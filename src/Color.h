@@ -3,48 +3,69 @@
 
 typedef unsigned char uchar;
 
+#include <cmath>
+
 struct Color {
-    uchar R;
-    uchar G;
-    uchar B;
-    uchar A;
+    float R;
+    float G;
+    float B;
+    float A;
 
     Color operator+(const Color& color){
         return {
-            std::min(R + color.R, 255),
-            std::min(G + color.G, 255),
-            std::min(B + color.B, 255),
-            std::min(A + color.A, 255)
-        };
+            R + color.R,
+            G + color.G,
+            B + color.B,
+            A + color.A
+            };
     }
 
     Color operator*(float factor) const {
+        factor = std::fmax(0.0f, std::fmax(factor, 1.0f));
         return {
-            std::fmin(R * factor, 255.0f),
-            std::fmin(G * factor, 255.0f),
-            std::fmin(B * factor, 255.0f),
-            std::fmin(A * factor, 255.0f)
+            R * factor,
+            G * factor,
+            B * factor,
+            A * factor
+            };
+    }
+
+    Color BalanceColor(struct Color colorA, struct Color colorB, float t){
+        t = fmax(0.0f, fmin(t, 1.0f));
+        return (struct Color){
+            (1-t)*colorA.R + t*colorB.R,
+            (1-t)*colorA.G + t*colorB.G,
+            (1-t)*colorA.B + t*colorB.B,
+            (1-t)*colorA.A + t*colorB.A
         };
     }
 
-    static Color Max(const Color &a, const Color &b){
-        return {
-            std::max(a.R, b.R),
-            std::max(a.G, b.G),
-            std::max(a.B, b.B),
-            std::max(a.A, b.A)
+    Color LerpColor(struct Color colorA, struct Color colorB, float t){
+        t = fmax(0.0f, fmin(t, 1.0f));
+        return (struct Color){
+            colorA.R + (colorB.R - colorA.R) * t,
+            colorA.G + (colorB.R - colorA.G) * t,
+            colorA.B + (colorB.R - colorA.B) * t,
+            colorA.A + (colorB.R - colorA.A) * t
         };
     }
 
-    static Color Mix(const Color& a, const Color& b, float factor) {
-        factor = std::max(0.0f, std::min(factor, 1.0f));
-
-        return {
-            (uchar)((1.0f - factor) * a.R + factor * b.R),
-            (uchar)((1.0f - factor) * a.G + factor * b.G),
-            (uchar)((1.0f - factor) * a.B + factor * b.B),
-            (uchar)((1.0f - factor) * a.A + factor * b.A)
+    Color MixColors(struct Color colorA, struct Color colorB) {
+        return (struct Color){
+            colorA.R * colorB.R,
+            colorA.G * colorB.G,
+            colorA.B * colorB.B,
+            colorA.A * colorB.A
         };
+    }
+
+    struct Color MaxColor(struct Color colorA, struct Color colorB){
+
+        bool greater =  colorA.R > colorB.R &&
+                        colorA.G > colorB.G &&
+                        colorA.B > colorB.B ;
+
+        return  colorA * greater + colorB * (1-greater);
     }
 
 };

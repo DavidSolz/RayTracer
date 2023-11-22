@@ -4,12 +4,13 @@
 #include "Color.h"
 
 struct Material {
-    Color ambient;
+    Color baseColor;
     Color diffuse;
     Color specular;
     Color emission;
-    float shininess;
-    float diffuseLevel;
+    float smoothness;
+    float emmissionScale;
+    float diffusionScale;
 };
 
 

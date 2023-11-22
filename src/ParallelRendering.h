@@ -1,5 +1,5 @@
-#ifndef GPUPARALLELRENDERER_H
-#define GPUPARALLELRENDERER_H
+#ifndef PARALLELRENDERING_H
+#define PARALLELRENDERING_H
 
 #define CL_HPP_TARGET_OPENCL_VERSION 200
 #define CL_HPP_ENABLE_EXCEPTIONS
@@ -7,9 +7,7 @@
 #ifdef __APPLE__
 
 #include <GL/glew.h>
-#include <GLFW/glfw3.h>
-#include <OpenGL/gl3.h>
-#include <OpenGL/OpenGL.h>
+
 #include <OpenCL/opencl.h>
 #include <OpenCL/cl_gl.h>
 #include "../OpenCL/include/CL/cl.hpp"
@@ -31,7 +29,7 @@ typedef unsigned int uint;
 
 #include "IFrameRender.h"
 
-class GPUParallelRenderer : public IFrameRender {
+class ParallelRendering : public IFrameRender {
 
     RenderingContext * context;
 
@@ -41,27 +39,27 @@ class GPUParallelRenderer : public IFrameRender {
     cl::Kernel kernel;
 
     cl::NDRange globalRange;
-    
+
     size_t dataSize;
     cl::Buffer pixelBuffer;
-    
+    cl::Buffer frameCounter;
+
     int objectBufferSize;
     cl::Buffer objectBuffer;
     cl::Buffer objectsCountBuffer;
 
     cl::Buffer cameraBuffer;
-    cl::Buffer sunBuffer;
 
-    cl::Device GetDefaultCLDevice();  
+    cl::Device GetDefaultCLDevice();
     cl::Program FetchProgram();
 
 public:
 
     void Init(RenderingContext * _context);
-    
+
     void Render(Color * _pixels);
 
-    ~GPUParallelRenderer();
+    ~ParallelRendering();
 
 };
 #endif

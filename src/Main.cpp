@@ -14,72 +14,121 @@ int main(){
 
     RenderingContext context;
 
-    context.width = 640;
-    context.height = 480;
+    context.width = 1000;
+    context.height = 1000;
     context.depth = 480;
 
-    context.sun.position = Vector3(context.width/2.0f, context.height/2.0f, 0);
-    context.sun.radius = 10.0f;
+    context.sun.position = Vector3(context.width/2.0f, 1.1f * context.height, -context.depth);
+    context.sun.radius = 300.0f;
 
-    context.cameraPos = Vector3(context.width/2.0f, context.height/2.0f, -context.depth/2.0f);
+    context.sun.material = {0};
+    context.sun.material.emission = {1.0f, 1.0f , 1.0f};
+    context.sun.material.emmissionScale = 1.0f;
 
-    const int rows = 5;
-    const int cols = 5;
-    const float spacing = 40.0f;
+    context.spheres.emplace_back(context.sun);
 
-    float startX = (context.width - (cols - 1) * spacing) / 2.0f;
-    float startY = (context.depth - (rows - 1) * spacing) / 2.0f;
+    context.camera.position = Vector3(context.width/2.0f, context.height/2.0f, -600.0f);
 
-    for (int i = 0; i < rows; ++i) {
-        for (int j = 0; j < cols; ++j) {
+
+{
+    //Plane
+
+    Sphere p={0};
+
+    p.position = Vector3(context.width/2.0f, -350.0f, 400.0f);
+    p.radius = 1000.0f;
+
+    p.material.baseColor = {0.5f, 0, 1.0f};
+    p.material.specular = {1.0f, 1.0f, 1.0f, 1.0f};
+    p.material.emmissionScale = 0;
+
+    context.spheres.emplace_back(p);
+    p={0};
+
+    //Spheres
+
+    //Green
+    p.position = Vector3(context.width/4.0f+50.0f, context.height/2.0f, -200.0f);
+    p.radius = 50.0f;
+
+    p.material.baseColor = {0.0f, 1.0f};
+    p.material.specular = {1.0f, 1.0f, 1.0f, 1.0f};
+    p.material.diffusionScale = 0.2f;
+
+    context.spheres.emplace_back(p);
+    p={0};
+
+    //Mirror
+    p.position = Vector3(context.width/2.0f+50.0f, context.height/2.0f-50.0f, -300.0f);
+    p.radius = 75.0f;
+
+    p.material.baseColor = {0.5f, 0.5f, 0.5f};
+    p.material.smoothness = 1.0f;
+    p.material.diffusionScale = 0.8f;
+
+    context.spheres.emplace_back(p);
+    p={0};
+
+    //Blue
+    p.position = Vector3(context.width/2.0f + context.width/4.0f, context.height/2.0f, -200.0f);
+    p.radius = 100.0f;
+
+    p.material.baseColor = {0, 0, 1.0f};
+    p.material.diffuse = {1.0f, 0.0f, 1.0f};
+
+    context.spheres.emplace_back(p);
+    p={0};
+
+    //Light
+    p.position = Vector3(context.width/2.0f-70.0f, context.height/2.0f+60.0f, -150.0f);
+    p.radius = 80.0f;
+
+    p.material.emission = {1.0f};
+    p.material.emmissionScale = 0.7f;
+
+    context.spheres.emplace_back(p);
+    p={0};
+
+}
+
+
+/*
+{
+    const int rows = 10;
+    const int cols = 10;
+    const float spacing = 60.0f;
+
+    float startX = (context.width - (cols - 1) * spacing) / 2.0f ;
+    float startY = (context.height - (rows - 1) * spacing) / 2.0f ;
+
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < cols; j++) {
             Sphere s;
             s.position.x = startX + i * spacing;
             s.position.y = startY + j * spacing;
-            s.position.z = context.depth / 2.0f;
-            s.radius = 20.0f;
+            s.position.z = -200.f;
+            s.radius = 32.0f;
 
-            float randomMaterial = (rand() / (float)RAND_MAX);
+            float isMetallic = (rand() / (float)RAND_MAX)>0.7f;
+            float isEmissive = (rand() / (float)RAND_MAX)>0.6f;
 
-            if(randomMaterial > 0.75f){
-                
-                //Glass
-                s.material.ambient = {0, 0, 0};
-                s.material.diffuse = {0, 0, 0};
-                s.material.specular = {255, 255, 255};
-                s.material.shininess = 100.0f;
-                s.material.diffuseLevel = 0.1f;
-                
-            }if(randomMaterial > 0.5f){
-                //Emissive
-                s.material.ambient = {rand()%255, rand()%255, rand()%255};
-                s.material.diffuse = {0};
-                s.material.specular = {0};
-                s.material.shininess = 50.0f;
-                s.material.diffuseLevel = 1.0f;
-            }if(randomMaterial > 0.25f){
-                //Phong material
-                s.material.ambient = {rand()%255, rand()%255, rand()%255};
-                s.material.diffuse = Color::Max(s.material.ambient, {0,0,0,0});
-                s.material.specular = {255, 255, 255, 255};
-                s.material.shininess = 50.0f;
-                s.material.diffuseLevel = 1.0f;
-            }else{
-                //Metall
-                s.material.ambient = {0};
-                s.material.diffuse = {128, 128, 128};
-                s.material.specular = {255, 255, 255};
-                s.material.shininess = 50.0f;
-                s.material.diffuseLevel = 1.0f; 
-            }
+            s.material.baseColor = {(rand() / (float)RAND_MAX), (rand() / (float)RAND_MAX), (rand() / (float)RAND_MAX)};
+            s.material.diffuse = {(rand() / (float)RAND_MAX),(rand() / (float)RAND_MAX),(rand() / (float)RAND_MAX)};
+            s.material.specular = {(rand() / (float)RAND_MAX), (rand() / (float)RAND_MAX), (rand() / (float)RAND_MAX)};
+
+            s.material.smoothness = (rand() / (float)RAND_MAX) * isMetallic;
+            s.material.emmissionScale = (rand() / (float)RAND_MAX) * isMetallic;
+
+            s.material.baseColor = s.material.baseColor * (1-isEmissive);
+            s.material.emission = (struct Color){(rand() / (float)RAND_MAX), (rand() / (float)RAND_MAX), (rand() / (float)RAND_MAX)} * isEmissive;
+
 
             context.spheres.emplace_back(s);
+            s=(struct Sphere){0};
         }
     }
-
-    context.sun.material.ambient={255,255,255};
-    context.sun.material.diffuse={255,255,255};
-    context.sun.material.shininess=100.0f;
-    context.sun.material.specular={255,255,255};
+}
+*/
 
 //Objects setup
 
@@ -89,20 +138,23 @@ int main(){
 
 //Main loop
 
-    float angle = 0.0f;
-    float speed = 10.0f;
+    // float angle = 0.0f;
+    // float speed = 2.0f;
 
     while (!renderer.ShouldClose()) {
-        float deltaTime = timer->GetDeltaTime();
+        double deltaTime = timer->GetDeltaTime();
 
-        context.sun.position.x = cos(angle * CL_M_PI * deltaTime) * 300.0f + context.width / 2.0f;
-        context.sun.position.y = sin(angle * CL_M_PI * deltaTime) * 300.0f + context.width / 2.0f;
+        // context.sun.position.x = cos(angle * CL_M_PI * deltaTime) * 200.0f + context.width / 2.0f;
+        // context.sun.position.z = sin(angle * CL_M_PI * deltaTime) * 200.0f + context.width / 2.0f;
+
+        // context.spheres[0].position = context.sun.position;
 
         timer->TicTac();
 
         renderer.Update();
 
-        angle = (angle<=360.0f)*(angle + speed * deltaTime);
+
+        // angle = (angle<=360.0f)*(angle + speed * deltaTime);
     }
 
     fprintf(stdout, "\nProgram exited succesfully.\n");

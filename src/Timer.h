@@ -8,9 +8,9 @@ class Timer {
 
 private:
 
-    float timeScale;
-    float lastTime;
-    float deltaTime;
+    double timeScale;
+    double lastTime;
+    double deltaTime;
     unsigned int frameCount;
 
     Timer();
@@ -19,9 +19,9 @@ public:
 
     void TicTac();
 
-    void SetTimeScale(const float& _timeScale);
+    void SetTimeScale(const double& _timeScale);
 
-    float GetDeltaTime();
+    double GetDeltaTime();
 
     static Timer* GetInstance();
 

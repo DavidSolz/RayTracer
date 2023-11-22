@@ -7,25 +7,27 @@ static Timer* instance;
 Timer::Timer(){
     this->timeScale = 1.0f;
     this->lastTime = glfwGetTime();
+    this->deltaTime = 1/60.0f;
 }
 
 void Timer::TicTac(){
-    float currentTime = glfwGetTime();
+    double currentTime = glfwGetTime();
     frameCount++;
-    float delta = currentTime - lastTime;
+    double delta = currentTime - lastTime;
     if(delta >= 1.0f){
         deltaTime = timeScale/frameCount;
-        fprintf(stdout, "frametime : %fms\r", 1000.0/frameCount);
+        printf("frametime : %6lfms\r", 1000.0f/frameCount);
+        fflush(stdout);
         frameCount = 0;
         lastTime = currentTime;
     }
 }
 
-float Timer::GetDeltaTime(){
+double Timer::GetDeltaTime(){
     return deltaTime;
 }
 
-void Timer::SetTimeScale(const float& _timeScale){
+void Timer::SetTimeScale(const double& _timeScale){
         this->timeScale = _timeScale;
 }
 

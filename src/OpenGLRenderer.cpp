@@ -1,16 +1,20 @@
 #include "OpenGLRenderer.h"
 
 OpenGLRenderer::OpenGLRenderer(RenderingContext * _context){
-    
+
     this->context = _context;
-    
+
     if(!glfwInit()){
         printf("Cannot initialize GLFW \n");
         return;
     }
-    
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_ANY_PROFILE);
+
+    glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_FALSE);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
     window = glfwCreateWindow(context->width, context->height, "RayTracer", NULL, NULL);
 
@@ -25,13 +29,13 @@ OpenGLRenderer::OpenGLRenderer(RenderingContext * _context){
 
     glOrtho(0, context->width, 0, context->height, 0, context->depth);
 
-
     if (glewInit() != GLEW_OK) {
         glfwDestroyWindow(window);
         glfwTerminate();
         fprintf(stderr, "Failed to initialize GLEW\n");
         return;
     }
+
 
     glGenBuffers(1, &context->pbo);
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, context->pbo);
@@ -41,27 +45,27 @@ OpenGLRenderer::OpenGLRenderer(RenderingContext * _context){
     cpuRender.Init(context);
     gpuRender.Init(context);
     SetRenderingService(&gpuRender);
+    selection = GPU;
 }
 
 
 void OpenGLRenderer::ProcessInput(){
-    Vector3 cameraFront = {0.0f, 0.0f, -1.0f};
-    Vector3 cameraUp = {0.0f, 1.0f, 0.0f};
 
     float cameraSpeed = 10.0f;
-    
+
     std::unordered_map<int, Vector3> keyMappings = {
-        {GLFW_KEY_R, cameraFront},
-        {GLFW_KEY_F, cameraFront * -1.0f},
-        {GLFW_KEY_D, Vector3::CrossProduct(cameraFront, cameraUp).Normalize() * -1.0f},
-        {GLFW_KEY_A, Vector3::CrossProduct(cameraFront, cameraUp).Normalize() },
-        {GLFW_KEY_W, cameraUp * -1.0f},
-        {GLFW_KEY_S, cameraUp}
+        {GLFW_KEY_R, {0.0f, 0.0f, 1.0f}},
+        {GLFW_KEY_F, {0.0f, 0.0f, -1.0f}},
+        {GLFW_KEY_D, {1.0f, 0.0f, 0.0f}},
+        {GLFW_KEY_A, {-1.0f, 0.0f, 0.0f}},
+        {GLFW_KEY_W, {0.0f, 1.0f, 0.0f}},
+        {GLFW_KEY_S, {0.0f, -1.0f, 0.0f}}
     };
 
     for (auto& [key, direction] : keyMappings) {
         if (glfwGetKey(window, key) == GLFW_PRESS) {
-            context->cameraPos = context->cameraPos + direction * cameraSpeed;
+            context->camera.position = context->camera.position + direction * cameraSpeed;
+            context->frameCounter=0;
         }
     }
 
@@ -99,7 +103,7 @@ void OpenGLRenderer::Update(){
     glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 
-    glDrawPixels(context->width, context->height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+    glDrawPixels(context->width, context->height, GL_RGBA, GL_FLOAT, pixels);
 
     glfwSwapBuffers(window);
     glfwPollEvents();

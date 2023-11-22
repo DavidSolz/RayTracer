@@ -2,11 +2,12 @@
 #define OPENGLRENDERER_H
 
 #include <stdio.h>
+#include <unordered_map>
 
 #include "IFrameRender.h"
 
 #include "ThreadedRendering.h"
-#include "GPUParallelRenderer.h"
+#include "ParallelRendering.h"
 
 class OpenGLRenderer {
 
@@ -23,7 +24,7 @@ private:
 
     bool cpu = true;
     ThreadedRendering cpuRender;
-    GPUParallelRenderer gpuRender;
+    ParallelRendering gpuRender;
 
     void ProcessInput();
 

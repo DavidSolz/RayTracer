@@ -1,7 +1,7 @@
 #ifndef SPHERE_H
 #define SPHERE_H
 
-#include "SpatialObject.h"
+#include "Material.h"
 struct Sphere{
     float radius;
     Vector3 position;

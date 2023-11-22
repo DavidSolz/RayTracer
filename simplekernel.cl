@@ -1,11 +1,15 @@
+struct Color{
+    float R, G, B, A;
+};
 
 struct Material {
-    uchar4 ambient;
-    uchar4 diffuse;
-    uchar4 specular;
-    uchar4 emission;
-    float shininess;
-    float diffuseLevel;
+    struct Color baseColor;
+    struct Color diffuse;
+    struct Color specular;
+    struct Color emission;
+    float smoothness;
+    float emmissionScale;
+    float diffusionScale;
 };
 
 struct Vector3{
@@ -55,22 +59,33 @@ struct Vector3 Normalize(const struct Vector3 a){
     return result;
 }
 
-uchar4 MixColor(uchar4 a, uchar4 b){
-    uchar4 result;
-    result.x = min(a.x + b.x, 255);
-    result.y = min(a.y + b.y, 255);
-    result.z = min(a.z + b.z, 255);
-    result.w = min(a.w + b.w, 255);
-    return result;
+struct Color MixColor(struct Color a, struct Color b){
+    return (struct Color){
+        a.R + b.R,
+        a.G + b.G,
+        a.B + b.B,
+        a.A + b.A,
+    };
+
 }
 
-uchar4 ScaleColor(uchar4 color, float factor) {
-    return (uchar4)(
-        min(color.x * factor, 255.0f),
-        min(color.y * factor, 255.0f),
-        min(color.z * factor, 255.0f),
-        min(color.w * factor, 255.0f)
-    );
+struct Color ScaleColors(struct Color colorA, struct Color colorB) {
+    return (struct Color){
+        colorA.R * colorB.R,
+        colorA.G * colorB.G,
+        colorA.B * colorB.B,
+        colorA.A * colorB.A
+    };
+}
+
+struct Color ScaleColor(struct Color color, float factor) {
+    factor = fmax(0.0f, fmin(factor, 1.0f));
+    return (struct Color){
+        color.R * factor,
+        color.G * factor,
+        color.B * factor,
+        color.A * factor
+    };
 }
 
 float Dot(const struct Vector3 a, const struct Vector3 b) {
@@ -95,7 +110,7 @@ struct Vector3 Reflect(struct Vector3 incident, struct Vector3 normal) {
     return Sub(incident, Mult(normal, (2.0f * Dot(incident, normal))));
 }
 
-uchar4 ComputeColor(struct Vector3 intersectionPoint, struct Vector3 cameraPosition, global const struct Sphere *object, struct Vector3 sunPosition) {
+struct Color ComputeColor(struct Vector3 intersectionPoint, struct Vector3 cameraPosition, global const struct Sphere *object, struct Vector3 sunPosition) {
     struct Vector3 normal = Normalize(Sub(intersectionPoint, object->position));
     struct Vector3 viewDir = Normalize(Sub(cameraPosition, intersectionPoint));
     struct Vector3 lightDir = Normalize(Sub(sunPosition, intersectionPoint));
@@ -104,41 +119,38 @@ uchar4 ComputeColor(struct Vector3 intersectionPoint, struct Vector3 cameraPosit
     float specular = fmax(0.0f, Dot(viewDir, reflectDir));
     float lightPower = fmax(0.0f, Dot(normal, lightDir));
 
-    uchar4 diffuseComponent = ScaleColor(object->material.diffuse, lightPower);
-    uchar4 specularComponent = ScaleColor(object->material.specular, pow(specular, object->material.shininess));
+    struct Color diffuseComponent = ScaleColor(object->material.diffuse, lightPower);
+    struct Color specularComponent = ScaleColor(object->material.specular, pow(specular, object->material.emmissionScale));
 
-    uchar4 resultColor = MixColor(MixColor(object->material.ambient, diffuseComponent), specularComponent);
+    struct Color resultColor = MixColor(MixColor(object->material.baseColor, diffuseComponent), specularComponent);
 
-    return resultColor; 
+    return resultColor;
 
 }
 
-void kernel RenderGraphics(global uchar4* pixels, global const struct Sphere* objects, global const int * objects_count, global const struct Vector3 * cameraPosition, global const struct Sphere * sun){
+void kernel RenderGraphics(global struct Color* pixels, global const struct Sphere* objects, global const int * objects_count, global const struct Vector3 * cameraPosition, global const struct Sphere * sun){
     int x = get_global_id(0);
     int y = get_global_id(1);
 
     int width = get_global_size(0);
-    int height = get_global_size(1);
-
-    float aspectRatio = width/(float)height;
 
     int index = y * width + x;
 
     struct Vector3 pixelPosition = {x, y, 0};
 
-    struct Vector3 rayDirection = Mult(Sub(pixelPosition, *cameraPosition), aspectRatio);
-    rayDirection = Normalize(rayDirection);
+    struct Vector3 rayDirection = Normalize(Sub(pixelPosition, *cameraPosition));
 
-    uchar4 color = {0, 0, 0, 0};
+    struct Color color = {0, 0, 0, 0};
+
+    float minDistance = INFINITY;
 
     for (int i = 0; i < *objects_count; i++) {
         float distance = Intersect(*cameraPosition, rayDirection, objects + i );
-        struct Vector3 intersectionPoint = Add(*cameraPosition, Mult(rayDirection, distance));
 
-        if(distance > 0.0f){
-
+        if(distance > 0.0f && distance < minDistance){
+            minDistance = distance;
+            struct Vector3 intersectionPoint = Add(*cameraPosition, Mult(rayDirection, minDistance));
             color = ComputeColor(intersectionPoint, *cameraPosition, objects + i, sun->position);
-            break;
         }
     }
 
