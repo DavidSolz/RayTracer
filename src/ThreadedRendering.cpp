@@ -94,6 +94,6 @@ void ThreadedRendering::Render(Color * array){
 
 
 ThreadedRendering::~ThreadedRendering(){
-    if(threads) delete[] threads;
+    delete[] threads;
 }
 

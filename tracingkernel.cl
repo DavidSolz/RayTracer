@@ -218,7 +218,7 @@ struct Color ComputeColor(struct Ray *ray, global const struct Sphere* objects, 
     struct Color accumulatedColor = {0};
     struct Color tempColor = {1.0f, 1.0f, 1.0f, 1.0f};
 
-    for(int i = 0; i < 30; i++){
+    for(int i = 0; i < 10; ++i){
         struct HitInfo info = FindClosestIntersection(objects, objects_count, ray);
         if(info.didHit){
             ray->origin = info.point;

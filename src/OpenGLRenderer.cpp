@@ -114,11 +114,8 @@ void OpenGLRenderer::Update(){
 }
 
 OpenGLRenderer::~OpenGLRenderer(){
-    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
-    glBindTexture(GL_TEXTURE_2D, 0);
 
     glDeleteBuffers(1, &context->pbo);
-    glDeleteTextures(1, &context->texture);
 
     glfwDestroyWindow(window);
     glfwTerminate();

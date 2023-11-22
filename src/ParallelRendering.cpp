@@ -4,7 +4,7 @@ void ParallelRendering::Init(RenderingContext * _context){
 
     this->context = _context;
 
-    fprintf(stdout, "========[ GPU Config ]========\n");
+    fprintf(stdout, "========[ Accelerator Config ]========\n");
 
     default_device = GetDefaultCLDevice();
     deviceContext = cl::Context(default_device);
@@ -19,17 +19,17 @@ void ParallelRendering::Init(RenderingContext * _context){
     }
 
     dataSize = sizeof(Color) * context->width * context->height;
-    pixelBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, dataSize);
+    pixelBuffer = cl::Buffer(deviceContext, CL_MEM_READ_WRITE, dataSize);
 
     context->frameCounter = 0;
     frameCounter = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, sizeof(int));
 
     objectBufferSize = sizeof(Sphere)*context->spheres.size();
-    objectBuffer = cl::Buffer(deviceContext, CL_MEM_READ_WRITE, objectBufferSize);
+    objectBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, objectBufferSize);
 
-    objectsCountBuffer = cl::Buffer(deviceContext, CL_MEM_READ_WRITE, sizeof(int));
+    objectsCountBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, sizeof(int));
 
-    cameraBuffer = cl::Buffer(deviceContext, CL_MEM_READ_WRITE, sizeof(Vector3));
+    cameraBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, sizeof(Vector3));
 
     kernel = cl::Kernel(program, "RenderGraphics");
     kernel.setArg(0, pixelBuffer);

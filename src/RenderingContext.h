@@ -28,8 +28,6 @@ struct RenderingContext {
     unsigned int frameCounter;
 
     GLuint pbo;
-    GLuint texture;
-    GLuint fbo;
 
 };
 

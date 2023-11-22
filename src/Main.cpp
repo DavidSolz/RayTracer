@@ -30,13 +30,15 @@ int main(){
     context.camera.position = Vector3(context.width/2.0f, context.height/2.0f, -600.0f);
 
 
+    float aspectRatio = context.width/(float)context.height;
+
 {
     //Plane
 
     Sphere p={0};
 
     p.position = Vector3(context.width/2.0f, -350.0f, 400.0f);
-    p.radius = 1000.0f;
+    p.radius = 1000.0f * aspectRatio;
 
     p.material.baseColor = {0.5f, 0, 1.0f};
     p.material.specular = {1.0f, 1.0f, 1.0f, 1.0f};
@@ -49,7 +51,7 @@ int main(){
 
     //Green
     p.position = Vector3(context.width/4.0f+50.0f, context.height/2.0f, -200.0f);
-    p.radius = 50.0f;
+    p.radius = 50.0f * aspectRatio;
 
     p.material.baseColor = {0.0f, 1.0f};
     p.material.specular = {1.0f, 1.0f, 1.0f, 1.0f};
@@ -60,7 +62,7 @@ int main(){
 
     //Mirror
     p.position = Vector3(context.width/2.0f+50.0f, context.height/2.0f-50.0f, -300.0f);
-    p.radius = 75.0f;
+    p.radius = 75.0f * aspectRatio;
 
     p.material.baseColor = {0.5f, 0.5f, 0.5f};
     p.material.smoothness = 1.0f;
@@ -71,7 +73,7 @@ int main(){
 
     //Blue
     p.position = Vector3(context.width/2.0f + context.width/4.0f, context.height/2.0f, -200.0f);
-    p.radius = 100.0f;
+    p.radius = 100.0f * aspectRatio;
 
     p.material.baseColor = {0, 0, 1.0f};
     p.material.diffuse = {1.0f, 0.0f, 1.0f};
@@ -81,7 +83,7 @@ int main(){
 
     //Light
     p.position = Vector3(context.width/2.0f-70.0f, context.height/2.0f+60.0f, -150.0f);
-    p.radius = 80.0f;
+    p.radius = 80.0f * aspectRatio;
 
     p.material.emission = {1.0f};
     p.material.emmissionScale = 0.7f;
