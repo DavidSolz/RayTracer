@@ -4,7 +4,6 @@
 #include <thread>
 
 #include "OpenGLRenderer.h"
-#include "Timer.h"
 
 int main(){
 
@@ -18,20 +17,19 @@ int main(){
     context.height = 1000;
     context.depth = 480;
 
+    float aspectRatio = context.width/(float)context.height;
+
     context.sun.position = Vector3(context.width/2.0f, 1.1f * context.height, -context.depth);
-    context.sun.radius = 300.0f;
+    context.sun.radius = 300.0f * aspectRatio ;
 
     context.sun.material = {0};
-    context.sun.material.emission = {1.0f, 1.0f , 1.0f};
+    context.sun.material.emission = {1.0f, 1.0f , 1.0f, 1.0f};
     context.sun.material.emmissionScale = 1.0f;
 
     context.spheres.emplace_back(context.sun);
 
-    context.camera.position = Vector3(context.width/2.0f, context.height/2.0f, -600.0f);
-
-
-    float aspectRatio = context.width/(float)context.height;
-
+    context.camera.position = Vector3(context.width/2.0f, context.height/2.0f, -700.0f);
+    context.camera.aspectRatio = aspectRatio;
 {
     //Plane
 
@@ -40,7 +38,7 @@ int main(){
     p.position = Vector3(context.width/2.0f, -350.0f, 400.0f);
     p.radius = 1000.0f * aspectRatio;
 
-    p.material.baseColor = {0.5f, 0, 1.0f};
+    p.material.baseColor = {0.5f, 0.0f, 1.0f, 1.0f};
     p.material.specular = {1.0f, 1.0f, 1.0f, 1.0f};
     p.material.emmissionScale = 0;
 
@@ -53,7 +51,7 @@ int main(){
     p.position = Vector3(context.width/4.0f+50.0f, context.height/2.0f, -200.0f);
     p.radius = 50.0f * aspectRatio;
 
-    p.material.baseColor = {0.0f, 1.0f};
+    p.material.baseColor = {0.0f, 1.0f, 0.0f, 1.0f};
     p.material.specular = {1.0f, 1.0f, 1.0f, 1.0f};
     p.material.diffusionScale = 0.2f;
 
@@ -64,7 +62,7 @@ int main(){
     p.position = Vector3(context.width/2.0f+50.0f, context.height/2.0f-50.0f, -300.0f);
     p.radius = 75.0f * aspectRatio;
 
-    p.material.baseColor = {0.5f, 0.5f, 0.5f};
+    p.material.baseColor = {0.5f, 0.5f, 0.5f, 1.0f};
     p.material.smoothness = 1.0f;
     p.material.diffusionScale = 0.8f;
 
@@ -75,8 +73,7 @@ int main(){
     p.position = Vector3(context.width/2.0f + context.width/4.0f, context.height/2.0f, -200.0f);
     p.radius = 100.0f * aspectRatio;
 
-    p.material.baseColor = {0, 0, 1.0f};
-    p.material.diffuse = {1.0f, 0.0f, 1.0f};
+    p.material.baseColor = {0.0f, 0.0f, 1.0f, 0.1f};
 
     context.spheres.emplace_back(p);
     p={0};
@@ -85,7 +82,7 @@ int main(){
     p.position = Vector3(context.width/2.0f-70.0f, context.height/2.0f+60.0f, -150.0f);
     p.radius = 80.0f * aspectRatio;
 
-    p.material.emission = {1.0f};
+    p.material.emission = {1.0f, 0.0f, 0.0f, 1.0f};
     p.material.emmissionScale = 0.7f;
 
     context.spheres.emplace_back(p);
@@ -144,15 +141,11 @@ int main(){
     // float speed = 2.0f;
 
     while (!renderer.ShouldClose()) {
-        double deltaTime = timer->GetDeltaTime();
 
         // context.sun.position.x = cos(angle * CL_M_PI * deltaTime) * 200.0f + context.width / 2.0f;
         // context.sun.position.z = sin(angle * CL_M_PI * deltaTime) * 200.0f + context.width / 2.0f;
 
         // context.spheres[0].position = context.sun.position;
-
-        timer->TicTac();
-
         renderer.Update();
 
 

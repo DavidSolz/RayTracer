@@ -29,7 +29,7 @@ void ParallelRendering::Init(RenderingContext * _context){
 
     objectsCountBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, sizeof(int));
 
-    cameraBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, sizeof(Vector3));
+    cameraBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, sizeof(Camera));
 
     kernel = cl::Kernel(program, "RenderGraphics");
     kernel.setArg(0, pixelBuffer);
@@ -39,25 +39,40 @@ void ParallelRendering::Init(RenderingContext * _context){
     kernel.setArg(4, frameCounter);
 
     globalRange = cl::NDRange(context->width, context->height);
-
+    localRange = cl::NDRange(16, 16);
 }
 
+bool ParallelRendering::isVisible(const Sphere &sphere){
+
+    Vector3 ray = sphere.position - context->camera.position;
+
+    return Vector3::DotProduct(ray,ray) > sphere.radius * sphere.radius;
+}
 
 void ParallelRendering::Render(Color * _pixels){
 
+    std::vector<Sphere> visible;
+
+    for(int i=0; i<context->spheres.size(); ++i){
+        if(isVisible(context->spheres[i]))
+            visible.emplace_back(context->spheres[i]);
+    }
+
+
     int objCount = context->spheres.size();
 
-    queue.enqueueWriteBuffer(objectBuffer, CL_FALSE, 0, objectBufferSize, context->spheres.data());
+    queue.enqueueWriteBuffer(objectBuffer, CL_FALSE, 0, objectBufferSize, visible.data());
     queue.enqueueWriteBuffer(objectsCountBuffer, CL_FALSE, 0, sizeof(int), &objCount);
-    queue.enqueueWriteBuffer(cameraBuffer, CL_FALSE, 0, sizeof(Vector3), &context->camera.position);
+    queue.enqueueWriteBuffer(cameraBuffer, CL_FALSE, 0, sizeof(Camera), &context->camera);
     queue.enqueueWriteBuffer(frameCounter, CL_FALSE, 0, sizeof(int), &context->frameCounter);
 
-    queue.enqueueNDRangeKernel(kernel, cl::NullRange, globalRange);
+    queue.enqueueNDRangeKernel(kernel, cl::NullRange, globalRange, localRange);
     queue.finish();
 
     queue.enqueueReadBuffer(pixelBuffer, CL_TRUE, 0, dataSize, _pixels);
 
     context->frameCounter++;
+    visible.clear();
 }
 
 ParallelRendering::~ParallelRendering(){

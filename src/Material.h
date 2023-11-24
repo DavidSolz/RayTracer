@@ -11,6 +11,7 @@ struct Material {
     float smoothness;
     float emmissionScale;
     float diffusionScale;
+    float transparencyScale;
 };
 
 

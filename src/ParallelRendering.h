@@ -39,6 +39,7 @@ class ParallelRendering : public IFrameRender {
     cl::Kernel kernel;
 
     cl::NDRange globalRange;
+    cl::NDRange localRange;
 
     size_t dataSize;
     cl::Buffer pixelBuffer;
@@ -54,6 +55,8 @@ class ParallelRendering : public IFrameRender {
     cl::Program FetchProgram();
 
 public:
+
+    bool isVisible(const Sphere& sphere);
 
     void Init(RenderingContext * _context);
 

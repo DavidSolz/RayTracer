@@ -13,15 +13,33 @@ void ThreadedRendering::Init(RenderingContext * _context){
     rowsPerThread = context->height / numThreads;
 }
 
+Vector3 ThreadedRendering::RandomReflection(const struct Vector3& normal, unsigned int& seed){
+    Vector3 direction;
+    direction.x = Random::UniformRandom(seed);
+    direction.y = Random::UniformRandom(seed);
+    direction.z = Random::UniformRandom(seed);
+
+    bool lessThanZero = Vector3::DotProduct(normal, direction) < 0;
+
+    return (direction * ((lessThanZero * -1.0f) + (1-lessThanZero))).Normalize();
+}
+
+Vector3 ThreadedRendering::RandomDirection(unsigned int& seed){
+    return (struct Vector3){
+        Random::UniformRandom(seed),
+        Random::UniformRandom(seed),
+        Random::UniformRandom(seed)
+    };
+}
+
 Vector3 ThreadedRendering::Reflect(const Vector3& incident, const Vector3& normal) {
     return incident - (Vector3)normal * (2.0f * Vector3::DotProduct(incident, normal)) ;
 }
 
-float ThreadedRendering::Intersect(const Vector3& rayOrigin, const Vector3& rayDirection, const Sphere& sphere) {
-    const Vector3 oc = rayOrigin - sphere.position;
+float ThreadedRendering::Intersect(const Ray &ray, const Sphere &sphere) {
+    const Vector3 oc = ray.origin - sphere.position;
 
-    const float a = 1.0f;
-    const float b = Vector3::DotProduct(oc, rayDirection);
+    const float b = Vector3::DotProduct(oc, ray.direction);
     const float c = Vector3::DotProduct(oc, oc) - sphere.radius * sphere.radius;
     const float delta = b * b - c;
 
@@ -32,19 +50,55 @@ float ThreadedRendering::Intersect(const Vector3& rayOrigin, const Vector3& rayD
     return fmin(t1, t2);
 }
 
-Color ThreadedRendering::ComputeColor(const Vector3& intersectionPoint, const Vector3& cameraPos,const Sphere &sphere, const Vector3& sunPosition) {
+Color ThreadedRendering::ComputeColor(struct Ray& ray, unsigned int& seed) {
+    Color accumulatedColor = {0};
+    Color tempColor = {1.0f, 1.0f, 1.0f, 1.0f};
 
-    Vector3 normal = (intersectionPoint - sphere.position).Normalize();
-    Vector3 lightDir = (sunPosition - intersectionPoint).Normalize();
-    Vector3 viewDir = (cameraPos - intersectionPoint).Normalize();
+    for(int i = 0; i < 10; ++i){
+        HitInfo info = FindClosestIntersection(ray);
+        if(info.distance < INFINITY){
+            ray.origin = info.point;
 
-    float lightPower = std::fmax(0.0f, Vector3::DotProduct(normal, lightDir));
-    Color diffuseComponent = sphere.material.diffuse * sphere.material.diffusionScale;
+             Material * material = &info.material;
 
-    Vector3 reflectDir = Reflect(lightDir*-1.0f, normal);
-    Color emmissionComponent = sphere.material.emission * sphere.material.emmissionScale;
+            Vector3 diffusionDir = (info.normal + RandomReflection(info.normal, seed)).Normalize();
+            Vector3 specularDir = Reflect(ray.direction, info.normal);
 
-    return (Color)sphere.material.baseColor + diffuseComponent + emmissionComponent;
+            ray.direction = Vector3::Lerp(diffusionDir, specularDir, material->smoothness);
+
+            struct Color emmisionComponent = Color::ToneColor(material->emission, material->emmissionScale);
+            struct Color diffuseComponent = Color::ToneColor(material->diffuse, Vector3::DotProduct(info.normal, diffusionDir) * material->diffusionScale);
+
+            accumulatedColor = accumulatedColor +  Color::MixColors(emmisionComponent, tempColor);
+            accumulatedColor = accumulatedColor + Color::MixColors(diffuseComponent, tempColor);
+
+            tempColor = Color::MixColors(tempColor, material->baseColor);
+
+        }else{
+            break;
+        }
+    }
+
+    return accumulatedColor;
+}
+
+
+HitInfo ThreadedRendering::FindClosestIntersection(const Ray& ray){
+    HitInfo info;
+    info.distance = INFINITY;
+
+    for (int i = 0; i < context->spheres.size(); i++) {
+        float distance = Intersect(ray, context->spheres[i]);
+
+        if(distance > 0.0f && distance < info.distance){
+            info.distance = distance;
+            info.point = ray.origin + (Vector3)ray.direction * distance;
+            info.normal = (info.point -  context->spheres[i].position).Normalize();
+            info.material = context->spheres[i].material;
+        }
+    }
+
+    return info;
 }
 
 void ThreadedRendering::ComputeRows(int _startY, int _endY, Color* pixels) {
@@ -52,24 +106,20 @@ void ThreadedRendering::ComputeRows(int _startY, int _endY, Color* pixels) {
     for (int y = _startY; y < _endY; ++y) {
         for (int x = 0; x < context->width; ++x) {
 
-            Vector3 rayDir = (Vector3(x , y , 0) - context->camera.position).Normalize();
+            Vector3 pixelPosition = context->camera.CalculatePixelPosition(x, y, context->width, context->height);
 
-            Color finalColor = {0};
+            unsigned int index = y * context->width + x;
+            unsigned int seed = context->frameCounter * 93726103484 + index;
 
-            float minDistance = INFINITY;
+            Ray ray;
+            ray.origin = context->camera.position;
+            ray.direction = (pixelPosition - ray.origin).Normalize();
 
-            for (int i = 0; i < context->spheres.size(); i++) {
-                float distance = Intersect(context->camera.position, rayDir, context->spheres[i]);
-                if (distance > 0.0f && distance < minDistance) {
-                    minDistance = distance;
-                    Vector3 intersectionPoint = context->camera.position + rayDir * distance;
+            struct Color finalColor = ComputeColor(ray, seed);
 
-                    finalColor = ComputeColor(intersectionPoint, context->camera.position, context->spheres[i], context->sun.position);
+            float scale = 1.0f / (context->frameCounter+1);
 
-                }
-            }
-
-            pixels[y * context->width + x] = finalColor;
+            pixels[index] =  Color::LerpColor(pixels[index], finalColor, scale);
         }
     }
 }

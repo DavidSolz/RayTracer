@@ -5,7 +5,7 @@
 #include <unordered_map>
 
 #include "IFrameRender.h"
-
+#include "Timer.h"
 #include "ThreadedRendering.h"
 #include "ParallelRendering.h"
 
@@ -21,6 +21,9 @@ private:
     IFrameRender * renderingService;
     RenderingContext * context;
     GLFWwindow * window;
+
+    Color* pixels;
+    Timer* timer;
 
     bool cpu = true;
     ThreadedRendering cpuRender;

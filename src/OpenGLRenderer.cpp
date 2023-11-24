@@ -36,11 +36,12 @@ OpenGLRenderer::OpenGLRenderer(RenderingContext * _context){
         return;
     }
 
+    pixels = new Color[context->width*context->height];
 
-    glGenBuffers(1, &context->pbo);
-    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, context->pbo);
-    glBufferData(GL_PIXEL_UNPACK_BUFFER, context->width * context->height * sizeof(Color), nullptr, GL_DYNAMIC_DRAW);
-    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+    timer = Timer::GetInstance();
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     cpuRender.Init(context);
     gpuRender.Init(context);
@@ -51,20 +52,28 @@ OpenGLRenderer::OpenGLRenderer(RenderingContext * _context){
 
 void OpenGLRenderer::ProcessInput(){
 
-    float cameraSpeed = 10.0f;
-
     std::unordered_map<int, Vector3> keyMappings = {
-        {GLFW_KEY_R, {0.0f, 0.0f, 1.0f}},
-        {GLFW_KEY_F, {0.0f, 0.0f, -1.0f}},
-        {GLFW_KEY_D, {1.0f, 0.0f, 0.0f}},
-        {GLFW_KEY_A, {-1.0f, 0.0f, 0.0f}},
-        {GLFW_KEY_W, {0.0f, 1.0f, 0.0f}},
-        {GLFW_KEY_S, {0.0f, -1.0f, 0.0f}}
+        {GLFW_KEY_R, context->camera.front},
+        {GLFW_KEY_F, context->camera.front * -1.0f},
+        {GLFW_KEY_A, context->camera.right *-1.0f},
+        {GLFW_KEY_D, context->camera.right},
+        {GLFW_KEY_W, context->camera.up},
+        {GLFW_KEY_S, context->camera.up * -1.0f},
+
     };
 
     for (auto& [key, direction] : keyMappings) {
         if (glfwGetKey(window, key) == GLFW_PRESS) {
-            context->camera.position = context->camera.position + direction * cameraSpeed;
+
+            /*
+                TODO:
+                -fix camera rotation
+                
+            */
+
+            //context->camera.Rotate(10.0f);
+            context->camera.position = context->camera.position + direction * context->camera.movementSpeed * timer->GetDeltaTime();
+
             context->frameCounter=0;
         }
     }
@@ -95,13 +104,9 @@ void OpenGLRenderer::Update(){
 
     ProcessInput();
 
-    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, context->pbo);
-    Color * pixels = static_cast<Color*>(glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY));
+    timer->TicTac();
 
     renderingService->Render(pixels);
-
-    glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
-    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 
     glDrawPixels(context->width, context->height, GL_RGBA, GL_FLOAT, pixels);
 
@@ -114,6 +119,8 @@ void OpenGLRenderer::Update(){
 }
 
 OpenGLRenderer::~OpenGLRenderer(){
+
+    delete[] pixels;
 
     glDeleteBuffers(1, &context->pbo);
 
