@@ -14,8 +14,6 @@
 
 #elif __WIN32__
 
-typedef unsigned int uint;
-
 #include <windows.h>
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
@@ -42,21 +40,19 @@ class ParallelRendering : public IFrameRender {
     cl::NDRange localRange;
 
     size_t dataSize;
+    size_t objectBufferSize;
+
     cl::Buffer pixelBuffer;
     cl::Buffer frameCounter;
-
-    int objectBufferSize;
     cl::Buffer objectBuffer;
     cl::Buffer objectsCountBuffer;
-
     cl::Buffer cameraBuffer;
+
 
     cl::Device GetDefaultCLDevice();
     cl::Program FetchProgram();
 
 public:
-
-    bool isVisible(const Sphere& sphere);
 
     void Init(RenderingContext * _context);
 

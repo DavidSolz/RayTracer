@@ -59,7 +59,7 @@ Color ThreadedRendering::ComputeColor(struct Ray& ray, unsigned int& seed) {
         if(info.distance < INFINITY){
             ray.origin = info.point;
 
-             Material * material = &info.material;
+            Material * material = &info.material;
 
             Vector3 diffusionDir = (info.normal + RandomReflection(info.normal, seed)).Normalize();
             Vector3 specularDir = Reflect(ray.direction, info.normal);
@@ -106,11 +106,13 @@ void ThreadedRendering::ComputeRows(int _startY, int _endY, Color* pixels) {
     for (int y = _startY; y < _endY; ++y) {
         for (int x = 0; x < context->width; ++x) {
 
-            Vector3 pixelPosition = context->camera.CalculatePixelPosition(x, y, context->width, context->height);
-
             unsigned int index = y * context->width + x;
             unsigned int seed = context->frameCounter * 93726103484 + index;
 
+            Vector3 offset = RandomDirection(seed);
+
+            Vector3 pixelPosition = context->camera.CalculatePixelPosition(x + offset.x - 0.5f, y + offset.y - 0.5f, context->width, context->height);
+            
             Ray ray;
             ray.origin = context->camera.position;
             ray.direction = (pixelPosition - ray.origin).Normalize();
@@ -128,13 +130,14 @@ void ThreadedRendering::Render(Color * array){
 
     for (int i = 0; i < numThreads; i++) {
         int startY = i * rowsPerThread;
-        bool last = (i==numThreads-1);
-        int endY =  (last) * context->height +  (1-last)*(startY + rowsPerThread);
+        int endY =  startY + rowsPerThread;
 
         threads[i] = std::thread([this, startY, endY, array](){
                 this->ComputeRows(startY, endY, array);
         });
     }
+
+    ComputeRows((numThreads-1)*rowsPerThread, context->height, array);
 
     for (int i = 0; i < numThreads; i++){
         threads[i].join();

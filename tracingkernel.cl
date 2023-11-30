@@ -11,6 +11,7 @@ struct Material {
     struct Color emission;
     float smoothness;
     float emmissionScale;
+    float specularScale;
     float diffusionScale;
     float transparencyScale;
 };
@@ -104,13 +105,17 @@ struct Vector3 Normalize(const struct Vector3 a){
     };
 }
 
+//WangHash
 float Rand(unsigned int * seed){
-    *seed = *seed * 747796405 + 2891336453;
-    unsigned int result = ((*seed >>((*seed>>28u)+4u)) ^ *seed) * 277803737;
-    result = (result>>22)^result;
-    return result/4294967295.0f;
+    *seed = (*seed ^ 61) ^ (*seed >>16); 
+    *seed*=9;
+    *seed= *seed ^ (*seed>>4);
+    *seed *= 0x27d4eb2d;
+    *seed = *seed ^ (*seed>>15);
+    return *seed/4294967295.0f;
 }
 
+//Uniform distrubution
 float UniformRandom(unsigned int * seed){
     float theta = 2 * 3.1415926f * Rand(seed);
     float rho = sqrt(-2 * log(Rand(seed)));
@@ -127,11 +132,11 @@ struct Vector3 RandomReflection(const struct Vector3 normal, unsigned int *seed)
 }
 
 struct Vector3 RandomDirection(unsigned int *seed){
-    return (struct Vector3){
+    return Normalize((struct Vector3){
         UniformRandom(seed),
         UniformRandom(seed),
         UniformRandom(seed)
-    };
+    });
 }
 
 struct Color AddColors(struct Color colorA, struct Color colorB){
@@ -172,6 +177,24 @@ struct Color ToneColor(struct Color color, float factor) {
     };
 }
 
+struct Color ClampColor(const struct Color color, const float minValue, const float maxValue){
+    return (struct Color){
+        fmax(minValue, fmin(color.R, maxValue)),
+        fmax(minValue, fmin(color.G, maxValue)),
+        fmax(minValue, fmin(color.B, maxValue)),
+        fmax(minValue, fmin(color.A, maxValue))
+    };
+}
+
+struct Color GammaCorrection(const struct Color color, const float factor){
+    return (struct Color){
+        pow(color.R, factor),
+        pow(color.G, factor),
+        pow(color.B, factor),
+        pow(color.A, factor)
+    };
+}
+
 float Intersect(const struct Ray *ray, global const struct Sphere *sphere) {
     struct Vector3 originToSphereCenter = Sub(ray->origin, sphere->position);
 
@@ -195,19 +218,25 @@ struct Vector3 Reflect(struct Vector3 incident, struct Vector3 normal) {
     return Sub(incident, Mult(normal, (2.0f * DotProduct(incident, normal))));
 }
 
+struct Vector3 Refract(struct Vector3 incident, struct Vector3 normal) {
+    return Sub(incident, Mult(normal, (2.0f * DotProduct(incident, normal))));
+}
+
 struct HitInfo FindClosestIntersection(global const struct Sphere* objects, global const int * objects_count, const struct Ray * ray){
-    struct HitInfo info;
+    struct HitInfo info ={0};
     info.distance = INFINITY;
 
-    for (int i = 0; i < *objects_count; i++) {
-        float distance = Intersect(ray, objects + i );
 
-        if(distance > 0.0f && distance < info.distance){
-            info.distance = distance;
+    for (int i = 0; i < *objects_count; i++) {
+        float distance = Intersect(ray, objects + i);
+
+        if((distance > 0.0f) && (distance < info.distance)){
+            info.distance = distance ;
             info.point = Add(ray->origin, Mult(ray->direction, distance));
             info.normal = Normalize(Sub(info.point, objects[i].position));
             info.material = objects[i].material;
         }
+
     }
 
     return info;
@@ -219,29 +248,27 @@ struct Color ComputeColor(struct Ray *ray, global const struct Sphere* objects, 
     struct Color accumulatedColor = {0};
     struct Color tempColor = {1.0f, 1.0f, 1.0f, 1.0f};
 
-    for(int i = 0; i < 10; ++i){
+    for(int i = 0; i < 10; i++){
         struct HitInfo info = FindClosestIntersection(objects, objects_count, ray);
-        if(info.distance < INFINITY){
-            ray->origin = info.point;
-
-            struct Material * material = &info.material;
-
-            struct Vector3 diffusionDir = Normalize(Add(info.normal, RandomReflection(info.normal, seed)));
-            struct Vector3 specularDir = Reflect(ray->direction, info.normal);
-
-            ray->direction = LerpPoint(diffusionDir, specularDir, material->smoothness);
-
-            struct Color emmisionComponent = ToneColor(material->emission, material->emmissionScale);
-            struct Color diffuseComponent = ToneColor(material->diffuse, DotProduct(info.normal, diffusionDir) * material->diffusionScale);
-
-            accumulatedColor = AddColors(accumulatedColor, MixColors(emmisionComponent, tempColor));
-            accumulatedColor = AddColors(accumulatedColor, MixColors(diffuseComponent, tempColor));
-
-            tempColor = MixColors(tempColor, material->baseColor);
-
-        }else{
+        
+        if(info.distance == INFINITY)
             break;
-        }
+
+        ray->origin = info.point;
+
+        struct Material * material = &info.material;
+
+        struct Vector3 diffusionDir = RandomReflection(info.normal, seed);
+        struct Vector3 specularDir = Reflect(ray->direction, info.normal);
+        
+        ray->direction = LerpPoint(diffusionDir, specularDir, material->smoothness);
+
+        struct Color emmisionComponent = ToneColor(material->emission, material->emmissionScale );
+
+        accumulatedColor = AddColors(accumulatedColor, MixColors(emmisionComponent, tempColor));
+
+        tempColor = MixColors(tempColor, material->baseColor);
+
     }
 
     return accumulatedColor;
@@ -273,11 +300,14 @@ global const int *numFrames){
     int width = get_global_size(0);
     int height = get_global_size(1);
 
-    struct Vector3 pixelPosition = CalculatePixelPosition(x, y, width, height, camera);
-
     unsigned int index = y * width + x;
     unsigned int seed = *numFrames * 93726103484 + index;
 
+    struct Vector3 offset = RandomDirection(&seed);
+
+    struct Vector3 pixelPosition = CalculatePixelPosition(x + offset.x - 0.5f, y + offset.y - 0.5f, width, height, camera);
+
+    
     struct Ray ray;
     ray.origin = camera->position;
     ray.direction = Normalize(Sub(pixelPosition, ray.origin ));

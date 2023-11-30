@@ -4,12 +4,13 @@
 #include "Color.h"
 
 struct Material {
-    Color baseColor;
-    Color diffuse;
-    Color specular;
-    Color emission;
+    struct Color baseColor;
+    struct Color diffuse;
+    struct Color specular;
+    struct Color emission;
     float smoothness;
     float emmissionScale;
+    float specularScale;
     float diffusionScale;
     float transparencyScale;
 };

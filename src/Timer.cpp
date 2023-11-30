@@ -8,6 +8,7 @@ Timer::Timer(){
     this->timeScale = 1.0f;
     this->lastTime = glfwGetTime();
     this->deltaTime = 1/60.0f;
+    this->frameCount = 0;
 }
 
 void Timer::TicTac(){

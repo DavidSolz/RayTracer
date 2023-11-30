@@ -6,6 +6,7 @@
 
 #include "IFrameRender.h"
 #include "Timer.h"
+
 #include "ThreadedRendering.h"
 #include "ParallelRendering.h"
 
@@ -15,7 +16,7 @@ private:
 
     enum {
         CPU,
-        GPU
+        ACC
     } selection;
 
     IFrameRender * renderingService;
@@ -25,7 +26,6 @@ private:
     Color* pixels;
     Timer* timer;
 
-    bool cpu = true;
     ThreadedRendering cpuRender;
     ParallelRendering gpuRender;
 

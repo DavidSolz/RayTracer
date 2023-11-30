@@ -4,6 +4,11 @@ OpenGLRenderer::OpenGLRenderer(RenderingContext * _context){
 
     this->context = _context;
 
+    cpuRender.Init(context);
+    gpuRender.Init(context);
+    SetRenderingService(&gpuRender);
+    selection = ACC;
+
     if(!glfwInit()){
         printf("Cannot initialize GLFW \n");
         return;
@@ -25,7 +30,7 @@ OpenGLRenderer::OpenGLRenderer(RenderingContext * _context){
     }
 
     glfwMakeContextCurrent(window);
-    glfwSwapInterval(1);
+    glfwSwapInterval(0);
 
     glOrtho(0, context->width, 0, context->height, 0, context->depth);
 
@@ -40,13 +45,6 @@ OpenGLRenderer::OpenGLRenderer(RenderingContext * _context){
 
     timer = Timer::GetInstance();
 
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    cpuRender.Init(context);
-    gpuRender.Init(context);
-    SetRenderingService(&gpuRender);
-    selection = GPU;
 }
 
 
@@ -84,11 +82,12 @@ void OpenGLRenderer::ProcessInput(){
         selection = CPU;
     }
 
-    if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS && selection != GPU){
+    if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS && selection != ACC){
         fprintf(stdout, "Switching to gpu context.\n");
         SetRenderingService(&gpuRender);
-        selection = GPU;
+        selection = ACC;
     }
+
 }
 
 bool OpenGLRenderer::ShouldClose(){
@@ -110,6 +109,8 @@ void OpenGLRenderer::Update(){
 
     glDrawPixels(context->width, context->height, GL_RGBA, GL_FLOAT, pixels);
 
+    context->frameCounter++;
+
     glfwSwapBuffers(window);
     glfwPollEvents();
 
@@ -121,8 +122,6 @@ void OpenGLRenderer::Update(){
 OpenGLRenderer::~OpenGLRenderer(){
 
     delete[] pixels;
-
-    glDeleteBuffers(1, &context->pbo);
 
     glfwDestroyWindow(window);
     glfwTerminate();
