@@ -30,7 +30,7 @@ OpenGLRenderer::OpenGLRenderer(RenderingContext * _context){
     }
 
     glfwMakeContextCurrent(window);
-    glfwSwapInterval(0);
+    glfwSwapInterval(1);
 
     glOrtho(0, context->width, 0, context->height, 0, context->depth);
 
@@ -50,31 +50,19 @@ OpenGLRenderer::OpenGLRenderer(RenderingContext * _context){
 
 void OpenGLRenderer::ProcessInput(){
 
-    std::unordered_map<int, Vector3> keyMappings = {
-        {GLFW_KEY_R, context->camera.front},
-        {GLFW_KEY_F, context->camera.front * -1.0f},
-        {GLFW_KEY_A, context->camera.right *-1.0f},
-        {GLFW_KEY_D, context->camera.right},
-        {GLFW_KEY_W, context->camera.up},
-        {GLFW_KEY_S, context->camera.up * -1.0f},
+    Vector3 direction = {0, 0, 0};
 
-    };
+    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
+        double currentX, currentY;
 
-    for (auto& [key, direction] : keyMappings) {
-        if (glfwGetKey(window, key) == GLFW_PRESS) {
+        glfwGetCursorPos(window, &currentX, &currentY);
 
-            /*
-                TODO:
-                -fix camera rotation
-                
-            */
+        direction.x = currentX - context->camera.position.x;
+        direction.y = context->camera.position.y - currentY;
 
-            //context->camera.Rotate(10.0f);
-            context->camera.position = context->camera.position + direction * context->camera.movementSpeed * timer->GetDeltaTime();
-
-            context->frameCounter=0;
-        }
+        context->frameCounter=0;
     }
+
 
     if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS && selection != CPU){
         fprintf(stdout, "Switching to cpu context.\n");
@@ -87,6 +75,8 @@ void OpenGLRenderer::ProcessInput(){
         SetRenderingService(&gpuRender);
         selection = ACC;
     }
+
+    context->camera.position = context->camera.position + direction * context->camera.movementSpeed * timer->GetDeltaTime();
 
 }
 

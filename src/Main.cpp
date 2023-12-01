@@ -29,8 +29,9 @@ int main(){
 
     context.spheres.emplace_back(context.sun);
 
-    context.camera.position = Vector3(context.width/2.0f, context.height/2.0f, -700.0f);
+    context.camera.position = Vector3(context.width/2.0f, context.height/2.0f, -900.0f);
     context.camera.aspectRatio = aspectRatio;
+
 
 {
     //Plane
@@ -53,11 +54,31 @@ int main(){
     p.radius = 900.0f * 1/aspectRatio;
 
     p.material.baseColor = {1.0f, 1.0f, 1.0f, 1.0f};
-    p.material.specular = p.material.baseColor;
-    p.material.specularScale = 1.0f;
 
     context.spheres.emplace_back(p);
     p={0};
+
+    //Wall 
+
+    p.position = Vector3(context.width*1.5f, context.height/2.0f, 250.0f);
+    p.radius = 800.0f * 1/aspectRatio;
+
+    p.material.baseColor = {1.0f, 0.0f, 0.0f, 1.0f};
+
+    context.spheres.emplace_back(p);
+    p={0};
+
+    //Wall 
+
+    p.position = Vector3(-500, context.height/2.0f, 250.0f);
+    p.radius = 800.0f * 1/aspectRatio;
+
+    p.material.baseColor = {0.0f, 1.0f, 0.0f, 1.0f};
+    p.material.specular = p.material.baseColor;
+
+    context.spheres.emplace_back(p);
+    p={0};
+
 
     //Spheres
 

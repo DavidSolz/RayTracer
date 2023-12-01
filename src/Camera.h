@@ -11,7 +11,7 @@ struct Camera{
 
     Vector3 position = {0.0f, 0.0f, 0.0f};
 
-    float movementSpeed = 50.0f;
+    float movementSpeed = 1.0f;
     float rotationSpeed = 15.0f;
     float aspectRatio = 1.0f;
     float nearView = 0.1f;

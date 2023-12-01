@@ -122,21 +122,17 @@ float UniformRandom(unsigned int * seed){
     return rho * cos(theta);
 }
 
-struct Vector3 RandomReflection(const struct Vector3 normal, unsigned int *seed){
-    struct Vector3 direction;
-    direction.x = UniformRandom(seed);
-    direction.y = UniformRandom(seed);
-    direction.z = UniformRandom(seed);
-
-    return Normalize(Mult(direction, sign(DotProduct(normal, direction))));
-}
-
 struct Vector3 RandomDirection(unsigned int *seed){
     return Normalize((struct Vector3){
         UniformRandom(seed),
         UniformRandom(seed),
         UniformRandom(seed)
     });
+}
+
+struct Vector3 RandomReflection(const struct Vector3 normal, unsigned int *seed){
+    struct Vector3 direction = RandomDirection(seed);
+    return Mult(direction, sign(DotProduct(normal, direction)));
 }
 
 struct Color AddColors(struct Color colorA, struct Color colorB){
@@ -177,24 +173,6 @@ struct Color ToneColor(struct Color color, float factor) {
     };
 }
 
-struct Color ClampColor(const struct Color color, const float minValue, const float maxValue){
-    return (struct Color){
-        fmax(minValue, fmin(color.R, maxValue)),
-        fmax(minValue, fmin(color.G, maxValue)),
-        fmax(minValue, fmin(color.B, maxValue)),
-        fmax(minValue, fmin(color.A, maxValue))
-    };
-}
-
-struct Color GammaCorrection(const struct Color color, const float factor){
-    return (struct Color){
-        pow(color.R, factor),
-        pow(color.G, factor),
-        pow(color.B, factor),
-        pow(color.A, factor)
-    };
-}
-
 float Intersect(const struct Ray *ray, global const struct Sphere *sphere) {
     struct Vector3 originToSphereCenter = Sub(ray->origin, sphere->position);
 
@@ -218,26 +196,23 @@ struct Vector3 Reflect(struct Vector3 incident, struct Vector3 normal) {
     return Sub(incident, Mult(normal, (2.0f * DotProduct(incident, normal))));
 }
 
-struct Vector3 Refract(struct Vector3 incident, struct Vector3 normal) {
-    return Sub(incident, Mult(normal, (2.0f * DotProduct(incident, normal))));
-}
 
 struct HitInfo FindClosestIntersection(global const struct Sphere* objects, global const int * objects_count, const struct Ray * ray){
-    struct HitInfo info ={0};
+    struct HitInfo info = {0};
     info.distance = INFINITY;
-
-
-    for (int i = 0; i < *objects_count; i++) {
+    
+    for (int i = 0; i < *objects_count; ++i) {
         float distance = Intersect(ray, objects + i);
 
-        if((distance > 0.0f) && (distance < info.distance)){
+        if((distance < info.distance) && (distance>0.0f)){
             info.distance = distance ;
-            info.point = Add(ray->origin, Mult(ray->direction, distance));
+            info.point = Add(ray->origin, Mult(ray->direction, distance * 1.05f));
             info.normal = Normalize(Sub(info.point, objects[i].position));
             info.material = objects[i].material;
         }
 
     }
+    
 
     return info;
 }
@@ -248,7 +223,7 @@ struct Color ComputeColor(struct Ray *ray, global const struct Sphere* objects, 
     struct Color accumulatedColor = {0};
     struct Color tempColor = {1.0f, 1.0f, 1.0f, 1.0f};
 
-    for(int i = 0; i < 10; i++){
+    for(int i = 0; i < 30; ++i){
         struct HitInfo info = FindClosestIntersection(objects, objects_count, ray);
         
         if(info.distance == INFINITY)
@@ -265,9 +240,9 @@ struct Color ComputeColor(struct Ray *ray, global const struct Sphere* objects, 
 
         struct Color emmisionComponent = ToneColor(material->emission, material->emmissionScale );
 
+        float lightStrength = DotProduct(info.normal, ray->direction);
         accumulatedColor = AddColors(accumulatedColor, MixColors(emmisionComponent, tempColor));
-
-        tempColor = MixColors(tempColor, material->baseColor);
+        tempColor = MixColors(tempColor, ToneColor(material->baseColor, lightStrength));
 
     }
 
@@ -301,7 +276,7 @@ global const int *numFrames){
     int height = get_global_size(1);
 
     unsigned int index = y * width + x;
-    unsigned int seed = *numFrames * 93726103484 + index;
+    unsigned int seed = *numFrames * 92037129381 + index ;
 
     struct Vector3 offset = RandomDirection(&seed);
 
@@ -309,13 +284,17 @@ global const int *numFrames){
 
     
     struct Ray ray;
-    ray.origin = camera->position;
+    ray.origin = camera->position; 
     ray.direction = Normalize(Sub(pixelPosition, ray.origin ));
 
-    struct Color finalColor = ComputeColor(&ray, objects, objects_count, &seed);
+    struct Color finalColor = {0};
+
+    for(int i=0; i<10; i++){
+        finalColor = AddColors(finalColor, ComputeColor(&ray, objects, objects_count, &seed));
+    }
 
     float scale = 1.0f / (*numFrames+1);
 
-    pixels[index] =  LerpColor(pixels[index], finalColor, scale);
+    pixels[index] = LerpColor(pixels[index], finalColor, scale);
 }
 
