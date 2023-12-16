@@ -63,7 +63,7 @@ struct Vector3 {
         return Vector3{x/magnitude, y/magnitude, z/magnitude};
     }
 
-};
+} __attribute__((aligned(16)));
 
 
 #endif

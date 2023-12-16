@@ -1,6 +1,6 @@
 #include "OpenGLRenderer.h"
 
-OpenGLRenderer::OpenGLRenderer(RenderingContext * _context){
+OpenGLRenderer::OpenGLRenderer(RenderingContext * _context, const bool& _enableVSync){
 
     this->context = _context;
 
@@ -30,7 +30,7 @@ OpenGLRenderer::OpenGLRenderer(RenderingContext * _context){
     }
 
     glfwMakeContextCurrent(window);
-    glfwSwapInterval(1);
+    glfwSwapInterval(_enableVSync);
 
     glOrtho(0, context->width, 0, context->height, 0, context->depth);
 
@@ -40,6 +40,10 @@ OpenGLRenderer::OpenGLRenderer(RenderingContext * _context){
         fprintf(stderr, "Failed to initialize GLEW\n");
         return;
     }
+
+    fprintf(stdout, "========[ Window Config ]========\n\tResolution : %d x %d\n\tV-Sync : %s\n",
+        context->width, context->height,
+        _enableVSync ? "YES" : "NO");
 
     pixels = new Color[context->width*context->height];
 
@@ -71,7 +75,7 @@ void OpenGLRenderer::ProcessInput(){
     }
 
     if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS && selection != ACC){
-        fprintf(stdout, "Switching to gpu context.\n");
+        fprintf(stdout, "Switching to accelerator context.\n");
         SetRenderingService(&gpuRender);
         selection = ACC;
     }

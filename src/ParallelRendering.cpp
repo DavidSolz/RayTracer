@@ -38,6 +38,7 @@ void ParallelRendering::Init(RenderingContext * _context){
 
     globalRange = cl::NDRange(context->width, context->height);
     localRange = cl::NDRange(16, 16);
+
 }
 
 void ParallelRendering::Render(Color * _pixels){
@@ -49,15 +50,16 @@ void ParallelRendering::Render(Color * _pixels){
     queue.enqueueWriteBuffer(cameraBuffer, CL_FALSE, 0, sizeof(Camera), &context->camera);
     queue.enqueueWriteBuffer(frameCounter, CL_FALSE, 0, sizeof(int), &context->frameCounter);
 
-    queue.enqueueNDRangeKernel(kernel, cl::NullRange, globalRange, localRange);
+    #ifdef __APPLE__
+        queue.enqueueNDRangeKernel(kernel, cl::NullRange, globalRange);
+    #else
+        queue.enqueueNDRangeKernel(kernel, cl::NullRange, globalRange, localRange);
+    #endif
+    
     queue.finish();
 
-    queue.enqueueReadBuffer(pixelBuffer, CL_TRUE, 0, dataSize, _pixels);
+    queue.enqueueReadBuffer(pixelBuffer, CL_FALSE, 0, dataSize, _pixels);
 
-}
-
-ParallelRendering::~ParallelRendering(){
-    //TODO: mem cleaning
 }
 
 cl::Device ParallelRendering::GetDefaultCLDevice(){
@@ -77,11 +79,13 @@ cl::Device ParallelRendering::GetDefaultCLDevice(){
         fprintf(stdout, "\t[%i] : %s\n", i, all_platforms[i].getInfo<CL_PLATFORM_NAME>().c_str());
     }
 
-    fprintf(stdout, "Enter desired platform id : ");
-    scanf("%d", &selectedPlatform);
+    if(all_platforms.size()>1){
+        fprintf(stdout, "Enter desired platform id : ");
+        scanf("%d", &selectedPlatform);
 
-    selectedPlatform = std::max(0, std::min(selectedPlatform, (int)all_platforms.size()-1));
-
+        selectedPlatform = std::max(0, std::min(selectedPlatform, (int)all_platforms.size()-1));
+    }
+    
     std::vector<cl::Device> all_devices;
 
     all_platforms[selectedPlatform].getDevices(CL_DEVICE_TYPE_ALL, &all_devices);
@@ -97,10 +101,12 @@ cl::Device ParallelRendering::GetDefaultCLDevice(){
         fprintf(stdout, "\t[%i] : %s\n", i, all_devices[i].getInfo<CL_DEVICE_NAME>().c_str());
     }
 
-    fprintf(stdout, "Enter desired device id : ");
-    scanf("%d", &selectedDevice);
+    if(all_devices.size()>1){
+        fprintf(stdout, "Enter desired device id : ");
+        scanf("%d", &selectedDevice);
 
-    selectedPlatform = std::max(0, std::min(selectedPlatform, (int)all_platforms.size()-1));
+        selectedDevice = std::max(0, std::min(selectedDevice, (int)all_devices.size()-1));
+    }
 
     auto const & device = all_devices[selectedDevice];
 

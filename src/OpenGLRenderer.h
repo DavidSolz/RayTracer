@@ -32,7 +32,7 @@ private:
     void ProcessInput();
 
 public:
-    OpenGLRenderer(RenderingContext * _context);
+    OpenGLRenderer(RenderingContext * _context, const bool& _enableVSync);
     bool ShouldClose();
     void SetRenderingService(IFrameRender * _service);
     void Update();

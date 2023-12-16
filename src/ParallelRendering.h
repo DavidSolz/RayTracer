@@ -37,7 +37,7 @@ class ParallelRendering : public IFrameRender {
 
     cl::NDRange globalRange;
     cl::NDRange localRange;
-
+    
     size_t dataSize;
     size_t objectBufferSize;
 
@@ -47,7 +47,6 @@ class ParallelRendering : public IFrameRender {
     cl::Buffer objectsCountBuffer;
     cl::Buffer cameraBuffer;
 
-
     cl::Device GetDefaultCLDevice();
     cl::Program FetchProgram();
 
@@ -56,8 +55,6 @@ public:
     void Init(RenderingContext * _context);
 
     void Render(Color * _pixels);
-
-    ~ParallelRendering();
 
 };
 #endif

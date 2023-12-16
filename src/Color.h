@@ -59,6 +59,6 @@ struct Color {
         };
     }
 
-};
+} __attribute__((aligned(16)));
 
 #endif

@@ -99,9 +99,9 @@ int main(){
     p.position = Vector3(context.width/2.0f+50.0f, context.height/2.0f-50.0f, -300.0f);
     p.radius = 75.0f * 1/aspectRatio;
 
-    p.material.baseColor = {1.0f, 1.0f, 1.0f, 1.0f};
-    p.material.specular = {1.0f, 1.0f, 1.0f, 1.0f};
-    p.material.smoothness = 1.0f;
+    p.material.baseColor = {1.0f, 1.0f, 0.4f, 1.0f};
+    p.material.specular = {1.0f, 1.0f, 0.4f, 1.0f};
+    p.material.smoothness = 0.6f;
     p.material.diffusionScale = 1.0f;
     p.material.specularScale = 0.5f;
 
@@ -132,7 +132,6 @@ int main(){
     p={0};
 
 }
-
 
 /*
 {
@@ -173,7 +172,7 @@ int main(){
 
 //Objects setup
 
-    OpenGLRenderer renderer(&context);
+    OpenGLRenderer renderer(&context, false);
 
     Timer *timer = Timer::GetInstance();
 
@@ -187,5 +186,5 @@ int main(){
 
     fprintf(stdout, "\nProgram exited succesfully.\n");
 
-    return 0;
+    return EXIT_SUCCESS;
 }
