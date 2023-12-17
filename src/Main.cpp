@@ -1,17 +1,18 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
-#include <thread>
 
 #include "OpenGLRenderer.h"
+#include "MaterialBuilder.h"
 
-int main(){
+int main(int argc, char* argv[]){
 
     srand(time(NULL));
 
-//Context setup
+
+//Objects setup
 
     RenderingContext context;
+    MaterialBuilder materialBuilder(&context);
+
+//Context setup
 
     context.width = 1000;
     context.height = 1000;
@@ -22,10 +23,10 @@ int main(){
     context.sun.position = Vector3(context.width/2.0f, context.height, -context.depth);
     context.sun.radius = 300.0f * 1/aspectRatio ;
 
-    context.sun.material = {0};
-    context.sun.material.emission = {1.0f, 1.0f , 1.0f, 1.0f};
-    context.sun.material.emmissionScale = 1.0f;
-    context.sun.material.specularScale = 1.0f;
+    context.sun.materialID = materialBuilder
+                            .SetEmissionColor({1.0f, 1.0f, 1.0f, 1.0f})
+                            ->SetEmission(1.0f)
+                            ->Build();
 
     context.spheres.emplace_back(context.sun);
 
@@ -41,43 +42,44 @@ int main(){
     p.position = Vector3(context.width/2.0f, -350.0f, 400.0f);
     p.radius = 1000.0f * 1/aspectRatio;
 
-    p.material.baseColor = {0.5f, 0.0f, 1.0f, 1.0f};
-    p.material.specular = {0.5f, 0.0f, 1.0f, 1.0f};
-    p.material.specularScale = 1.0f;
+    p.materialID = materialBuilder
+                    .SetBaseColor({0.5f, 0.0f, 1.0f, 1.0f})
+                    ->SetSpecularColor({0.5f, 0.0f, 1.0f, 1.0f})
+                    ->Build();
 
     context.spheres.emplace_back(p);
-    p={0};
 
     //Wall 
 
-    p.position = Vector3(context.width/2.0f, context.height/2.0f, 900.0f);
-    p.radius = 900.0f * 1/aspectRatio;
+    // p.position = Vector3(context.width/2.0f, context.height/2.0f, 900.0f);
+    // p.radius = 900.0f * 1/aspectRatio;
 
-    p.material.baseColor = {1.0f, 1.0f, 1.0f, 1.0f};
+    // p.material.baseColor = {1.0f, 1.0f, 1.0f, 1.0f};
 
-    context.spheres.emplace_back(p);
-    p={0};
-
+    // context.spheres.emplace_back(p);
+    
     //Wall 
 
     p.position = Vector3(context.width*1.5f, context.height/2.0f, 250.0f);
     p.radius = 800.0f * 1/aspectRatio;
 
-    p.material.baseColor = {1.0f, 0.0f, 0.0f, 1.0f};
+    p.materialID = materialBuilder
+                    .SetBaseColor({1.0f, 0.0f, 0.0f, 1.0f})
+                    ->Build();
 
     context.spheres.emplace_back(p);
-    p={0};
 
     //Wall 
 
     p.position = Vector3(-500, context.height/2.0f, 250.0f);
     p.radius = 800.0f * 1/aspectRatio;
 
-    p.material.baseColor = {0.0f, 1.0f, 0.0f, 1.0f};
-    p.material.specular = p.material.baseColor;
+    p.materialID = materialBuilder
+                    .SetBaseColor({0.0f, 1.0f, 0.0f, 1.0f})
+                    ->SetSpecularColor({0.0f, 1.0f, 0.0f, 1.0f})
+                    ->Build();
 
     context.spheres.emplace_back(p);
-    p={0};
 
 
     //Spheres
@@ -86,50 +88,50 @@ int main(){
     p.position = Vector3(context.width/4.0f+50.0f, context.height/2.0f, -200.0f);
     p.radius = 50.0f * 1/aspectRatio;
 
-    p.material.baseColor = {0.0f, 1.0f, 0.0f, 1.0f};
-    p.material.specular = {0.0f, 1.0f, 0.0f, 1.0f};
-    p.material.diffusionScale = 0.2f;
-    p.material.specularScale = 1.0f;
-    
+    p.materialID = materialBuilder
+                    .SetBaseColor({0.0f, 1.0f, 0.0f, 1.0f})
+                    ->SetSpecularColor({0.0f, 1.0f, 0.0f, 1.0f})
+                    ->SetDiffusion(0.2f)
+                    ->Build();
+
 
     context.spheres.emplace_back(p);
-    p={0};
 
     //Mirror
     p.position = Vector3(context.width/2.0f+50.0f, context.height/2.0f-50.0f, -300.0f);
     p.radius = 75.0f * 1/aspectRatio;
 
-    p.material.baseColor = {1.0f, 1.0f, 0.4f, 1.0f};
-    p.material.specular = {1.0f, 1.0f, 0.4f, 1.0f};
-    p.material.smoothness = 0.6f;
-    p.material.diffusionScale = 1.0f;
-    p.material.specularScale = 0.5f;
+    p.materialID = materialBuilder
+                    .SetBaseColor({1.0f, 1.0f, 0.4f, 1.0f})
+                    ->SetSpecularColor({1.0f, 1.0f, 0.4f, 1.0f})
+                    ->SetSmoothness(0.6f)
+                    ->SetDiffusion(1.0f)
+                    ->Build();
 
     context.spheres.emplace_back(p);
-    p={0};
 
     //Blue
     p.position = Vector3(context.width/2.0f + context.width/4.0f, context.height/2.0f, -200.0f);
     p.radius = 100.0f * 1/aspectRatio;
 
-    p.material.baseColor = {0.0f, 0.0f, 1.0f, 1.0f};
-    p.material.specular = {0.0f, 0.0f, 1.0f, 1.0f};
-    p.material.specularScale = 1.0f;
+    p.materialID = materialBuilder
+                    .SetBaseColor({0.0f, 0.0f, 1.0f, 1.0f})
+                    ->SetSpecularColor({0.0f, 0.0f, 1.0f, 1.0f})
+                    ->Build();
 
     context.spheres.emplace_back(p);
-    p={0};
 
     //Light
     p.position = Vector3(context.width/2.0f-70.0f, context.height/2.0f+60.0f, -150.0f);
     p.radius = 80.0f * 1/aspectRatio;
 
-    p.material.emission = {1.0f, 0.0f, 0.0f, 1.0f};
-    p.material.specular = {1.0f, 0.0f, 0.0f, 1.0f};
-    p.material.emmissionScale = 1.0f;
-    p.material.specularScale = 1.0f;
+    p.materialID = materialBuilder
+                    .SetEmissionColor({1.0f, 0.0f, 0.0f, 1.0f})
+                    ->SetSpecularColor({1.0f, 0.0f, 0.0f, 1.0f})
+                    ->SetEmission(1.0f)
+                    ->Build();
 
     context.spheres.emplace_back(p);
-    p={0};
 
 }
 
@@ -170,11 +172,7 @@ int main(){
 }
 */
 
-//Objects setup
-
-    OpenGLRenderer renderer(&context, false);
-
-    Timer *timer = Timer::GetInstance();
+OpenGLRenderer renderer(&context);
 
 //Main loop
 

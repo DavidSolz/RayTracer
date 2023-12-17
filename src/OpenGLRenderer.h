@@ -32,11 +32,12 @@ private:
     void ProcessInput();
 
 public:
-    OpenGLRenderer(RenderingContext * _context, const bool& _enableVSync);
+    OpenGLRenderer(RenderingContext * _context, const bool& _enableVSync = true);
     bool ShouldClose();
     void SetRenderingService(IFrameRender * _service);
     void Update();
     ~OpenGLRenderer();
+
 };
 
 #endif

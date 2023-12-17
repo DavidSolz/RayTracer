@@ -1,4 +1,4 @@
-//Structures
+// Structures
 
 struct Material {
     float4 baseColor;
@@ -7,10 +7,8 @@ struct Material {
     float4 emission;
     float smoothness;
     float emmissionScale;
-    float specularScale;
     float diffusionScale;
-    float transparencyScale;
-};
+} ;
 
 struct Ray{
     float3 origin;
@@ -20,14 +18,14 @@ struct Ray{
 struct Sphere{
     float radius;
     float3 position;
-    struct Material material;
+    unsigned int materialID;
 };
 
 struct HitInfo{
     float distance;
     float3 point;
     float3 normal;
-    struct Material material;
+    unsigned int materialID;
 };
 
 struct Camera{
@@ -46,21 +44,19 @@ struct Camera{
     float fov;
 };
 
-//Functions
+// Functions
 
-//WangHash
+// PCG_Hash
 float Rand(unsigned int * seed){
-    *seed = (*seed ^ 61) ^ (*seed >>16); 
-    *seed*=9;
-    *seed= *seed ^ (*seed>>4);
-    *seed *= 0x27d4eb2d;
-    *seed = *seed ^ (*seed>>15);
+    unsigned int state = *seed *747796405u + 2891336453u;
+    unsigned int word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
+    *seed = (word>>22u) ^ word;
     return *seed/4294967295.0f;
 }
 
-//Uniform distrubution
+// Uniform distrubution
 float UniformRandom(unsigned int * seed){
-    float theta = 2 * 3.1415926f * Rand(seed);
+    float theta = 2 * M_PI * Rand(seed);
     float rho = sqrt(-2 * log(Rand(seed)));
     return rho * cos(theta);
 }
@@ -93,15 +89,9 @@ float Intersect(const struct Ray *ray, global const struct Sphere *sphere) {
     return fmin(t1, t2);
 }
 
-float3 LerpPoint(const float3 * begin, const float3 * end, float t){
-    t = fmax(0.0f, fmin(t, 1.0f));
-    return *begin + (*end - *begin) * t;
-}
-
 float3 Reflect(const float3 * incident, const float3 * normal) {
     return *incident - *normal * 2.0f * dot(*incident, *normal);
 }
-
 
 struct HitInfo FindClosestIntersection(global const struct Sphere* objects, global const int * objects_count, const struct Ray * ray){
     struct HitInfo info = {0};
@@ -112,10 +102,10 @@ struct HitInfo FindClosestIntersection(global const struct Sphere* objects, glob
 
         if((distance < info.distance) && (distance>0.0f)){
             info.distance = distance ;
-            info.point = ray->origin + ray->direction * distance * 1.05f;
+            info.point = ray->origin + ray->direction * distance;
             float3 objPos = (float3)(objects[i].position.x, objects[i].position.y, objects[i].position.z);
             info.normal = normalize(info.point - objPos);
-            info.material = objects[i].material;
+            info.materialID = objects[i].materialID;
         }
 
     }
@@ -125,54 +115,59 @@ struct HitInfo FindClosestIntersection(global const struct Sphere* objects, glob
 }
 
 
-float4 ComputeColor(struct Ray *ray, global const struct Sphere* objects, global const int * objects_count, unsigned int *seed) {
+float4 ComputeColor(struct Ray *ray, global const struct Sphere* objects, global const int * objects_count, global const struct Material* materials,  unsigned int *seed) {
 
-    float4 accumulatedColor = 0;
-    float4 tempColor = (float4)(1.0f, 1.0f, 1.0f, 1.0f);
+    float4 accumulatedColor = 0.0f;
+    float4 colorMask = 1.0f;
+    float intensity = 1.0f;
 
     for(int i = 0; i < 10; ++i){
         struct HitInfo info = FindClosestIntersection(objects, objects_count, ray);
         
-        if(info.distance == INFINITY)
+        if(info.distance == INFINITY){
+            accumulatedColor += (float4)(0.6f, 0.7f, 0.9f, 1.0f) * intensity;
             break;
-        
+        }
 
         ray->origin = info.point;
 
-        struct Material * material = &info.material;
+        struct Material material = materials[info.materialID];
 
-        float3 diffusionDir = normalize(RandomReflection(&info.normal, seed) + info.normal);
-        float3 specularDir = Reflect(&ray->direction, &info.normal);
-        
-        ray->direction = LerpPoint(&diffusionDir, &specularDir, material->smoothness);
+        float3 diffusion = normalize(RandomReflection(&info.normal, seed) + info.normal);
+        float3 reflection = Reflect(&ray->direction, &info.normal);
 
-        float4 emmisionComponent = material->emission * material->emmissionScale;
-        float4 diffuseComponent = material->diffuse * dot(info.normal, diffusionDir) * material->diffusionScale;
+        ray->direction = diffusion + (reflection - diffusion) * material.smoothness;
 
+        float4 emmisionComponent = material.emission * material.emmissionScale;
+        float4 diffuseComponent = material.diffuse * material.diffusionScale;
 
-        accumulatedColor += (emmisionComponent * tempColor);
-        accumulatedColor += (diffuseComponent * tempColor);
-        tempColor *= material->baseColor;
+        accumulatedColor += (emmisionComponent * colorMask);
+        accumulatedColor += (diffuseComponent * colorMask);
+        colorMask *= material.baseColor * intensity;
+        intensity *= 0.1f;
     }
 
     return accumulatedColor;
 }
 
 float3 CalculatePixelPosition(const int x, const int y, const int width, const int height, global const struct Camera * camera){
-    float tanHalfFOV = tan(radians(camera->fov / 2.0));
+    float tanHalfFOV = tan(radians(camera->fov) * 0.5f);
     float cameraX = (2.0 * x / width - 1.0f) * camera->aspectRatio * tanHalfFOV * camera->near;
     float cameraY = (2.0 * y / height - 1.0f) * tanHalfFOV * camera->near;
     
     return camera->position + camera->front * camera->near + camera->right * cameraX + camera->up * cameraY;
 }
 
-//Main
+// Main
 
-void kernel RenderGraphics(global float4* pixels,
-global struct Sphere* objects,
+void kernel RenderGraphics(
+global float4* pixels,
+global struct Sphere * objects,
 global const int * objects_count,
+global struct Material * materials,
 global const struct Camera * camera,
-global const int *numFrames){
+global const int *numFrames
+){
 
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -181,7 +176,7 @@ global const int *numFrames){
     int height = get_global_size(1);
 
     unsigned int index = y * width + x;
-    unsigned int seed = *numFrames * 92037129381 + index ;
+    unsigned int seed = (*numFrames<<16) ^ (*numFrames >>13) + index ;
 
     float3 offset = RandomDirection(&seed);
 
@@ -193,7 +188,9 @@ global const int *numFrames){
 
     float4 finalColor = 0;
 
-    finalColor = ComputeColor(&ray, objects, objects_count, &seed);
+    // Monte - Carlo path tracing have issue with glaring (dark and light spots on consistent color)
+
+    finalColor = ComputeColor(&ray, objects, objects_count, materials, &seed);
 
     float scale = 1.0f / (*numFrames+1);
 

@@ -59,7 +59,7 @@ Color ThreadedRendering::ComputeColor(struct Ray& ray, unsigned int& seed) {
         if(info.distance < INFINITY){
             ray.origin = info.point;
 
-            Material * material = &info.material;
+            Material * material = &context->materials[info.materialID];
 
             Vector3 diffusionDir = (info.normal + RandomReflection(info.normal, seed)).Normalize();
             Vector3 specularDir = Reflect(ray.direction, info.normal);
@@ -94,7 +94,7 @@ HitInfo ThreadedRendering::FindClosestIntersection(const Ray& ray){
             info.distance = distance;
             info.point = ray.origin + (Vector3)ray.direction * distance;
             info.normal = (info.point -  context->spheres[i].position).Normalize();
-            info.material = context->spheres[i].material;
+            info.materialID = context->spheres[i].materialID;
         }
     }
 

@@ -1,14 +1,9 @@
 #ifndef RENDERINGCONTEXT_H
 #define RENDERINGCONTEXT_H
 
-
-#ifdef __APPLE__
-    #include <GL/glew.h>
-#else
-    #include <GL/glew.h>
-#endif
-
+#include <GL/glew.h>
 #include <GLFW/glfw3.h>
+
 #include <vector>
 
 #include "Vector3.h"
@@ -22,12 +17,13 @@ struct RenderingContext {
     int depth;
 
     std::vector<Sphere> spheres;
+    std::vector<Material> materials;
+
     Camera camera;
     Sphere sun;
 
     unsigned int frameCounter;
 
-    GLuint pbo;
 
 };
 

@@ -40,11 +40,13 @@ class ParallelRendering : public IFrameRender {
     
     size_t dataSize;
     size_t objectBufferSize;
+    size_t materialBufferSize;
 
     cl::Buffer pixelBuffer;
     cl::Buffer frameCounter;
     cl::Buffer objectBuffer;
     cl::Buffer objectsCountBuffer;
+    cl::Buffer materialBuffer;
     cl::Buffer cameraBuffer;
 
     cl::Device GetDefaultCLDevice();

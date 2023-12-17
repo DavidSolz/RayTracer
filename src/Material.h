@@ -2,6 +2,7 @@
 #define MATERIAL_H
 
 #include "Color.h"
+#include <stdint.h>
 
 struct Material {
     struct Color baseColor;
@@ -10,9 +11,8 @@ struct Material {
     struct Color emission;
     float smoothness;
     float emmissionScale;
-    float specularScale;
     float diffusionScale;
-    float transparencyScale;
+    float temporary;
 };
 
 

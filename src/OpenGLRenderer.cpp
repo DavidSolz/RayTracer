@@ -6,6 +6,7 @@ OpenGLRenderer::OpenGLRenderer(RenderingContext * _context, const bool& _enableV
 
     cpuRender.Init(context);
     gpuRender.Init(context);
+
     SetRenderingService(&gpuRender);
     selection = ACC;
 
@@ -32,6 +33,7 @@ OpenGLRenderer::OpenGLRenderer(RenderingContext * _context, const bool& _enableV
     glfwMakeContextCurrent(window);
     glfwSwapInterval(_enableVSync);
 
+    glLoadIdentity();
     glOrtho(0, context->width, 0, context->height, 0, context->depth);
 
     if (glewInit() != GLEW_OK) {
@@ -45,7 +47,7 @@ OpenGLRenderer::OpenGLRenderer(RenderingContext * _context, const bool& _enableV
         context->width, context->height,
         _enableVSync ? "YES" : "NO");
 
-    pixels = new Color[context->width*context->height];
+    pixels = new Color[context->width * context->height];
 
     timer = Timer::GetInstance();
 

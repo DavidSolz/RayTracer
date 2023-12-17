@@ -8,7 +8,7 @@ struct HitInfo{
     float distance;
     struct Vector3 point;
     struct Vector3 normal;
-    struct Material material;
+    uint32_t materialID;
 };
 
 #endif

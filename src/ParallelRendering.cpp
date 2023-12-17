@@ -25,6 +25,9 @@ void ParallelRendering::Init(RenderingContext * _context){
     objectBufferSize = sizeof(Sphere)*context->spheres.size();
     objectBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, objectBufferSize);
 
+    materialBufferSize = sizeof(Material) * context->materials.size();
+    materialBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, materialBufferSize);
+
     objectsCountBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, sizeof(int));
 
     cameraBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, sizeof(Camera));
@@ -33,8 +36,9 @@ void ParallelRendering::Init(RenderingContext * _context){
     kernel.setArg(0, pixelBuffer);
     kernel.setArg(1, objectBuffer);
     kernel.setArg(2, objectsCountBuffer);
-    kernel.setArg(3, cameraBuffer);
-    kernel.setArg(4, frameCounter);
+    kernel.setArg(3, materialBuffer);
+    kernel.setArg(4, cameraBuffer);
+    kernel.setArg(5, frameCounter);
 
     globalRange = cl::NDRange(context->width, context->height);
     localRange = cl::NDRange(16, 16);
@@ -47,6 +51,7 @@ void ParallelRendering::Render(Color * _pixels){
 
     queue.enqueueWriteBuffer(objectBuffer, CL_FALSE, 0, objectBufferSize, context->spheres.data());
     queue.enqueueWriteBuffer(objectsCountBuffer, CL_FALSE, 0, sizeof(int), &objCount);
+    queue.enqueueWriteBuffer(materialBuffer, CL_FALSE, 0, materialBufferSize, context->materials.data());
     queue.enqueueWriteBuffer(cameraBuffer, CL_FALSE, 0, sizeof(Camera), &context->camera);
     queue.enqueueWriteBuffer(frameCounter, CL_FALSE, 0, sizeof(int), &context->frameCounter);
 
@@ -67,7 +72,7 @@ cl::Device ParallelRendering::GetDefaultCLDevice(){
 
     cl::Platform::get(&all_platforms);
 
-    if(all_platforms.size()<1){
+    if(all_platforms.size()==0){
         fprintf(stderr, "No available platforms. \n");
         exit(-1);
     }
@@ -84,13 +89,15 @@ cl::Device ParallelRendering::GetDefaultCLDevice(){
         scanf("%d", &selectedPlatform);
 
         selectedPlatform = std::max(0, std::min(selectedPlatform, (int)all_platforms.size()-1));
+    }else{
+        fprintf(stdout, "> Selected default platform.\n");
     }
     
     std::vector<cl::Device> all_devices;
 
     all_platforms[selectedPlatform].getDevices(CL_DEVICE_TYPE_ALL, &all_devices);
 
-    if(all_devices.size()<1){
+    if(all_devices.size()==0){
         fprintf(stderr, "No available devices. \n");
         exit(-1);
     }
@@ -106,6 +113,8 @@ cl::Device ParallelRendering::GetDefaultCLDevice(){
         scanf("%d", &selectedDevice);
 
         selectedDevice = std::max(0, std::min(selectedDevice, (int)all_devices.size()-1));
+    }else{
+        fprintf(stdout, "> Selected default device.\n");
     }
 
     auto const & device = all_devices[selectedDevice];
