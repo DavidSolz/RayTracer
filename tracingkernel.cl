@@ -10,14 +10,25 @@ struct Material {
     float diffusionScale;
 } ;
 
+enum SpatialType{
+    SPHERE,
+    PLANE,
+    DISK,
+    CUBE,
+    CYLINDER
+};
+
 struct Ray{
     float3 origin;
     float3 direction;
 };
 
-struct Sphere{
+struct Object{
+    enum SpatialType type;
     float radius;
     float3 position;
+    float3 normal;
+    float3 maxPos;
     unsigned int materialID;
 };
 
@@ -48,10 +59,9 @@ struct Camera{
 
 // PCG_Hash
 float Rand(unsigned int * seed){
-    unsigned int state = *seed *747796405u + 2891336453u;
-    unsigned int word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
-    *seed = (word>>22u) ^ word;
-    return *seed/4294967295.0f;
+    *seed = *seed *747796405u + 2891336453u;
+    unsigned int word = ((*seed >> ((*seed >> 28u) + 4u)) ^ *seed) * 277803737u;
+    return ((word>>22u) ^ word)/(float)UINT_MAX;
 }
 
 // Uniform distrubution
@@ -63,9 +73,9 @@ float UniformRandom(unsigned int * seed){
 
 float3 RandomDirection(unsigned int *seed){
     return normalize((float3)(
-        UniformRandom(seed),
-        UniformRandom(seed),
-        UniformRandom(seed)
+        2 * UniformRandom(seed) - 1,
+        2 * UniformRandom(seed) - 1,
+        2 * UniformRandom(seed) - 1
     ));
 }
 
@@ -74,12 +84,11 @@ float3 RandomReflection(float3 * normal, unsigned int *seed){
     return direction * sign(dot(*normal, direction));
 }
 
-float Intersect(const struct Ray *ray, global const struct Sphere *sphere) {
-    float3 spherePos = (float3)(sphere->position.x, sphere->position.y, sphere->position.z);
-    float3 originToSphereCenter = ray->origin - spherePos;
+float IntersectSphere(const struct Ray *ray, global const struct Object *object) {
+    float3 originToSphereCenter = ray->origin - object->position;
 
     float b = dot(originToSphereCenter, ray->direction);
-    float c = dot(originToSphereCenter, originToSphereCenter) - sphere->radius * sphere->radius;
+    float c = dot(originToSphereCenter, originToSphereCenter) - object->radius * object->radius;
     float delta = b * b - c;
 
     float sqrtDelta =  sqrt(delta);
@@ -89,22 +98,116 @@ float Intersect(const struct Ray *ray, global const struct Sphere *sphere) {
     return fmin(t1, t2);
 }
 
+float IntersectPlane(const struct Ray *ray, global const struct Object *object) {
+    
+    float d = dot(object->position, -object->normal);
+    float rayToPlane = dot(ray->origin, object->normal);
+
+    return (rayToPlane - d) / dot(ray->direction, object->normal);
+}
+
+float IntersectDisk(const struct Ray *ray, global const struct Object *object) {
+    
+    float t = IntersectPlane(ray, object);
+
+    float3 p = ray->origin + ray->direction * t;
+    float3 v = p - object->position;
+    float d2 = dot(v, v);
+
+    return (d2 <= object->radius * object->radius) * t;
+}
+
+/*
+
+float IntersectCube(const struct Ray *ray, global const struct Object *object) {
+
+    float3 inverseDir = 1.0f / ray->direction;
+
+    float tMinX = (object->position.x - ray->origin.x) * inverseDir.x;
+    float tMaxX = (object->maxPos.x - ray->origin.x) * inverseDir.x;
+
+    float tMin = fmin(tMinX, tMaxX);
+    float tMax = fmax(tMinX, tMaxX);
+
+    float tMinY = (object->position.y - ray->origin.y) * inverseDir.y;
+    float tMaxY = (object->maxPos.y - ray->origin.y) * inverseDir.y;
+
+    tMin = fmax(tMin, fmin(tMinY, tMaxY));
+    tMax = fmin(tMax, fmax(tMinY, tMaxY));
+
+    float tMinZ = (object->position.z - ray->origin.z) * inverseDir.z;
+    float tMaxZ = (object->maxPos.z - ray->origin.z) * inverseDir.z;
+
+    tMin = fmax(tMin, fmin(tMinZ, tMaxZ));
+    tMax = fmin(tMax, fmax(tMinZ, tMaxZ));
+
+
+    return (tMax >= tMin && tMin > 0.0f) * tMin ;
+
+}
+
+*/
+
+
+float IntersectCube(const struct Ray *ray, global const struct Object *object) {
+
+    float3 inverseDir = 1.0f / ray->direction;
+
+    float tMinX = (object->position.x - ray->origin.x) * inverseDir.x;
+    float tMaxX = (object->maxPos.x - ray->origin.x) * inverseDir.x;
+
+    float tMin = fmin(tMinX, tMaxX);
+    float tMax = fmax(tMinX, tMaxX);
+
+    float tMinY = (object->position.y - ray->origin.y) * inverseDir.y;
+    float tMaxY = (object->maxPos.y - ray->origin.y) * inverseDir.y;
+
+    tMin = fmax(tMin, fmin(tMinY, tMaxY));
+    tMax = fmin(tMax, fmax(tMinY, tMaxY));
+
+    float tMinZ = (object->position.z - ray->origin.z) * inverseDir.z;
+    float tMaxZ = (object->maxPos.z - ray->origin.z) * inverseDir.z;
+
+    tMin = fmax(tMin, fmin(tMinZ, tMaxZ));
+    tMax = fmin(tMax, fmax(tMinZ, tMaxZ));
+
+
+    return (tMax >= tMin && tMin > 0.0f) * tMin ;
+
+}
+
+
 float3 Reflect(const float3 * incident, const float3 * normal) {
     return *incident - *normal * 2.0f * dot(*incident, *normal);
 }
 
-struct HitInfo FindClosestIntersection(global const struct Sphere* objects, global const int * objects_count, const struct Ray * ray){
+struct HitInfo FindClosestIntersection(global const struct Object* objects, global const int * numObject, const struct Ray * ray){
     struct HitInfo info = {0};
     info.distance = INFINITY;
     
-    for (int i = 0; i < *objects_count; ++i) {
-        float distance = Intersect(ray, objects + i);
+    for (int i = 0; i < *numObject; ++i) {
+
+        float distance = INFINITY;
+
+        switch(objects[i].type){
+            case CUBE:
+                distance = IntersectCube(ray, objects + i);
+                break;
+            case PLANE:
+                distance = IntersectPlane(ray, objects + i);
+                break;
+            case DISK:
+                distance = IntersectDisk(ray, objects + i);
+                break;
+            default:
+                distance = IntersectSphere(ray, objects + i);
+        }
+
 
         if((distance < info.distance) && (distance>0.0f)){
             info.distance = distance ;
-            info.point = ray->origin + ray->direction * distance;
-            float3 objPos = (float3)(objects[i].position.x, objects[i].position.y, objects[i].position.z);
-            info.normal = normalize(info.point - objPos);
+            info.point = ray->origin + ray->direction * distance * 1.05f;
+            info.normal = normalize(info.point - objects[i].position);
             info.materialID = objects[i].materialID;
         }
 
@@ -115,36 +218,36 @@ struct HitInfo FindClosestIntersection(global const struct Sphere* objects, glob
 }
 
 
-float4 ComputeColor(struct Ray *ray, global const struct Sphere* objects, global const int * objects_count, global const struct Material* materials,  unsigned int *seed) {
+float4 ComputeColor(struct Ray *ray, global const struct Object* objects, global const int * numObject, global const struct Material* materials,  unsigned int *seed) {
 
     float4 accumulatedColor = 0.0f;
     float4 colorMask = 1.0f;
     float intensity = 1.0f;
 
     for(int i = 0; i < 10; ++i){
-        struct HitInfo info = FindClosestIntersection(objects, objects_count, ray);
+        struct HitInfo info = FindClosestIntersection(objects, numObject, ray);
         
         if(info.distance == INFINITY){
             accumulatedColor += (float4)(0.6f, 0.7f, 0.9f, 1.0f) * intensity;
             break;
         }
 
-        ray->origin = info.point;
+            ray->origin = info.point;
 
-        struct Material material = materials[info.materialID];
+            struct Material material = materials[info.materialID];
 
-        float3 diffusion = normalize(RandomReflection(&info.normal, seed) + info.normal);
-        float3 reflection = Reflect(&ray->direction, &info.normal);
+            float3 diffusion = normalize(RandomReflection(&info.normal, seed) + info.normal);
+            float3 reflection = Reflect(&ray->direction, &info.normal);
 
-        ray->direction = diffusion + (reflection - diffusion) * material.smoothness;
+            ray->direction = diffusion + (reflection - diffusion) * material.smoothness;
 
-        float4 emmisionComponent = material.emission * material.emmissionScale;
-        float4 diffuseComponent = material.diffuse * material.diffusionScale;
+            float4 emmisionComponent = material.emission * material.emmissionScale ;
+            float4 diffuseComponent = material.diffuse * material.diffusionScale;
 
-        accumulatedColor += (emmisionComponent * colorMask);
-        accumulatedColor += (diffuseComponent * colorMask);
-        colorMask *= material.baseColor * intensity;
-        intensity *= 0.1f;
+            accumulatedColor += emmisionComponent * colorMask;
+            accumulatedColor += diffuseComponent * colorMask;
+            colorMask *= material.baseColor * dot(ray->direction, info.normal);
+            intensity *= 0.1f;
     }
 
     return accumulatedColor;
@@ -162,8 +265,8 @@ float3 CalculatePixelPosition(const int x, const int y, const int width, const i
 
 void kernel RenderGraphics(
 global float4* pixels,
-global struct Sphere * objects,
-global const int * objects_count,
+global struct Object * objects,
+global const int * numObject,
 global struct Material * materials,
 global const struct Camera * camera,
 global const int *numFrames
@@ -178,6 +281,7 @@ global const int *numFrames
     unsigned int index = y * width + x;
     unsigned int seed = (*numFrames<<16) ^ (*numFrames >>13) + index ;
 
+
     float3 offset = RandomDirection(&seed);
 
     float3 pixelPosition = CalculatePixelPosition(x + offset.x - 0.5f, y + offset.y - 0.5f, width, height, camera);
@@ -186,14 +290,12 @@ global const int *numFrames
     ray.origin = camera->position;
     ray.direction = normalize(pixelPosition - ray.origin );
 
-    float4 finalColor = 0;
-
     // Monte - Carlo path tracing have issue with glaring (dark and light spots on consistent color)
-
-    finalColor = ComputeColor(&ray, objects, objects_count, materials, &seed);
+    
+    float4 finalColor = ComputeColor(&ray, objects, numObject, materials, &seed);
 
     float scale = 1.0f / (*numFrames+1);
-
+    
     pixels[index] = pixels[index] + (finalColor - pixels[index]) * scale;
 }
 

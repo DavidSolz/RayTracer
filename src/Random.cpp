@@ -1,12 +1,9 @@
 #include "Random.h"
 
-
-
 float Random::Rand(unsigned int& seed){
-    seed = seed * 747796405 + 2891336453;
-    unsigned int result = ((seed >>((seed>>28u)+4u)) ^ seed) * 277803737;
-    result = (result>>22)^result;
-    return result/4294967295.0f;
+    seed = seed *747796405u + 2891336453u;
+    unsigned int word = ((seed >> ((seed >> 28u) + 4u)) ^ seed) * 277803737u;
+    return ((word>>22u) ^ word)/(float)UINT_MAX;
 }
 
 float Random::UniformRandom(unsigned int& seed){

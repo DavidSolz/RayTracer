@@ -42,15 +42,29 @@ MaterialBuilder * MaterialBuilder::SetDiffusion(const float & _factor){
 
 uint32_t MaterialBuilder::Build(){
 
+    uint32_t mostSimilar = FindSimilarMaterial();
+
+
     context->materials.emplace_back(temporaryMaterial);
     temporaryMaterial = {0};
     return context->materials.size()-1;
-}
-
-
-Material * MaterialBuilder::FindTheMostSimilar(){
 
     //TODO
 
-    return NULL;
+}
+
+
+uint32_t MaterialBuilder::FindSimilarMaterial(){
+
+    for(int i=0; i < context->materials.size(); i++){
+
+        float difference = Material::Difference(context->materials[i], temporaryMaterial);
+
+        if(difference < EPSILON){
+            return i;
+        }
+
+    }
+
+    return UINT32_MAX;
 }

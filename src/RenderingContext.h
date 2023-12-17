@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "Vector3.h"
-#include "Sphere.h"
+#include "Object.h"
 #include "Camera.h"
 
 struct RenderingContext {
@@ -16,12 +16,10 @@ struct RenderingContext {
     int height;
     int depth;
 
-    std::vector<Sphere> spheres;
+    std::vector<Object> objects;
     std::vector<Material> materials;
 
     Camera camera;
-    Sphere sun;
-
     unsigned int frameCounter;
 
 

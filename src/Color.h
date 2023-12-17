@@ -20,8 +20,16 @@ struct Color {
             };
     }
 
+    Color operator-(const Color& color){
+        return {
+            R - color.R,
+            G - color.G,
+            B - color.B,
+            A - color.A
+            };
+    }
+
     Color operator*(float factor) const {
-        factor = std::fmax(0.0f, std::fmax(factor, 1.0f));
         return {
             R * factor,
             G * factor,
@@ -30,33 +38,21 @@ struct Color {
             };
     }
 
-    static Color LerpColor(struct Color colorA, struct Color colorB, float t){
-        t = fmax(0.0f, fmin(t, 1.0f));
-        return (struct Color){
-            colorA.R + t*(colorB.R - colorA.R),
-            colorA.G + t*(colorB.G - colorA.G),
-            colorA.B + t*(colorB.B - colorA.B),
-            fmax(colorA.A, colorB.A)
-        };
+    Color operator*(const Color& other) const {
+        return {
+            R * other.R,
+            G * other.G,
+            B * other.B,
+            A * other.A
+            };
     }
 
-    static Color MixColors(struct Color colorA, struct Color colorB) {
-        return (struct Color){
-            colorA.R * colorB.R,
-            colorA.G * colorB.G,
-            colorA.B * colorB.B,
-            colorA.A * colorB.A
-        };
-    }
-
-    static Color ToneColor(struct Color color, float factor) {
-        factor = fmax(0.0f, fmin(factor, 1.0f));
-        return (struct Color){
-            color.R * factor,
-            color.G * factor,
-            color.B * factor,
-            color.A * factor
-        };
+    static float Similarity(const Color& colorA, const Color& colorB){
+        float dR = colorA.R - colorB.R;
+        float dG = colorA.G - colorB.G;
+        float dB = colorA.B - colorB.B;
+        float dA = colorA.A - colorB.A;
+        return sqrt( dR*dR + dG*dG + dB*dB + dA*dA );
     }
 
 } __attribute__((aligned(16)));

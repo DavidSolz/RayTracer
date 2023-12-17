@@ -66,9 +66,20 @@ void OpenGLRenderer::ProcessInput(){
         direction.x = currentX - context->camera.position.x;
         direction.y = context->camera.position.y - currentY;
 
+        direction = direction.Normalize();
+        
         context->frameCounter=0;
     }
 
+    if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
+            direction = context->camera.front;
+            context->frameCounter=0;
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) {
+            direction = context->camera.front * -1.0f;
+            context->frameCounter=0;
+    }
 
     if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS && selection != CPU){
         fprintf(stdout, "Switching to cpu context.\n");
@@ -81,6 +92,7 @@ void OpenGLRenderer::ProcessInput(){
         SetRenderingService(&gpuRender);
         selection = ACC;
     }
+
 
     context->camera.position = context->camera.position + direction * context->camera.movementSpeed * timer->GetDeltaTime();
 

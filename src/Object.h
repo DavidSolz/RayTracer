@@ -9,6 +9,7 @@ struct Object{
     float radius;
     Vector3 position;
     Vector3 normal;
+    Vector3 maxPos;
     uint32_t materialID;
 };
 

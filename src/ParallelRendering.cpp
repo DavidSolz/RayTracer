@@ -22,7 +22,7 @@ void ParallelRendering::Init(RenderingContext * _context){
     context->frameCounter = 0;
     frameCounter = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, sizeof(int));
 
-    objectBufferSize = sizeof(Sphere)*context->spheres.size();
+    objectBufferSize = sizeof(Object)*context->objects.size();
     objectBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, objectBufferSize);
 
     materialBufferSize = sizeof(Material) * context->materials.size();
@@ -47,9 +47,9 @@ void ParallelRendering::Init(RenderingContext * _context){
 
 void ParallelRendering::Render(Color * _pixels){
 
-    int objCount = context->spheres.size();
+    int objCount = context->objects.size();
 
-    queue.enqueueWriteBuffer(objectBuffer, CL_FALSE, 0, objectBufferSize, context->spheres.data());
+    queue.enqueueWriteBuffer(objectBuffer, CL_FALSE, 0, objectBufferSize, context->objects.data());
     queue.enqueueWriteBuffer(objectsCountBuffer, CL_FALSE, 0, sizeof(int), &objCount);
     queue.enqueueWriteBuffer(materialBuffer, CL_FALSE, 0, materialBufferSize, context->materials.data());
     queue.enqueueWriteBuffer(cameraBuffer, CL_FALSE, 0, sizeof(Camera), &context->camera);
@@ -63,7 +63,7 @@ void ParallelRendering::Render(Color * _pixels){
     
     queue.finish();
 
-    queue.enqueueReadBuffer(pixelBuffer, CL_FALSE, 0, dataSize, _pixels);
+    queue.enqueueReadBuffer(pixelBuffer, CL_TRUE, 0, dataSize, _pixels);
 
 }
 

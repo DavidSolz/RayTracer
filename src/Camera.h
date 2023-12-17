@@ -11,7 +11,7 @@ struct Camera{
 
     Vector3 position = {0.0f, 0.0f, 0.0f};
 
-    float movementSpeed = 1.0f;
+    float movementSpeed = 50.0f;
     float rotationSpeed = 15.0f;
     float aspectRatio = 1.0f;
     float nearView = 0.1f;
@@ -35,7 +35,7 @@ struct Camera{
     }
 
     Vector3 CalculatePixelPosition(const int x, const int y, const int width, const int height){
-        float tanHalfFOV = tan(3.141569f/180.0f * fov / 2.0);
+        float tanHalfFOV = tan(3.141569f/180.0f * fov * 0.5f);
         float cameraX = (2.0 * x / width - 1.0f) * aspectRatio * tanHalfFOV * nearView;
         float cameraY = (2.0 * y / height - 1.0f) * tanHalfFOV * nearView;
         

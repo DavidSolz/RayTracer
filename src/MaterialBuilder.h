@@ -27,10 +27,10 @@ public:
 
 private:
 
-    Material * FindTheMostSimilar();
+    uint32_t FindSimilarMaterial();
 
     // This constant describes maximal material similarity difference
-    const float EPSILON = 0.01f;
+    const float EPSILON = 0.001f;
 
     Material temporaryMaterial;
     RenderingContext * context;
