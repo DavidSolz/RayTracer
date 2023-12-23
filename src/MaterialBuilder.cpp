@@ -32,11 +32,13 @@ MaterialBuilder * MaterialBuilder::SetSmoothness(const float & _factor){
 
 MaterialBuilder * MaterialBuilder::SetEmission(const float & _factor){
     temporaryMaterial.emmissionScale = _factor;
+    temporaryMaterial.diffusionScale = 1.0f - _factor;
     return this;
 }
 
 MaterialBuilder * MaterialBuilder::SetDiffusion(const float & _factor){
     temporaryMaterial.diffusionScale = _factor;
+    temporaryMaterial.emmissionScale = 1.0f - _factor;
     return this;
 }
 

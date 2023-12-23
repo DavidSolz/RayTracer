@@ -32,7 +32,7 @@ int main(int argc, char* argv[]){
 
 // BLUE CUBE
 
-    p.position = Vector3(context.width/2.0f, context.height/4.0f, context.depth);
+    p.position = Vector3(context.width/2.0f, context.height/4.0f+20.0f, context.depth);
     p.maxPos = p.position + Vector3(300, 400, 300);
     p.type = CUBE;
 
@@ -45,7 +45,7 @@ int main(int argc, char* argv[]){
 
 // RED CUBE
 
-    p.position = Vector3(context.width/3.0f, context.height/4.0f, context.depth/2.0f);
+    p.position = Vector3(context.width/3.0f, context.height/4.0f+20.0f, context.depth/2.0f);
     p.maxPos = p.position + Vector3(200, 200, 200);
     p.type = CUBE;
 
@@ -58,13 +58,26 @@ int main(int argc, char* argv[]){
 
 // GREEN CUBE
 
-    p.position = Vector3(context.width/4.0f, context.height/4.0f, 0.0f);
+    p.position = Vector3(context.width/4.0f, context.height/4.0f+20.0f, 0.0f);
     p.maxPos = p.position + Vector3(100, 100, 100);
     p.type = CUBE;
 
     p.materialID = materialBuilder
                     .SetEmissionColor({0.0f, 1.0f, 0.0f, 1.0f})
                     ->SetEmission(1.0f)
+                    ->Build();
+
+    context.objects.emplace_back(p);
+
+// MIRROR
+
+    p.position = Vector3(context.width/2.0f, context.height/4.0f + 50.0f, 0.0f);
+    p.type = SPHERE;
+    p.radius = 50.0f;
+
+    p.materialID = materialBuilder
+                    .SetBaseColor({0.5f, 0.5f, 0.5f, 1.0f})
+                    ->SetSmoothness(1.0f)
                     ->Build();
 
     context.objects.emplace_back(p);
@@ -76,7 +89,22 @@ int main(int argc, char* argv[]){
     p.type = CUBE;
 
     p.materialID = materialBuilder
-                    .SetBaseColor({0.8f, 0.8f, 0.8f, 1.0f})
+                    .SetBaseColor({1.0f, 1.0f, 1.0f, 1.0f})
+                    ->SetDiffusion(1.0f)
+                    ->SetSmoothness(0.2f)
+                    ->Build();
+
+    context.objects.emplace_back(p);
+
+// WALL
+    p.position = Vector3(0, 0, -context.depth/4.0f + 2*context.depth);
+    p.maxPos = p.position + Vector3(context.width, context.height, context.depth/4.0f);
+    p.type = CUBE;
+
+    p.materialID = materialBuilder
+                    .SetBaseColor({1.0f, 1.0f, 1.0f, 1.0f})
+                    ->SetDiffusion(1.0f)
+                    ->SetSmoothness(0.2f)
                     ->Build();
 
     context.objects.emplace_back(p);
