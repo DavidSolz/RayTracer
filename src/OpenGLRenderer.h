@@ -20,16 +20,16 @@ private:
     } selection;
 
     IFrameRender * renderingService;
-    RenderingContext * context;
     GLFWwindow * window;
 
     Color* pixels;
-    Timer* timer;
 
     ThreadedRendering cpuRender;
     ParallelRendering gpuRender;
 
     void ProcessInput();
+
+    static void KeyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
 public:
     OpenGLRenderer(RenderingContext * _context, const bool& _enableVSync = true);
@@ -37,7 +37,6 @@ public:
     void SetRenderingService(IFrameRender * _service);
     void Update();
     ~OpenGLRenderer();
-
 };
 
 #endif

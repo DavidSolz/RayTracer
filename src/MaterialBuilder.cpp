@@ -3,6 +3,9 @@
 MaterialBuilder::MaterialBuilder(const RenderingContext * _context){
     this->context = (RenderingContext *)_context;
     this->temporaryMaterial = {0};
+    
+    // Default refractive index for air
+    this->temporaryMaterial.refractiveIndex = 1.00029f; 
 }       
 
 MaterialBuilder * MaterialBuilder::SetBaseColor(const Color & _color){
@@ -20,25 +23,34 @@ MaterialBuilder * MaterialBuilder::SetSpecularColor(const Color & _color){
     return this;
 }
 
+MaterialBuilder * MaterialBuilder::SetRefractiveIndex(const float & _factor){
+    temporaryMaterial.refractiveIndex = _factor;
+    return this;
+}
+
+MaterialBuilder * MaterialBuilder::SetTransparency(const float & _factor){
+    temporaryMaterial.transparency = std::fmax(0.0f, std::fmin(_factor, 1.0f));
+    return this;
+}
+
+
 MaterialBuilder * MaterialBuilder::SetEmissionColor(const Color & _color){
     temporaryMaterial.emission = _color;
     return this;
 }
 
 MaterialBuilder * MaterialBuilder::SetSmoothness(const float & _factor){
-    temporaryMaterial.smoothness = _factor;
+    temporaryMaterial.smoothness = std::fmax(0.0f, std::fmin(_factor, 1.0f));
     return this;
 }
 
 MaterialBuilder * MaterialBuilder::SetEmission(const float & _factor){
-    temporaryMaterial.emmissionScale = _factor;
-    temporaryMaterial.diffusionScale = 1.0f - _factor;
+    temporaryMaterial.emmissionScale = std::fmax(0.0f, std::fmin(_factor, 1.0f));
     return this;
 }
 
 MaterialBuilder * MaterialBuilder::SetDiffusion(const float & _factor){
-    temporaryMaterial.diffusionScale = _factor;
-    temporaryMaterial.emmissionScale = 1.0f - _factor;
+    temporaryMaterial.diffusionScale = std::fmax(0.0f, std::fmin(_factor, 1.0f));
     return this;
 }
 

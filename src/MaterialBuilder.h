@@ -19,6 +19,10 @@ public:
 
     MaterialBuilder * SetSmoothness(const float & _factor);
 
+    MaterialBuilder * SetTransparency(const float & _factor);
+
+    MaterialBuilder * SetRefractiveIndex(const float & _factor);
+
     MaterialBuilder * SetEmission(const float & _factor);
 
     MaterialBuilder * SetDiffusion(const float & _factor);

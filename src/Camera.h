@@ -3,6 +3,9 @@
 
 #include "Vector3.h"
 
+constexpr float deg2rad = 3.1415926535f/180.0f;
+const Vector3 worldUp = {0.0f , 1.0f ,0.0f};
+
 struct Camera{
 
     Vector3 front = {0.0f, 0.0f, 1.0f};
@@ -11,31 +14,55 @@ struct Camera{
 
     Vector3 position = {0.0f, 0.0f, 0.0f};
 
-    float movementSpeed = 50.0f;
+    float movementSpeed = 100.0f;
     float rotationSpeed = 15.0f;
     float aspectRatio = 1.0f;
     float nearView = 0.1f;
     float farView = 100.0f;
     float fov = 45.0f;
+    float pitch = 0.0f;
+    float yaw = 90.0f;
 
-    void Rotate(const float& angle){
+    float lastMouseX;
+    float lastMouseY;
 
-        float cosAngle = cos(angle);
-        float sinAngle = sin(angle);
+    void Rotate(const float& currentX, const float& currentY){
+        float offsetX = lastMouseX - currentX;
+        float offsetY = lastMouseY - currentY;
 
-        bool isRotating = (angle!=0);
+        lastMouseX = currentX;
+        lastMouseY = currentY;
 
-        Vector3 newFront(front.x * cosAngle - front.z * sinAngle, front.y, front.x * sinAngle + front.z * cosAngle);
-        Vector3 newRight(right.x * cosAngle - right.z * sinAngle, right.y, -right.x * sinAngle + right.z * cosAngle);
+        float sensitivity = 0.1f;
+        offsetX *= sensitivity;
+        offsetY *= sensitivity;
 
-        front = front * (1 - isRotating) + newFront * isRotating;
+        yaw = yaw + offsetX;
+        pitch = pitch + offsetY;
 
-        right = right * (1 - isRotating) + newRight * isRotating;
+        pitch = std::fmax(-89.0f, std::fmin(pitch, 89.0f));
+
+        float cosPitch = cos(pitch * deg2rad);
+
+        front.x = cos(yaw * deg2rad) * cosPitch;
+        front.y = sin(pitch * deg2rad);
+        front.z = sin(yaw * deg2rad) * cosPitch;
+
+        front = front.Normalize();
+
+        right = Vector3::CrossProduct(worldUp, front);
+        up  = Vector3::CrossProduct(front, right);
+
+    }
+
+    void Move(const Vector3& direction, const float& deltaTime){
+
+        position = position + (Vector3)direction * movementSpeed * deltaTime;
 
     }
 
     Vector3 CalculatePixelPosition(const int x, const int y, const int width, const int height){
-        float tanHalfFOV = tan(3.141569f/180.0f * fov * 0.5f);
+        float tanHalfFOV = tan(deg2rad * fov * 0.5f);
         float cameraX = (2.0 * x / width - 1.0f) * aspectRatio * tanHalfFOV * nearView;
         float cameraY = (2.0 * y / height - 1.0f) * tanHalfFOV * nearView;
         

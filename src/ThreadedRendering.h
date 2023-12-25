@@ -5,10 +5,16 @@
 #include <stdio.h>
 #include <vector>
 
+#ifdef _WIN32
+    #include <windows.h>
+#else
+    #include <unistd.h>
+#endif
+
 #include "IFrameRender.h"
 #include "RenderingContext.h"
 #include "Random.h"
-#include "HitInfo.h"
+#include "Sample.h"
 #include "Ray.h"
 
 class ThreadedRendering : public IFrameRender{
@@ -30,7 +36,7 @@ class ThreadedRendering : public IFrameRender{
 
     float IntersectPlane(const Ray& ray, const Object& object);
 
-    HitInfo FindClosestIntersection(const struct Ray& ray);
+    Sample FindClosestIntersection(const struct Ray& ray);
 
     Color ComputeColor(struct Ray& ray, unsigned int& seed);
 

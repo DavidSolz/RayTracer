@@ -1,8 +1,11 @@
 #include "OpenGLRenderer.h"
 
+static RenderingContext * context;
+static Timer* timer;
+
 OpenGLRenderer::OpenGLRenderer(RenderingContext * _context, const bool& _enableVSync){
 
-    this->context = _context;
+    context = _context;
 
     cpuRender.Init(context);
     gpuRender.Init(context);
@@ -33,6 +36,8 @@ OpenGLRenderer::OpenGLRenderer(RenderingContext * _context, const bool& _enableV
     glfwMakeContextCurrent(window);
     glfwSwapInterval(_enableVSync);
 
+    glfwSetKeyCallback(window, KeyboardCallback);
+
     glLoadIdentity();
     glOrtho(0, context->width, 0, context->height, 0, context->depth);
 
@@ -53,48 +58,68 @@ OpenGLRenderer::OpenGLRenderer(RenderingContext * _context, const bool& _enableV
 
 }
 
+void OpenGLRenderer::KeyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mods){
+
+    Vector3 direction(0.0f, 1.0f, 0.0f);
+
+    float deltaTime = timer->GetDeltaTime();
+
+    switch (key){
+        case GLFW_KEY_W:
+            context->camera.Move(context->camera.front, deltaTime);
+            context->frameCounter=0;
+            break;
+        case GLFW_KEY_S:
+            context->camera.Move(context->camera.front*(-1.0f), deltaTime);
+            context->frameCounter=0;
+            break;
+        case GLFW_KEY_A:
+            context->camera.Move(context->camera.right*(-1.0f), deltaTime);
+            context->frameCounter=0;
+            break;
+        case GLFW_KEY_D:
+            context->camera.Move(context->camera.right, deltaTime);
+            context->frameCounter=0;
+            break;
+        case GLFW_KEY_LEFT_SHIFT:
+            context->camera.Move(context->camera.up*(-1.0f), deltaTime);
+            context->frameCounter=0;
+            break;
+        case GLFW_KEY_SPACE:
+            context->camera.Move(context->camera.up, deltaTime);
+            context->frameCounter=0;
+            break;
+        
+        default:
+            break;
+    }
+    
+}
 
 void OpenGLRenderer::ProcessInput(){
-
-    Vector3 direction = {0, 0, 0};
 
     if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
         double currentX, currentY;
 
         glfwGetCursorPos(window, &currentX, &currentY);
 
-        direction.x = currentX - context->camera.position.x;
-        direction.y = context->camera.position.y - currentY;
+        context->camera.Rotate(currentX, currentY);
 
-        direction = direction.Normalize();
-        
         context->frameCounter=0;
     }
 
-    if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
-            direction = context->camera.front;
-            context->frameCounter=0;
-    }
-
-    if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) {
-            direction = context->camera.front * -1.0f;
-            context->frameCounter=0;
-    }
-
     if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS && selection != CPU){
-        fprintf(stdout, "Switching to cpu context.\n");
+        fprintf(stdout, "\nSwitching to cpu context.\n");
         SetRenderingService(&cpuRender);
         selection = CPU;
     }
 
     if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS && selection != ACC){
-        fprintf(stdout, "Switching to accelerator context.\n");
+        fprintf(stdout, "\nSwitching to accelerator context.\n");
         SetRenderingService(&gpuRender);
         selection = ACC;
     }
 
-
-    context->camera.position = context->camera.position + direction * context->camera.movementSpeed * timer->GetDeltaTime();
 
 }
 

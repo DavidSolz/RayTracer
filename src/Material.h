@@ -12,6 +12,8 @@ struct Material {
     float smoothness;
     float emmissionScale;
     float diffusionScale;
+    float transparency;
+    float refractiveIndex;
 
 static float Difference(const Material & _materialA, const Material & _materialB){
 

@@ -6,7 +6,25 @@ void ThreadedRendering::Init(RenderingContext * _context){
     fprintf(stdout, "========[ CPU Config ]========\n");
 
     numThreads = std::thread::hardware_concurrency();
-    fprintf(stdout, "Logic cores : %d\n", numThreads);
+    fprintf(stdout, "\tLogic cores : %d\n", numThreads);
+
+    bool isHyperThreadinEnabled = false;
+
+#ifdef _WIN32
+
+    SYSTEM_INFO sysInfo;
+    GetSystemInfo(&sysInfo);
+
+    isHyperThreadinEnabled = (numThreads == sysInfo.dwNumberOfProcessors);
+#else
+    long numProcessors = sysconf(_SC_NPROCESSORS_ONLN);
+
+    isHyperThreadinEnabled = numThreads == numProcessors;
+
+#endif
+
+    fprintf(stdout, "\tHyperthreading : %s\n", isHyperThreadinEnabled?"YES":"NO");
+
 
     threads = new std::thread[numThreads];
 
@@ -65,7 +83,7 @@ Color ThreadedRendering::ComputeColor(struct Ray& ray, unsigned int& seed) {
     float intensity = 1.0f;
 
     for(int i = 0; i < 10; ++i){
-        HitInfo info = FindClosestIntersection(ray);
+        Sample info = FindClosestIntersection(ray);
 
         if(info.distance == INFINITY){
             accumulatedColor = accumulatedColor + (Color){0.6f, 0.7f, 0.9f, 1.0f} * intensity;
@@ -94,8 +112,8 @@ Color ThreadedRendering::ComputeColor(struct Ray& ray, unsigned int& seed) {
 }
 
 
-HitInfo ThreadedRendering::FindClosestIntersection(const Ray& ray){
-    HitInfo info = {0};
+Sample ThreadedRendering::FindClosestIntersection(const Ray& ray){
+    Sample info = {0};
     info.distance = INFINITY;
 
     for (int i = 0; i < context->objects.size(); i++) {
