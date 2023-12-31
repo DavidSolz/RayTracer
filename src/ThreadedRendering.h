@@ -42,6 +42,7 @@ class ThreadedRendering : public IFrameRender{
 
     void ComputeRows(const int& _startY, const int& _endY, Color* pixels);
 
+    bool CheckForHyperthreading();
 
 public:
 

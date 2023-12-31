@@ -20,6 +20,14 @@ struct Color {
             };
     }
 
+    Color operator+=(const Color& color){
+        this->R += color.R;
+        this->G += color.G;
+        this->B += color.B;
+        this->A += color.A;
+        return *this;
+    }
+
     Color operator-(const Color& color){
         return {
             R - color.R,
@@ -37,6 +45,7 @@ struct Color {
             A * factor
             };
     }
+    
 
     Color operator*(const Color& other) const {
         return {
@@ -45,6 +54,16 @@ struct Color {
             B * other.B,
             A * other.A
             };
+    }
+
+    Color operator*=(const Color& other) const {
+        
+        this->R * other.R;
+        this->G * other.G;
+        this->B * other.B;
+        this->A * other.A;
+
+        return *this;
     }
 
     static float Similarity(const Color& colorA, const Color& colorB){

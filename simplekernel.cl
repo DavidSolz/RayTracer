@@ -1,299 +1,126 @@
-//Structures
-
-struct Color{
-    float R, G, B, A;
-};
+// Structures
 
 struct Material {
-    struct Color baseColor;
-    struct Color diffuse;
-    struct Color specular;
-    struct Color emission;
+    float4 baseColor;
+    float4 diffuse;
+    float4 specular;
+    float4 emission;
     float smoothness;
     float emmissionScale;
-    float specularScale;
     float diffusionScale;
-    float transparencyScale;
-};
+    float transparency;
+    float refractiveIndex;
+} ;
 
-struct Vector3{
-    float x, y, z;
+enum SpatialType{
+    SPHERE,
+    PLANE,
+    DISK,
+    CUBE,
+    CYLINDER
 };
 
 struct Ray{
-    struct Vector3 origin;
-    struct Vector3 direction;
+    float3 origin;
+    float3 direction;
 };
 
-struct Sphere{
+struct Object{
+    enum SpatialType type;
     float radius;
-    struct Vector3 position;
-    struct Material material;
+    float3 position;
+    float3 normal;
+    float3 maxPos;
+    unsigned int materialID;
 };
 
-struct HitInfo{
+struct Sample{
     float distance;
-    struct Vector3 point;
-    struct Vector3 normal;
-    struct Material material;
+    float3 point;
+    float3 normal;
+    unsigned int materialID;
 };
 
 struct Camera{
+    float3 front;
+    float3 up;
+    float3 right;
 
-    struct Vector3 front;
-    struct Vector3 up;
-    struct Vector3 right;
-
-    struct Vector3 position;
+    float3 position;
 
     float movementSpeed;
-    float rotationAngle;
     float aspectRatio;
     float near;
     float far;
     float fov;
+    float pitch;
+    float yaw;
+
 };
 
-//Functions
+// Functions
 
-struct Vector3 Sub(const struct Vector3 vectorA, const struct Vector3 vectorB) {
-    return (struct Vector3){
-        vectorA.x - vectorB.x,
-        vectorA.y - vectorB.y,
-        vectorA.z - vectorB.z
-    };
-}
-
-struct Vector3 Add(const struct Vector3 vectorA, const struct Vector3 vectorB) {
-    return (struct Vector3){
-        vectorA.x + vectorB.x,
-        vectorA.y + vectorB.y,
-        vectorA.z + vectorB.z
-    };
-}
-
-struct Vector3 Mult(const struct Vector3 vectorA, const float scalar){
-    return (struct Vector3){
-        vectorA.x * scalar,
-        vectorA.y * scalar,
-        vectorA.z * scalar
-    };
-}
-
-float Magnitude(const struct Vector3 a){
-    return sqrt(a.x*a.x+a.y*a.y+a.z*a.z);
-}
-
-float DotProduct(const struct Vector3 a, const struct Vector3 b) {
-    return a.x*b.x + a.y*b.y + a.z*b.z;
-}
-
-struct Vector3 CrossProduct(const struct Vector3 a, const struct Vector3 b){
-    return (struct Vector3){
-        a.y*b.z-b.y*a.z,
-        a.x*b.z-b.x*a.z,
-        a.x*b.y-b.x*a.y
-    };
-}
-
-struct Vector3 Normalize(const struct Vector3 a){
-    float magnitude = Magnitude(a);
-    return (struct Vector3){
-        a.x/magnitude,
-        a.y/magnitude,
-        a.z/magnitude
-    };
-}
-
-//WangHash
+// PCG_Hash
 float Rand(unsigned int * seed){
-    *seed = (*seed ^ 61) ^ (*seed >>16); 
-    *seed*=9;
-    *seed= *seed ^ (*seed>>4);
-    *seed *= 0x27d4eb2d;
-    *seed = *seed ^ (*seed>>15);
-    return *seed/4294967295.0f;
+    *seed = *seed *747796405u + 2891336453u;
+    unsigned int word = ((*seed >> ((*seed >> 28u) + 4u)) ^ *seed) * 277803737u;
+    return ((word>>22u) ^ word)/(float)UINT_MAX;
 }
 
-//Uniform distrubution
-float UniformRandom(unsigned int * seed){
-    float theta = 2 * 3.1415926f * Rand(seed);
-    float rho = sqrt(-2 * log(Rand(seed)));
-    return rho * cos(theta);
-}
-
-struct Vector3 RandomDirection(unsigned int *seed){
-    return Normalize((struct Vector3){
-        UniformRandom(seed),
-        UniformRandom(seed),
-        UniformRandom(seed)
-    });
-}
-
-struct Vector3 RandomReflection(const struct Vector3 normal, unsigned int *seed){
-    struct Vector3 direction = RandomDirection(seed);
-    return Mult(direction, sign(DotProduct(normal, direction)));
-}
-
-struct Color AddColors(struct Color colorA, struct Color colorB){
-    return (struct Color){
-        colorA.R + colorB.R,
-        colorA.G + colorB.G,
-        colorA.B + colorB.B,
-        colorA.A + colorB.A
-    };
-}
-
-struct Color LerpColor(struct Color colorA, struct Color colorB, float t){
-    t = fmax(0.0f, fmin(t, 1.0f));
-    return (struct Color){
-        colorA.R + t*(colorB.R - colorA.R),
-        colorA.G + t*(colorB.G - colorA.G),
-        colorA.B + t*(colorB.B - colorA.B),
-        fmax(colorA.A, colorB.A)
-    };
-}
-
-struct Color MixColors(struct Color colorA, struct Color colorB) {
-    return (struct Color){
-        colorA.R * colorB.R,
-        colorA.G * colorB.G,
-        colorA.B * colorB.B,
-        colorA.A * colorB.A
-    };
-}
-
-struct Color ToneColor(struct Color color, float factor) {
-    factor = fmax(0.0f, fmin(factor, 1.0f));
-    return (struct Color){
-        color.R * factor,
-        color.G * factor,
-        color.B * factor,
-        color.A * factor
-    };
-}
-
-float Intersect(const struct Ray *ray, global const struct Sphere *sphere) {
-    struct Vector3 originToSphereCenter = Sub(ray->origin, sphere->position);
-
-    float b = DotProduct(originToSphereCenter, ray->direction);
-    float c = DotProduct(originToSphereCenter, originToSphereCenter) - sphere->radius * sphere->radius;
-    float delta = b * b - c;
-
-    float sqrtDelta =  sqrt(delta);
-    float t1 = (-b - sqrtDelta);
-    float t2 = (-b + sqrtDelta);
-
-    return fmin(t1, t2);
-}
-
-struct Vector3 LerpPoint(struct Vector3 begin, struct Vector3 end, float t){
-    t = fmax(0.0f, fmin(t, 1.0f));
-    return Add(begin, Mult(Sub(end,begin), t));
-}
-
-struct Vector3 Reflect(struct Vector3 incident, struct Vector3 normal) {
-    return Sub(incident, Mult(normal, (2.0f * DotProduct(incident, normal))));
-}
-
-
-struct HitInfo FindClosestIntersection(global const struct Sphere* objects, global const int * objects_count, const struct Ray * ray){
-    struct HitInfo info = {0};
-    info.distance = INFINITY;
+float3 CalculatePixelPosition(const int x, const int y, const int width, const int height, global const struct Camera * camera){
     
-    for (int i = 0; i < *objects_count; ++i) {
-        float distance = Intersect(ray, objects + i);
-
-        if((distance < info.distance) && (distance>0.0f)){
-            info.distance = distance ;
-            info.point = Add(ray->origin, Mult(ray->direction, distance * 1.05f));
-            info.normal = Normalize(Sub(info.point, objects[i].position));
-            info.material = objects[i].material;
-        }
-
-    }
+    float tanHalfFOV = tan(radians(camera->fov) * 0.5f);
+    float pixelXPos = (2.0 * x / width - 1.0f) * camera->aspectRatio * tanHalfFOV * camera->near;
+    float pixelYPos = (2.0 * y / height - 1.0f) * tanHalfFOV * camera->near;
     
-
-    return info;
+    return camera->position + camera->front * camera->near + camera->right * pixelXPos + camera->up * pixelYPos;
 }
 
+// Main
 
-struct Color ComputeColor(struct Ray *ray, global const struct Sphere* objects, global const int * objects_count, unsigned int *seed) {
-
-    struct Color accumulatedColor = {0};
-    struct Color tempColor = {1.0f, 1.0f, 1.0f, 1.0f};
-
-    for(int i = 0; i < 10; ++i){
-        struct HitInfo info = FindClosestIntersection(objects, objects_count, ray);
-        
-        if(info.distance == INFINITY)
-            break;
-        
-
-        ray->origin = info.point;
-
-        struct Material * material = &info.material;
-
-        struct Vector3 diffusionDir = Normalize(Add(RandomReflection(info.normal, seed), info.normal));
-        struct Vector3 specularDir = Reflect(ray->direction, info.normal);
-        
-        ray->direction = LerpPoint(diffusionDir, specularDir, material->smoothness);
-
-        struct Color emmisionComponent = ToneColor(material->emission, material->emmissionScale );
-        struct Color diffuseComponent = ToneColor(material->diffuse, DotProduct(info.normal, diffusionDir) * material->diffusionScale);
-
-
-        accumulatedColor = AddColors(accumulatedColor, MixColors(emmisionComponent, tempColor));
-        accumulatedColor = AddColors(accumulatedColor, MixColors(diffuseComponent, tempColor));
-        tempColor = MixColors(tempColor, material->baseColor);
-    }
-
-    return accumulatedColor;
-}
-
-struct Vector3 CalculatePixelPosition(const int x, const int y, const int width, const int height, global const struct Camera * camera){
-    float tanHalfFOV = tan(radians(camera->fov / 2.0));
-    float cameraX = (2.0 * x / width - 1.0f) * camera->aspectRatio * tanHalfFOV * camera->near;
-    float cameraY = (2.0 * y / height - 1.0f) * tanHalfFOV * camera->near;
-    
-    return (struct Vector3){
-        camera->position.x + camera->front.x * camera->near + camera->right.x * cameraX + camera->up.x * cameraY,
-        camera->position.y + camera->front.y * camera->near + camera->right.y * cameraX + camera->up.y * cameraY,
-        camera->position.z + camera->front.z * camera->near + camera->right.z * cameraX + camera->up.z * cameraY
-    };
-}
-
-//Main
-
-void kernel RenderGraphics(global struct Color* pixels,
-global struct Sphere* objects,
-global const int * objects_count,
+void kernel RenderGraphics(
+global float4* pixels,
+global struct Object * objects,
+global const int * numObject,
+global struct Material * materials,
 global const struct Camera * camera,
-global const int *numFrames){
-
-    int x = get_global_id(0);
-    int y = get_global_id(1);
+global const int *numFrames
+){
 
     int width = get_global_size(0);
     int height = get_global_size(1);
 
-    unsigned int index = y * width + x;
-    unsigned int seed = *numFrames * 92037129381 + index ;
+    int x = get_global_id(0);
+    int y = get_global_id(1);
 
-    struct Vector3 offset = RandomDirection(&seed);
+    if (x >= width || y >= height) {
+        return;
+    }
 
-    struct Vector3 pixelPosition = CalculatePixelPosition(x + offset.x - 0.5f, y + offset.y - 0.5f, width, height, camera);
+    float c_real = x * 3.0 / (width - 1) - 2.0;
+    float c_imag = y * 2.0 / (height - 1) - 1.0;
 
-    struct Ray ray;
-    ray.origin = camera->position; 
-    ray.direction = Normalize(Sub(pixelPosition, ray.origin ));
+    float z_real = 0.0;
+    float z_imag = 0.0;
+    float tmp_z_real;
+    float norm;
 
-    struct Color finalColor = {0};
+    unsigned int divergence_at = 0;
+    for (int i = 1; i <= 256; ++i) {
+        tmp_z_real = z_real * z_real - z_imag * z_imag + c_real;
+        z_imag = 2 * z_real * z_imag                   + c_imag;
+        z_real = tmp_z_real;
 
-    finalColor = AddColors(finalColor, ComputeColor(&ray, objects, objects_count, &seed));
+        norm = z_real * z_real + z_imag * z_imag;
+        if (norm > 4.0) {
+            divergence_at = i;
+            break;
+        }
+    }
 
-    float scale = 1.0f / (*numFrames+1);
+    
 
-    pixels[index] = LerpColor(pixels[index], finalColor, scale);
+    pixels[y * width + x] = (float4)(Rand(&divergence_at), Rand(&divergence_at),Rand(&divergence_at), 1.0f);
+    
 }
 

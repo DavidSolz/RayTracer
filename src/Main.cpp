@@ -24,8 +24,6 @@ int main(int argc, char* argv[]){
 
     context.camera.position = Vector3(context.width/2.0f, context.height/2.0f, -900.0f);
     context.camera.aspectRatio = aspectRatio;
-    context.camera.lastMouseX = context.width/2.0f;
-    context.camera.lastMouseY = context.height/2.0f;
 {
 
     Object p;

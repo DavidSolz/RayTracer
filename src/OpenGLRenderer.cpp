@@ -56,6 +56,9 @@ OpenGLRenderer::OpenGLRenderer(RenderingContext * _context, const bool& _enableV
 
     timer = Timer::GetInstance();
 
+    lastMouseX = context->width/2.0f;
+    lastMouseY = context->height/2.0f;
+
 }
 
 void OpenGLRenderer::KeyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mods){
@@ -89,7 +92,9 @@ void OpenGLRenderer::KeyboardCallback(GLFWwindow* window, int key, int scancode,
             context->camera.Move(context->camera.up, deltaTime);
             context->frameCounter=0;
             break;
-        
+        case GLFW_KEY_ESCAPE:
+            glfwSetWindowShouldClose(window, true);
+            break;
         default:
             break;
     }
@@ -103,7 +108,13 @@ void OpenGLRenderer::ProcessInput(){
 
         glfwGetCursorPos(window, &currentX, &currentY);
 
-        context->camera.Rotate(currentX, currentY);
+        float offsetX = lastMouseX - currentX;
+        float offsetY = lastMouseY - currentY;
+
+        lastMouseX = currentX;
+        lastMouseY = currentY;
+
+        context->camera.Rotate(offsetX, offsetY);
 
         context->frameCounter=0;
     }

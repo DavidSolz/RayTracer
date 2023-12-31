@@ -20,6 +20,12 @@ struct Vector3 {
         this->z=_z;
     }
 
+    Vector3(const float& _x, const float& _y){
+        this->x=_x;
+        this->y=_y;
+        this->z= 0;
+    }
+
     static float DotProduct(const Vector3& a, const Vector3& b){
         return a.x * b.x + a.y * b.y + a.z * b.z;
     }

@@ -49,16 +49,13 @@ struct Camera{
     float3 position;
 
     float movementSpeed;
-    float rotationAngle;
     float aspectRatio;
     float near;
     float far;
     float fov;
     float pitch;
     float yaw;
-    
-    float lastMouseX;
-    float lastMouseY;
+
 };
 
 // Functions
@@ -205,19 +202,26 @@ float3 Refract(const float3 * incident, const float3 * normal, const struct Mate
     return (*incident * reflectance) + *normal * ( reflectance * cosI - cosR);
 }
 
+float4 GetSkyBoxColor(const float intensity, const struct Ray * ray){
+    float t = intensity/fmax(ray->direction.y + 1.0f, 0.00001f);
+
+    const float4 skyColor = (float4)(0.5f, 0.7f, 1.0f, 1.0f);
+
+    return  skyColor * t;
+}
+
 float4 ComputeColor(struct Ray *ray, global const struct Object* objects, global const int * numObject, global const struct Material* materials,  unsigned int *seed) {
 
     float4 accumulatedColor = 0.0f;
     float4 colorMask = 1.0f;
     float intensity = 1.0f;
-    float lastRedrectance = 1.00029f; 
+    float lastRefrectance = 1.00029f; 
 
-    for(int i = 0; i < 16; ++i){
+    for(int i = 0; i < 8; ++i){
         struct Sample sample = FindClosestIntersection(objects, numObject, ray);
         
         if(sample.distance == INFINITY){
-
-            accumulatedColor += (float4)(0.5f, 0.7f, 1.0f, 1.0f) * intensity/fabs(ray->direction.y+1.0f);
+            accumulatedColor += GetSkyBoxColor(intensity, ray);
             break;
         }
 
@@ -231,7 +235,7 @@ float4 ComputeColor(struct Ray *ray, global const struct Object* objects, global
         float3 reflectionDirection = Reflect(&ray->direction, &sample.normal);
         float3 refractionDirection = Refract(&ray->direction, &sample.normal, &material);
 
-        ray->direction = diffusionDirection + (reflectionDirection - diffusionDirection) * material.smoothness;// * (1 - isRefraction);
+        ray->direction = diffusionDirection + (reflectionDirection - diffusionDirection) * material.smoothness;
         ray->direction = normalize(ray->direction);
 
         float lightIntensity = dot(ray->direction, sample.normal);
@@ -240,7 +244,7 @@ float4 ComputeColor(struct Ray *ray, global const struct Object* objects, global
         float4 diffuseComponent = normalize(material.diffuse * material.diffusionScale * 2 * lightIntensity);
 
         accumulatedColor += (2 * emmisionComponent + diffuseComponent/M_PI_F) * colorMask;
-        colorMask *= material.baseColor;
+        colorMask *= material.baseColor  ;
         intensity *= lightIntensity * 0.5f;
     }
 
@@ -276,21 +280,21 @@ global const int *numFrames
     unsigned int index = y * width + x;
     unsigned int seed = (*numFrames<<16) ^ (*numFrames >>13) + index;
 
-    // Simple antialiasing by randomly ofsetting rays
     float3 offset = RandomDirection(&seed);
-
-    float3 pixelPosition = CalculatePixelPosition(x + offset.x - 0.5f, y + offset.y - 0.5f, width, height, camera);
+    float3 pixelPosition = CalculatePixelPosition(x + offset.x + 0.5f, y + offset.y + 0.5f, width, height, camera);
 
     struct Ray ray;
     ray.origin = camera->position;
     ray.direction = normalize(pixelPosition - ray.origin );
 
     // Monte - Carlo path tracing have issue with glaring (dark and light spots on consistent color)
-    
-    float4 finalColor = ComputeColor(&ray, objects, numObject, materials, &seed);
+
+    // Supersampling approach results in no noise but very low amount of fps
+
+    float4 sample = ComputeColor(&ray, objects, numObject, materials, &seed);
 
     float scale = 1.0f / (*numFrames+1);
     
-    pixels[index] = pixels[index] + (finalColor - pixels[index]) * scale;
+    pixels[index] =  pixels[index] + sqrt(sample - pixels[index]) * scale;
 }
 

@@ -1,5 +1,42 @@
 #include "ThreadedRendering.h"
 
+bool ThreadedRendering::CheckForHyperthreading(){
+
+    FILE *fp;
+    char var[5] = {0};
+    int corecount = 0;
+
+#ifdef _WIN32 
+
+    fp = popen("wmic cpu get NumberOfCores", "r");
+
+    while (fgets(var,sizeof(var),fp) != NULL) 
+        sscanf(var,"%d",&corecount);
+
+#elif __APPLE__
+
+    fp = popen("sysctl -n hw.physicalcpu", "r");
+
+    while (fgets(var,sizeof(var),fp) != NULL) 
+        sscanf(var,"%d",&corecount);
+
+#else
+
+    fp = popen("lscpu | grep 'Core(s) per socket' | awk '{print $NF}'", "r");
+    
+    fscanf(fd, "%d", &corecount);
+
+#endif
+
+    
+
+    if(fp)
+        fclose(fp);
+
+    return numThreads > corecount;
+
+}
+
 void ThreadedRendering::Init(RenderingContext * _context){
     this->context = _context;
 
@@ -8,23 +45,9 @@ void ThreadedRendering::Init(RenderingContext * _context){
     numThreads = std::thread::hardware_concurrency();
     fprintf(stdout, "\tLogic cores : %d\n", numThreads);
 
-    bool isHyperThreadinEnabled = false;
-
-#ifdef _WIN32
-
-    SYSTEM_INFO sysInfo;
-    GetSystemInfo(&sysInfo);
-
-    isHyperThreadinEnabled = (numThreads == sysInfo.dwNumberOfProcessors);
-#else
-    long numProcessors = sysconf(_SC_NPROCESSORS_ONLN);
-
-    isHyperThreadinEnabled = numThreads == numProcessors;
-
-#endif
+    bool isHyperThreadinEnabled = CheckForHyperthreading();
 
     fprintf(stdout, "\tHyperthreading : %s\n", isHyperThreadinEnabled?"YES":"NO");
-
 
     threads = new std::thread[numThreads];
 
@@ -82,30 +105,31 @@ Color ThreadedRendering::ComputeColor(struct Ray& ray, unsigned int& seed) {
     Color colorMask = {1.0f, 1.0f, 1.0f, 1.0f};
     float intensity = 1.0f;
 
-    for(int i = 0; i < 10; ++i){
-        Sample info = FindClosestIntersection(ray);
+    for(int i = 0; i < 8; ++i){
+        Sample sample = FindClosestIntersection(ray);
 
-        if(info.distance == INFINITY){
-            accumulatedColor = accumulatedColor + (Color){0.6f, 0.7f, 0.9f, 1.0f} * intensity;
+        if(sample.distance == INFINITY){
+            accumulatedColor += (Color){0.5f, 0.7f, 1.0f, 1.0f} * (intensity/std::fmax(ray.direction.y+1.0f, 0.00001f));
             break;
         }
-            ray.origin = info.point;
+            ray.origin = sample.point;
 
-            Material * material = &context->materials[info.materialID];
+            Material * material = &context->materials[sample.materialID];
 
-            Vector3 diffusionDir = (info.normal + RandomReflection(info.normal, seed)).Normalize();
-            Vector3 specularDir = Reflect(ray.direction, info.normal);
+            Vector3 diffusionDir = (sample.normal + RandomReflection(sample.normal, seed)).Normalize();
+            Vector3 specularDir = Reflect(ray.direction, sample.normal);
 
             ray.direction = Vector3::Lerp(diffusionDir, specularDir, material->smoothness);
 
             Color emmisionComponent = material->emission * material->emmissionScale;
             Color diffuseComponent = material->diffuse *  material->diffusionScale;
 
-            accumulatedColor = accumulatedColor + emmisionComponent * colorMask;
-            accumulatedColor = accumulatedColor + diffuseComponent * colorMask;
+            float lightIntensity = Vector3::DotProduct(ray.direction, sample.normal);
 
-            colorMask = colorMask * material->baseColor;
-            intensity *= 0.1f;
+            accumulatedColor += (diffuseComponent + emmisionComponent) * colorMask;
+
+            colorMask *= material->baseColor;
+            intensity *= lightIntensity * 0.5f;
     }
 
     return accumulatedColor;

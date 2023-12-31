@@ -27,6 +27,9 @@ private:
     ThreadedRendering cpuRender;
     ParallelRendering gpuRender;
 
+    float lastMouseX;
+    float lastMouseY;
+
     void ProcessInput();
 
     static void KeyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
