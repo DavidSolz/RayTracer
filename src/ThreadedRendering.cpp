@@ -28,10 +28,8 @@ bool ThreadedRendering::CheckForHyperthreading(){
 
 #endif
 
-    
-
     if(fp)
-        fclose(fp);
+        pclose(fp);
 
     return numThreads > corecount;
 

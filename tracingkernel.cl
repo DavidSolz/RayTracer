@@ -295,6 +295,6 @@ global const int *numFrames
 
     float scale = 1.0f / (*numFrames+1);
     
-    pixels[index] =  pixels[index] + sqrt(sample - pixels[index]) * scale;
+    pixels[index] =  pixels[index] + (sample - pixels[index]) * scale;
 }
 
