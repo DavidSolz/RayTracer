@@ -3,6 +3,12 @@ find_package(OpenGL REQUIRED)
 find_package(glfw3 REQUIRED)
 find_package(GLEW REQUIRED)
 
+
+if(NOT GLEW_FOUND)
+    message(FATAL_ERROR "GLEW not found")
+endif()
+
+
 file(GLOB_RECURSE HEADERS
     "${CMAKE_CURRENT_SOURCE_DIR}/*.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/**/*.h"

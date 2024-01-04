@@ -14,8 +14,8 @@ int main(int argc, char* argv[]){
 
 // Context setup
 
-    context.width = 900;
-    context.height = 900;
+    context.width = 1000;
+    context.height = 1000;
     context.depth = 480;
 
     float aspectRatio = context.width/(float)context.height;
@@ -24,6 +24,8 @@ int main(int argc, char* argv[]){
 
     context.camera.position = Vector3(context.width/2.0f, context.height/2.0f, -900.0f);
     context.camera.aspectRatio = aspectRatio;
+
+
 {
 
     Object p;
@@ -121,6 +123,7 @@ int main(int argc, char* argv[]){
     context.objects.emplace_back(p);
 
 }
+
 
 /*
 {

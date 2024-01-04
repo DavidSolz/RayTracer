@@ -117,29 +117,56 @@ float IntersectDisk(const struct Ray *ray, global const struct Object *object) {
 
     bool condition = (d2 <= object->radius * object->radius);
 
-    return t * condition + (-1.0f) * (1-condition);
+    return t * condition - 1 + condition;
 }
 
 float IntersectCube(const struct Ray *ray, global const struct Object *object) {
+    float tMin = (object->position.x - ray->origin.x) / ray->direction.x;
+    float tMax = (object->maxPos.x - ray->origin.x) / ray->direction.x;
 
-    float3 inverseDir = 1.0f / ray->direction;
+    if (tMin > tMax) {
+        float temp = tMin;
+        tMin = tMax;
+        tMax = temp;
+    }
 
-    float tMinX = (object->position.x - ray->origin.x) * inverseDir.x;
-    float tMaxX = (object->maxPos.x - ray->origin.x) * inverseDir.x;
+    float tyMin = (object->position.y - ray->origin.y) / ray->direction.y;
+    float tyMax = (object->maxPos.y - ray->origin.y) / ray->direction.y;
 
-    float tMinY = (object->position.y - ray->origin.y) * inverseDir.y;
-    float tMaxY = (object->maxPos.y - ray->origin.y) * inverseDir.y;
+    if (tyMin > tyMax) {
+        float temp = tyMin;
+        tyMin = tyMax;
+        tyMax = temp;
+    }
 
-    float tMinZ = (object->position.z - ray->origin.z) * inverseDir.z;
-    float tMaxZ = (object->maxPos.z - ray->origin.z) * inverseDir.z;
+    if ((tMin > tyMax) || (tyMin > tMax)) {
+        return -1.0f;  // No intersection
+    }
 
-    float tMin = fmax(fmax(fmin(tMinX, tMaxX), fmin(tMinY, tMaxY)), fmin(tMinZ, tMaxZ));
-    float tMax = fmin(fmin(fmax(tMinX, tMaxX), fmax(tMinY, tMaxY)), fmax(tMinZ, tMaxZ));
+    tMin = fmax(tMin, tyMin);
+    tMax = fmin(tMax, tyMax);
 
-    bool condition = (tMin >= tMax || tMin < 0.0f);
+    float tzMin = (object->position.z - ray->origin.z) / ray->direction.z;
+    float tzMax = (object->maxPos.z - ray->origin.z) / ray->direction.z;
 
-    return -1.0f * condition + tMin * (1-condition);
+    if (tzMin > tzMax) {
+        float temp = tzMin;
+        tzMin = tzMax;
+        tzMax = temp;
+    }
 
+    if ((tMin > tzMax) || (tzMin > tMax)) {
+        return -1.0f;  // No intersection
+    }
+
+    tMin = fmax(tMin, tzMin);
+    tMax = fmin(tMax, tzMax);
+
+    if (tMin > 0.0f && tMin < tMax) {
+        return tMin;
+    }
+
+    return -1.0f;
 }
 
 struct Sample FindClosestIntersection(global const struct Object* objects, global const int * numObject, const struct Ray * ray){
@@ -166,7 +193,7 @@ struct Sample FindClosestIntersection(global const struct Object* objects, globa
                 distance = IntersectSphere(ray, objects + i);
         }
 
-        if((distance < sample.distance) && (distance>0.0f)){
+        if((distance < sample.distance) && (distance>0.1f)){
             sample.distance = distance ;
             sample.point = ray->origin + ray->direction * distance * 1.000005f;
             idx = i;
@@ -244,7 +271,7 @@ float4 ComputeColor(struct Ray *ray, global const struct Object* objects, global
         float4 diffuseComponent = normalize(material.diffuse * material.diffusionScale * 2 * lightIntensity);
 
         accumulatedColor += (2 * emmisionComponent + diffuseComponent/M_PI_F) * colorMask;
-        colorMask *= material.baseColor  ;
+        colorMask *= sqrt(material.baseColor);
         intensity *= lightIntensity * 0.5f;
     }
 
@@ -282,6 +309,10 @@ global const int *numFrames
 
     float3 offset = RandomDirection(&seed);
     float3 pixelPosition = CalculatePixelPosition(x + offset.x + 0.5f, y + offset.y + 0.5f, width, height, camera);
+
+    pixelPosition.x = fmax(pixelPosition.x, 0.00001f);
+    pixelPosition.y = fmax(pixelPosition.y, 0.00001f);
+    pixelPosition.z = fmin(pixelPosition.z, 0.00001f);
 
     struct Ray ray;
     ray.origin = camera->position;

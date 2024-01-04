@@ -58,7 +58,7 @@ void ParallelRendering::Render(Color * _pixels){
     #ifdef __APPLE__
         queue.enqueueNDRangeKernel(kernel, cl::NullRange, globalRange);
     #else
-        queue.enqueueNDRangeKernel(kernel, cl::NullRange, globalRange, localRange);
+        queue.enqueueNDRangeKernel(kernel, cl::NullRange, globalRange);
     #endif
     
     queue.finish();
