@@ -24,6 +24,7 @@ int main(int argc, char* argv[]){
 
     context.camera.position = Vector3(context.width/2.0f, context.height/2.0f, -900.0f);
     context.camera.aspectRatio = aspectRatio;
+/*
 {
 
     Object p;
@@ -105,7 +106,7 @@ int main(int argc, char* argv[]){
                     .SetBaseColor({1.0f, 1.0f, 1.0f, 1.0f})
                     ->SetDiffusion(0.1f)
                     ->Build();
-    
+
     context.objects.emplace_back(p);
 
 // WALL
@@ -121,8 +122,9 @@ int main(int argc, char* argv[]){
     context.objects.emplace_back(p);
 
 }
+*/
 
-/*
+
 {
     const int rows = 10;
     const int cols = 10;
@@ -157,10 +159,9 @@ int main(int argc, char* argv[]){
         }
     }
 }
-*/
 
 
-OpenGLRenderer renderer(&context, false);
+OpenGLRenderer renderer(&context);
 
 //Main loop
 

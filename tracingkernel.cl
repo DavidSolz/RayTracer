@@ -69,7 +69,7 @@ float Rand(unsigned int * seed){
 
 float3 RandomDirection(unsigned int *seed){
     float phi = acos(2.0f * Rand(seed) - 1.0f);
-    float theta = Rand(seed) * 2 *  M_PI;
+    float theta = Rand(seed) * 2 *  3.1415926535f;
 
     float sinTheta = sin(theta);
 
@@ -100,7 +100,7 @@ float IntersectSphere(const struct Ray *ray, global const struct Object *object)
 }
 
 float IntersectPlane(const struct Ray *ray, global const struct Object *object) {
-    
+
     float d = dot(object->position, -object->normal);
     float rayToPlane = dot(ray->origin, object->normal);
 
@@ -108,7 +108,7 @@ float IntersectPlane(const struct Ray *ray, global const struct Object *object) 
 }
 
 float IntersectDisk(const struct Ray *ray, global const struct Object *object) {
-    
+
     float t = IntersectPlane(ray, object);
 
     float3 p = ray->origin + ray->direction * t * 1.000005f;
@@ -145,7 +145,7 @@ float IntersectCube(const struct Ray *ray, global const struct Object *object) {
 struct Sample FindClosestIntersection(global const struct Object* objects, global const int * numObject, const struct Ray * ray){
     struct Sample sample = {0};
     sample.distance = INFINITY;
-    
+
     unsigned int idx = 0;
 
     for (int i = 0; i < *numObject; ++i) {
@@ -173,7 +173,7 @@ struct Sample FindClosestIntersection(global const struct Object* objects, globa
         }
 
     }
-    
+
     sample.normal = normalize(sample.point - objects[idx].position);
     sample.materialID = objects[idx].materialID;
 
@@ -215,11 +215,11 @@ float4 ComputeColor(struct Ray *ray, global const struct Object* objects, global
     float4 accumulatedColor = 0.0f;
     float4 colorMask = 1.0f;
     float intensity = 1.0f;
-    float lastRefrectance = 1.00029f; 
+    float lastRefrectance = 1.00029f;
 
     for(int i = 0; i < 8; ++i){
         struct Sample sample = FindClosestIntersection(objects, numObject, ray);
-        
+
         if(sample.distance == INFINITY){
             accumulatedColor += GetSkyBoxColor(intensity, ray);
             break;
@@ -252,11 +252,11 @@ float4 ComputeColor(struct Ray *ray, global const struct Object* objects, global
 }
 
 float3 CalculatePixelPosition(const int x, const int y, const int width, const int height, global const struct Camera * camera){
-    
+
     float tanHalfFOV = tan(radians(camera->fov) * 0.5f);
     float pixelXPos = (2.0 * x / width - 1.0f) * camera->aspectRatio * tanHalfFOV * camera->near;
     float pixelYPos = (2.0 * y / height - 1.0f) * tanHalfFOV * camera->near;
-    
+
     return camera->position + camera->front * camera->near + camera->right * pixelXPos + camera->up * pixelYPos;
 }
 
@@ -294,7 +294,7 @@ global const int *numFrames
     float4 sample = ComputeColor(&ray, objects, numObject, materials, &seed);
 
     float scale = 1.0f / (*numFrames+1);
-    
+
     pixels[index] =  pixels[index] + (sample - pixels[index]) * scale;
 }
 

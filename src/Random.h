@@ -2,6 +2,7 @@
 #define RANDOM_H
 
 #include <cmath>
+#include <stdint.h>
 
 class Random{
 public:

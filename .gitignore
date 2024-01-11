@@ -29,6 +29,7 @@
 #Directories
 build
 .vscode
+OpenCL
 
 # Executables
 *.exe
