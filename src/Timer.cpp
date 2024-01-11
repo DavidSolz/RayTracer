@@ -17,7 +17,7 @@ void Timer::TicTac(){
     double delta = currentTime - lastTime;
     if(delta >= 1.0f){
         deltaTime = timeScale/frameCount;
-        printf("Frametime : %0.3f ms   FPS: % 3d\r", 1000.0f/frameCount, frameCount);
+        printf("Frametime : %4.3lf ms   FPS: % 3d\r", 1000.0f/frameCount, frameCount);
         fflush(stdout);
         frameCount = 0;
         lastTime = currentTime;

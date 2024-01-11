@@ -14,8 +14,8 @@ int main(int argc, char* argv[]){
 
 // Context setup
 
-    context.width = 900;
-    context.height = 900;
+    context.width = 1000;
+    context.height = 1000;
     context.depth = 480;
 
     float aspectRatio = context.width/(float)context.height;
