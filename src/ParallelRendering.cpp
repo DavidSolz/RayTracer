@@ -17,7 +17,7 @@ void ParallelRendering::Init(RenderingContext * _context){
     }
 
     dataSize = sizeof(Color) * context->width * context->height;
-    pixelBuffer = cl::Buffer(deviceContext, CL_MEM_READ_WRITE, dataSize);
+    pixelBuffer = cl::Buffer(deviceContext, CL_MEM_READ_WRITE | CL_MEM_HOST_READ_ONLY, dataSize);
 
     context->frameCounter = 0;
     frameCounter = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, sizeof(int));
@@ -32,7 +32,7 @@ void ParallelRendering::Init(RenderingContext * _context){
 
     cameraBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, sizeof(Camera));
 
-    kernel = cl::Kernel(program, "RenderGraphics");
+    kernel = cl::Kernel(program, "RayTrace");
     kernel.setArg(0, pixelBuffer);
     kernel.setArg(1, objectBuffer);
     kernel.setArg(2, objectsCountBuffer);
@@ -58,7 +58,7 @@ void ParallelRendering::Render(Color * _pixels){
     #ifdef __APPLE__
         queue.enqueueNDRangeKernel(kernel, cl::NullRange, globalRange);
     #else
-        queue.enqueueNDRangeKernel(kernel, cl::NullRange, globalRange);
+        queue.enqueueNDRangeKernel(kernel, cl::NullRange, globalRange, localRange);
     #endif
     
     queue.finish();
@@ -134,7 +134,7 @@ cl::Program ParallelRendering::FetchProgram(){
 
     std::string kernel_code;
 
-    std::fstream input("tracingkernel.cl");
+    std::fstream input("resources/tracingkernel.cl");
 
     if(!input){
         fprintf(stderr,"File can't be opened\n");

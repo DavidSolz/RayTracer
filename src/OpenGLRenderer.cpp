@@ -63,7 +63,6 @@ OpenGLRenderer::OpenGLRenderer(RenderingContext * _context, const bool& _enableV
 
 void OpenGLRenderer::KeyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mods){
 
-    Vector3 direction(0.0f, 1.0f, 0.0f);
 
     float deltaTime = timer->GetDeltaTime();
 
@@ -165,8 +164,11 @@ void OpenGLRenderer::Update(){
 
 OpenGLRenderer::~OpenGLRenderer(){
 
-    delete[] pixels;
+    if( pixels != NULL)
+        delete[] pixels;
 
     glfwDestroyWindow(window);
     glfwTerminate();
+
+    fprintf(stdout, "\nProgram exited succesfully.\n");
 }

@@ -68,21 +68,21 @@ float Rand(unsigned int * seed){
 }
 
 float3 RandomDirection(unsigned int *seed){
-    float phi = acos(2.0f * Rand(seed) - 1.0f);
-    float theta = Rand(seed) * 2 *  3.1415926535f;
+    float latitude = acos(2.0f * Rand(seed) - 1.0f) - 3.1415926353f/2.0f;
+    float longitude = Rand(seed) * 2 *  3.1415926535f;
 
-    float sinTheta = sin(theta);
+    float cosLatitude = cos(latitude);
 
     return (float3)(
-        sinTheta*cos(phi),
-        cos(theta),
-        sinTheta*sin(phi)
+        cosLatitude * cos(longitude),
+        cosLatitude * sin(longitude),
+        sin(latitude)
     );
 }
 
 float3 RandomReflection(float3 normal, unsigned int *seed){
     float3 direction = RandomDirection(seed);
-    return direction * sign(dot(normal, direction));
+    return direction * sign( dot(normal, direction) );
 }
 
 float IntersectSphere(const struct Ray *ray, global const struct Object *object) {
@@ -121,59 +121,74 @@ float IntersectDisk(const struct Ray *ray, global const struct Object *object) {
 }
 
 float IntersectCube(const struct Ray *ray, global const struct Object *object) {
-    float tMin = (object->position.x - ray->origin.x) / ray->direction.x;
-    float tMax = (object->maxPos.x - ray->origin.x) / ray->direction.x;
+    
+    float3 dirs = (float3)(sign(ray->direction.x), sign(ray->direction.y), sign(ray->direction.z) );
 
-    if (tMin > tMax) {
-        float temp = tMin;
-        tMin = tMax;
-        tMax = temp;
-    }
+    float3 values = (float3)(fabs(ray->direction.x), fabs(ray->direction.y), fabs(ray->direction.z));
 
-    float tyMin = (object->position.y - ray->origin.y) / ray->direction.y;
-    float tyMax = (object->maxPos.y - ray->origin.y) / ray->direction.y;
+    values.x = fmax(values.x, 0.00000001f);
+    values.y = fmax(values.y, 0.00000001f);
+    values.z = fmax(values.z, 0.00000001f);
 
-    if (tyMin > tyMax) {
-        float temp = tyMin;
-        tyMin = tyMax;
-        tyMax = temp;
-    }
+    float3 direction = 1.0f/(values * dirs);
+
+    float tMin = (object->position.x - ray->origin.x) * direction.x;
+    float tMax = (object->maxPos.x - ray->origin.x) * direction.x;
+
+    float min = fmin(tMin, tMax);
+    float max = fmax(tMin, tMax);
+
+    tMin = min;
+    tMax = max;
+
+    float tyMin = (object->position.y - ray->origin.y) * direction.y;
+    float tyMax = (object->maxPos.y - ray->origin.y) * direction.y;
+
+    min = fmin(tyMin, tyMax);
+    max = fmax(tyMin, tyMax);
+
+    tyMin = min;
+    tyMax = max;
 
     if ((tMin > tyMax) || (tyMin > tMax)) {
-        return -1.0f;  // No intersection
+        return -1.0f;  
     }
 
     tMin = fmax(tMin, tyMin);
     tMax = fmin(tMax, tyMax);
 
-    float tzMin = (object->position.z - ray->origin.z) / ray->direction.z;
-    float tzMax = (object->maxPos.z - ray->origin.z) / ray->direction.z;
+    float tzMin = (object->position.z - ray->origin.z) * direction.z;
+    float tzMax = (object->maxPos.z - ray->origin.z) * direction.z;
 
-    if (tzMin > tzMax) {
-        float temp = tzMin;
-        tzMin = tzMax;
-        tzMax = temp;
-    }
+    min = fmin(tzMin, tzMax);
+    max = fmax(tzMin, tzMax);
 
+    tzMin = min;
+    tzMax = max;
+    
     if ((tMin > tzMax) || (tzMin > tMax)) {
-        return -1.0f;  // No intersection
+        return -1.0f; 
     }
 
     tMin = fmax(tMin, tzMin);
     tMax = fmin(tMax, tzMax);
 
-    if (tMin > 0.0f && tMin < tMax) {
+    if (tMin > 0.0f) {
         return tMin;
     }
 
     return -1.0f;
 }
 
+float3 ComputeBoxNormal(global const float3 * nearVertice, global const float3 * farVertice, const float3 * intersection){
+    float3 boxCenter = (*nearVertice + *farVertice) * 0.5f;
+    float3 localIntersection = *intersection - boxCenter;
+    return normalize(localIntersection);
+}
+
 struct Sample FindClosestIntersection(global const struct Object* objects, global const int * numObject, const struct Ray * ray){
     struct Sample sample = {0};
     sample.distance = INFINITY;
-
-    unsigned int idx = 0;
 
     for (int i = 0; i < *numObject; ++i) {
 
@@ -196,13 +211,25 @@ struct Sample FindClosestIntersection(global const struct Object* objects, globa
         if((distance < sample.distance) && (distance>0.1f)){
             sample.distance = distance ;
             sample.point = ray->origin + ray->direction * distance * 1.000005f;
-            idx = i;
+            sample.materialID = objects[i].materialID;
+
+            switch(objects[i].type){
+
+                case CUBE:
+                    sample.normal = ComputeBoxNormal(&objects[i].position, &objects[i].maxPos, &sample.point);
+                    break;
+
+                case SPHERE:
+                    sample.normal = normalize(sample.point - objects[i].position);
+                    break;
+
+                default:
+                    sample.normal = objects[i].normal;
+            }
+            
         }
 
     }
-
-    sample.normal = normalize(sample.point - objects[idx].position);
-    sample.materialID = objects[idx].materialID;
 
     return sample;
 }
@@ -219,10 +246,8 @@ float3 Refract(const float3 * incident, const float3 * normal, const struct Mate
 
     float reflectance  = 1.0f/material->refractiveIndex;
 
-    float cosI = dot(-*incident, *normal);
+    float cosI = -dot(*incident, *normal);
     float sinR2 = reflectance * reflectance * (1.0f - cosI * cosI);
-
-    // sin2 r + cos2 r = 1 ==> cos2r = 1 - sin2 r => cos r = sqrt( 1 - sin2 r)
 
     float cosR = sqrt(1.0f - sinR2);
 
@@ -234,7 +259,7 @@ float4 GetSkyBoxColor(const float intensity, const struct Ray * ray){
 
     const float4 skyColor = (float4)(0.5f, 0.7f, 1.0f, 1.0f);
 
-    return  skyColor * t;
+    return skyColor * t;
 }
 
 float4 ComputeColor(struct Ray *ray, global const struct Object* objects, global const int * numObject, global const struct Material* materials,  unsigned int *seed) {
@@ -256,7 +281,7 @@ float4 ComputeColor(struct Ray *ray, global const struct Object* objects, global
 
         struct Material material =  materials[sample.materialID];
 
-        bool isRefraction = (material.transparency < Rand(seed) );
+        bool isRefraction = ( material.transparency < Rand(seed) );
 
         float3 diffusionDirection = RandomReflection(sample.normal, seed);
         float3 reflectionDirection = Reflect(&ray->direction, &sample.normal);
@@ -265,14 +290,16 @@ float4 ComputeColor(struct Ray *ray, global const struct Object* objects, global
         ray->direction = diffusionDirection + (reflectionDirection - diffusionDirection) * material.smoothness;
         ray->direction = normalize(ray->direction);
 
+        ray->origin += ray->direction * 0.01f;
+
         float lightIntensity = dot(ray->direction, sample.normal);
 
         float4 emmisionComponent = normalize(material.emission * material.emmissionScale) ;
-        float4 diffuseComponent = normalize(material.diffuse * material.diffusionScale * 2 * lightIntensity);
+        float4 reflectionComponent = normalize(material.diffuse * material.diffusionScale * 2 * lightIntensity);
 
-        accumulatedColor += (2 * emmisionComponent + diffuseComponent/M_PI_F) * colorMask;
+        accumulatedColor += (2 * emmisionComponent + reflectionComponent/M_PI_F) * colorMask;
         colorMask *= sqrt(material.baseColor);
-        intensity *= lightIntensity * 0.5f;
+        intensity *= lightIntensity * 0.1f;
     }
 
     return accumulatedColor;
@@ -289,7 +316,8 @@ float3 CalculatePixelPosition(const int x, const int y, const int width, const i
 
 // Main
 
-void kernel RenderGraphics(
+
+void kernel RayTrace(
 global float4* pixels,
 global struct Object * objects,
 global const int * numObject,
@@ -307,8 +335,9 @@ global const int *numFrames
     unsigned int index = y * width + x;
     unsigned int seed = (*numFrames<<16) ^ (*numFrames >>13) + index;
 
+    // Simple anti-aliasing techinque 
     float3 offset = RandomDirection(&seed);
-    float3 pixelPosition = CalculatePixelPosition(x + offset.x + 0.5f, y + offset.y + 0.5f, width, height, camera);
+    float3 pixelPosition = CalculatePixelPosition(x + offset.x - 0.5f, y + offset.y - 0.5f, width, height, camera);
 
     pixelPosition.x = fmax(pixelPosition.x, 0.00001f);
     pixelPosition.y = fmax(pixelPosition.y, 0.00001f);

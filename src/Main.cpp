@@ -6,7 +6,6 @@ int main(int argc, char* argv[]){
 
     srand(time(NULL));
 
-
 // Objects setup
 
     RenderingContext context;
@@ -24,7 +23,7 @@ int main(int argc, char* argv[]){
 
     context.camera.position = Vector3(context.width/2.0f, context.height/2.0f, -900.0f);
     context.camera.aspectRatio = aspectRatio;
-/*
+
 {
 
     Object p;
@@ -122,9 +121,9 @@ int main(int argc, char* argv[]){
     context.objects.emplace_back(p);
 
 }
-*/
 
 
+/*
 {
     const int rows = 10;
     const int cols = 10;
@@ -140,25 +139,31 @@ int main(int argc, char* argv[]){
             s.position.x = startX + i * spacing;
             s.position.y = startY + j * spacing;
             s.position.z = -200.f + (rand() / (float)RAND_MAX) * spacing * aspectRatio;
-            s.maxPos = s.position + (Vector3){spacing*aspectRatio, spacing*aspectRatio, spacing*aspectRatio};
+            s.maxPos = s.position + (Vector3){spacing, spacing, spacing} * aspectRatio;
             s.type = CUBE;
 
             float isMetallic = (rand() / (float)RAND_MAX)>0.7f;
-            float isEmissive = (rand() / (float)RAND_MAX)>0.6f;
+            float isEmissive = (rand() / (float)RAND_MAX)>0.8f;
+
+            Color color = (Color){(rand() / (float)RAND_MAX), (rand() / (float)RAND_MAX), (rand() / (float)RAND_MAX)} * (1- isEmissive);
+
 
             s.materialID =  materialBuilder
-                            .SetBaseColor( (Color){(rand() / (float)RAND_MAX), (rand() / (float)RAND_MAX), (rand() / (float)RAND_MAX)} * (1- isEmissive))
-                            ->SetDiffuseColor({(rand() / (float)RAND_MAX),(rand() / (float)RAND_MAX),(rand() / (float)RAND_MAX)})
+                            .SetBaseColor( color )
+                            ->SetDiffuseColor( color )
                             ->SetSpecularColor({(rand() / (float)RAND_MAX), (rand() / (float)RAND_MAX), (rand() / (float)RAND_MAX)})
                             ->SetEmissionColor((Color){(rand() / (float)RAND_MAX), (rand() / (float)RAND_MAX), (rand() / (float)RAND_MAX)} * isEmissive)
+                            ->SetRefractiveIndex((rand() / (float)RAND_MAX))
+                            ->SetDiffusion((rand() / (float)RAND_MAX))
                             ->SetSmoothness((rand() / (float)RAND_MAX) * isMetallic)
-                            ->SetEmission((rand() / (float)RAND_MAX) * isMetallic)
+                            ->SetEmission((rand() / (float)RAND_MAX) * isEmissive)
                             ->Build();
 
             context.objects.emplace_back(s);
         }
     }
 }
+*/
 
 
 OpenGLRenderer renderer(&context);
@@ -166,12 +171,8 @@ OpenGLRenderer renderer(&context);
 //Main loop
 
     while (!renderer.ShouldClose()) {
-
         renderer.Update();
-
     }
-
-    fprintf(stdout, "\nProgram exited succesfully.\n");
 
     return EXIT_SUCCESS;
 }
