@@ -39,6 +39,30 @@ MaterialBuilder * MaterialBuilder::SetEmissionColor(const Color & _color){
     return this;
 }
 
+MaterialBuilder * MaterialBuilder::SetBaseColor(const uint8_t & _R, const uint8_t & _G, const uint8_t & _B){
+    Color color = {_R/255.0f, _G/255.0f, _B/255.0f};
+    temporaryMaterial.baseColor = color;
+    return this;
+}
+
+MaterialBuilder * MaterialBuilder::SetDiffuseColor(const uint8_t & _R, const uint8_t & _G, const uint8_t & _B){
+    Color color = {_R/255.0f, _G/255.0f, _B/255.0f};
+    temporaryMaterial.diffuse = color;
+    return this;
+}
+
+MaterialBuilder * MaterialBuilder::SetSpecularColor(const uint8_t & _R, const uint8_t & _G, const uint8_t & _B){
+    Color color = {_R/255.0f, _G/255.0f, _B/255.0f};
+    temporaryMaterial.specular = color;
+    return this;
+}
+
+MaterialBuilder * MaterialBuilder::SetEmissionColor(const uint8_t & _R, const uint8_t & _G, const uint8_t & _B){
+    Color color = {_R/255.0f, _G/255.0f, _B/255.0f};
+    temporaryMaterial.emission = color;
+    return this;
+}
+
 MaterialBuilder * MaterialBuilder::SetSmoothness(const float & _factor){
     temporaryMaterial.smoothness = std::fmax(0.0f, std::fmin(_factor, 1.0f));
     return this;

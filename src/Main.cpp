@@ -24,6 +24,7 @@ int main(int argc, char* argv[]){
     context.camera.position = Vector3(context.width/2.0f, context.height/2.0f, -900.0f);
     context.camera.aspectRatio = aspectRatio;
 
+/*
 {
 
     Object p;
@@ -80,16 +81,15 @@ int main(int argc, char* argv[]){
 
     context.objects.emplace_back(p);
 
-// GLASS
+// RED LIGHT
 
     p.position = Vector3(context.width/4.0f, context.height/4.0f + 50.0f, 0.0f);
     p.type = SPHERE;
     p.radius = 50.0f;
 
     p.materialID = materialBuilder
-                    .SetBaseColor({0.7f, 0.7f, 0.7f, 1.0f})
-                    ->SetRefractiveIndex(1.52f)
-                    ->SetTransparency(1.0f)
+                    .SetEmissionColor({1.0f, 0.0f, 0.0f, 1.0f})
+                    ->SetEmission(1.0f)
                     ->Build();
 
     context.objects.emplace_back(p);
@@ -99,11 +99,12 @@ int main(int argc, char* argv[]){
 
     p.position = Vector3(0, 0, -context.depth/4.0f);
     p.maxPos = p.position + Vector3(context.width, context.height/4.0f, 2*context.depth);
+    p.normal = Vector3(0.0f, 1.0f ,0.0f);
     p.type = CUBE;
 
     p.materialID = materialBuilder
-                    .SetBaseColor({1.0f, 1.0f, 1.0f, 1.0f})
-                    ->SetDiffusion(0.1f)
+                    .SetBaseColor(255, 126, 13)
+                    ->SetEmissionColor({})
                     ->Build();
 
     context.objects.emplace_back(p);
@@ -121,9 +122,8 @@ int main(int argc, char* argv[]){
     context.objects.emplace_back(p);
 
 }
+*/
 
-
-/*
 {
     const int rows = 10;
     const int cols = 10;
@@ -138,22 +138,24 @@ int main(int argc, char* argv[]){
 
             s.position.x = startX + i * spacing;
             s.position.y = startY + j * spacing;
-            s.position.z = -200.f + (rand() / (float)RAND_MAX) * spacing * aspectRatio;
+            s.position.z = -200.f + (rand() / (float)RAND_MAX) * spacing ;
             s.maxPos = s.position + (Vector3){spacing, spacing, spacing} * aspectRatio;
             s.type = CUBE;
+
 
             float isMetallic = (rand() / (float)RAND_MAX)>0.7f;
             float isEmissive = (rand() / (float)RAND_MAX)>0.8f;
 
-            Color color = (Color){(rand() / (float)RAND_MAX), (rand() / (float)RAND_MAX), (rand() / (float)RAND_MAX)} * (1- isEmissive);
+            Color color = (Color){(rand() / (float)RAND_MAX), (rand() / (float)RAND_MAX), (rand() / (float)RAND_MAX)};
 
 
             s.materialID =  materialBuilder
                             .SetBaseColor( color )
                             ->SetDiffuseColor( color )
-                            ->SetSpecularColor({(rand() / (float)RAND_MAX), (rand() / (float)RAND_MAX), (rand() / (float)RAND_MAX)})
+                            ->SetSpecularColor((Color){(rand() / (float)RAND_MAX), (rand() / (float)RAND_MAX), (rand() / (float)RAND_MAX)})
                             ->SetEmissionColor((Color){(rand() / (float)RAND_MAX), (rand() / (float)RAND_MAX), (rand() / (float)RAND_MAX)} * isEmissive)
                             ->SetRefractiveIndex((rand() / (float)RAND_MAX))
+                            ->SetTransparency(0.0f)
                             ->SetDiffusion((rand() / (float)RAND_MAX))
                             ->SetSmoothness((rand() / (float)RAND_MAX) * isMetallic)
                             ->SetEmission((rand() / (float)RAND_MAX) * isEmissive)
@@ -162,8 +164,8 @@ int main(int argc, char* argv[]){
             context.objects.emplace_back(s);
         }
     }
+
 }
-*/
 
 
 OpenGLRenderer renderer(&context);

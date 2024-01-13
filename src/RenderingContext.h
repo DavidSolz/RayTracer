@@ -12,15 +12,15 @@
 
 struct RenderingContext {
 
-    int width;
-    int height;
-    int depth;
+    uint32_t width;
+    uint32_t height;
+    uint32_t depth;
 
     std::vector<Object> objects;
     std::vector<Material> materials;
 
     Camera camera;
-    unsigned int frameCounter;
+    uint32_t frameCounter;
 
 
 };

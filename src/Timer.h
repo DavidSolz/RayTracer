@@ -3,6 +3,7 @@
 
 #include <GLFW/glfw3.h>
 #include <stdio.h>
+#include <stdint.h>
 
 class Timer {
 
@@ -11,7 +12,7 @@ private:
     double timeScale;
     double lastTime;
     double deltaTime;
-    unsigned int frameCount;
+    uint32_t frameCount;
 
     Timer();
 
