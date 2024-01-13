@@ -34,6 +34,7 @@ class ParallelRendering : public IFrameRender {
     cl::CommandQueue queue;
     cl::Context deviceContext;
     cl::Kernel kernel;
+    cl::Kernel antialiasingKernel;
 
     cl::NDRange globalRange;
     cl::NDRange localRange;
@@ -43,6 +44,7 @@ class ParallelRendering : public IFrameRender {
     size_t materialBufferSize;
 
     cl::Buffer pixelBuffer;
+    cl::Buffer antialiasBuffer;
     cl::Buffer frameCounter;
     cl::Buffer objectBuffer;
     cl::Buffer objectsCountBuffer;

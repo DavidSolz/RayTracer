@@ -5,6 +5,10 @@
 int main(int argc, char* argv[]){
 
     srand(time(NULL));
+    int VSync = true;
+
+    if( argc > 0)
+        VSync = atoi(argv[1]);
 
 // Objects setup
 
@@ -40,7 +44,7 @@ int main(int argc, char* argv[]){
                     ->SetDiffusion(0.4f)
                     ->Build();
 
-    context.objects.emplace_back(p);
+    context.objects.push_back(p);
 
 // RED CUBE
 
@@ -53,7 +57,7 @@ int main(int argc, char* argv[]){
                     ->SetDiffusion(0.2f)
                     ->Build();
 
-    context.objects.emplace_back(p);
+    context.objects.push_back(p);
 
 // GREEN CUBE
 
@@ -66,7 +70,7 @@ int main(int argc, char* argv[]){
                     ->SetDiffusion(0.1f)
                     ->Build();
 
-    context.objects.emplace_back(p);
+    context.objects.push_back(p);
 
 // MIRROR
 
@@ -79,7 +83,7 @@ int main(int argc, char* argv[]){
                     ->SetSmoothness(1.52f)
                     ->Build();
 
-    context.objects.emplace_back(p);
+    context.objects.push_back(p);
 
 // RED LIGHT
 
@@ -92,7 +96,7 @@ int main(int argc, char* argv[]){
                     ->SetEmission(1.0f)
                     ->Build();
 
-    context.objects.emplace_back(p);
+    context.objects.push_back(p);
 
 
 // PLANE
@@ -100,14 +104,16 @@ int main(int argc, char* argv[]){
     p.position = Vector3(0, 0, -context.depth/4.0f);
     p.maxPos = p.position + Vector3(context.width, context.height/4.0f, 2*context.depth);
     p.normal = Vector3(0.0f, 1.0f ,0.0f);
-    p.type = CUBE;
+    p.radius = 300.0f;
+    p.type = DISK;
 
     p.materialID = materialBuilder
                     .SetBaseColor(255, 126, 13)
-                    ->SetEmissionColor({})
+                    ->SetEmissionColor(36, 13, 42)
+                    ->SetEmission(1.0f)
                     ->Build();
 
-    context.objects.emplace_back(p);
+    context.objects.push_back(p);
 
 // WALL
     p.position = Vector3(0, 0, -context.depth/4.0f + 2*context.depth);
@@ -119,10 +125,11 @@ int main(int argc, char* argv[]){
                     ->SetEmission(0.7f)
                     ->Build();
 
-    context.objects.emplace_back(p);
+    context.objects.push_back(p);
 
 }
 */
+
 
 {
     const int rows = 10;
@@ -139,9 +146,10 @@ int main(int argc, char* argv[]){
             s.position.x = startX + i * spacing;
             s.position.y = startY + j * spacing;
             s.position.z = -200.f + (rand() / (float)RAND_MAX) * spacing ;
-            s.maxPos = s.position + (Vector3){spacing, spacing, spacing} * aspectRatio;
+            s.maxPos = s.position + (Vector3){1, 1, 1} * spacing * aspectRatio;
+            s.radius = spacing/2.0f;
+            s.normal = Vector3(0.0f, 1.0f, 0.0f);
             s.type = CUBE;
-
 
             float isMetallic = (rand() / (float)RAND_MAX)>0.7f;
             float isEmissive = (rand() / (float)RAND_MAX)>0.8f;
@@ -168,7 +176,7 @@ int main(int argc, char* argv[]){
 }
 
 
-OpenGLRenderer renderer(&context);
+OpenGLRenderer renderer(&context, VSync);
 
 //Main loop
 

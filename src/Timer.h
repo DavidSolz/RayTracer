@@ -12,6 +12,8 @@ private:
     double timeScale;
     double lastTime;
     double deltaTime;
+
+    uint32_t lastFrameCount;
     uint32_t frameCount;
 
     Timer();
@@ -22,7 +24,9 @@ public:
 
     void SetTimeScale(const double& _timeScale);
 
-    double GetDeltaTime();
+    double GetDeltaTime() const;
+
+    uint32_t GetFrameCount() const;
 
     static Timer* GetInstance();
 

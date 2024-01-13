@@ -3,7 +3,7 @@
 
 #include "Vector3.h"
 
-constexpr float deg2rad = 3.1415926535f/180.0f;
+constexpr float deg2rad = 0.0174532925f;
 const Vector3 worldUp = {0.0f , 1.0f ,0.0f};
 
 struct Camera{
@@ -51,8 +51,8 @@ struct Camera{
 
     Vector3 CalculatePixelPosition(const int x, const int y, const int width, const int height){
         float tanHalfFOV = tan(deg2rad * fov * 0.5f);
-        float cameraX = (2.0 * (x / (float)width) - 1.0f) * aspectRatio * tanHalfFOV * nearView;
-        float cameraY = (2.0 * (y / (float)height) - 1.0f) * tanHalfFOV * nearView;
+        float cameraX = (2.0 * x / (float)width - 1.0f) * aspectRatio * tanHalfFOV * nearView;
+        float cameraY = (2.0 * y / (float)height - 1.0f) * tanHalfFOV * nearView;
         
         return position + front*nearView + right*cameraX + up*cameraY;
 

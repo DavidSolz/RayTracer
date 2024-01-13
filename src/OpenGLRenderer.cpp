@@ -10,6 +10,7 @@ OpenGLRenderer::OpenGLRenderer(RenderingContext * _context, const bool& _enableV
     cpuRender.Init(context);
     gpuRender.Init(context);
 
+    memcpy(windowTitle, "ACC Mode", 9);
     SetRenderingService(&gpuRender);
     selection = ACC;
 
@@ -84,11 +85,11 @@ void OpenGLRenderer::KeyboardCallback(GLFWwindow* window, int key, int scancode,
             context->frameCounter=0;
             break;
         case GLFW_KEY_LEFT_SHIFT:
-            context->camera.Move(context->camera.up*(-1.0f), deltaTime);
+            context->camera.Move(worldUp*(-1.0f), deltaTime);
             context->frameCounter=0;
             break;
         case GLFW_KEY_SPACE:
-            context->camera.Move(context->camera.up, deltaTime);
+            context->camera.Move(worldUp, deltaTime);
             context->frameCounter=0;
             break;
         case GLFW_KEY_ESCAPE:
@@ -119,13 +120,13 @@ void OpenGLRenderer::ProcessInput(){
     }
 
     if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS && selection != CPU){
-        fprintf(stdout, "\nSwitching to cpu context.\n");
+        memcpy(windowTitle, "CPU Mode", 9);
         SetRenderingService(&cpuRender);
         selection = CPU;
     }
 
     if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS && selection != ACC){
-        fprintf(stdout, "\nSwitching to accelerator context.\n");
+        memcpy(windowTitle, "ACC Mode", 9);
         SetRenderingService(&gpuRender);
         selection = ACC;
     }
@@ -154,6 +155,11 @@ void OpenGLRenderer::Update(){
 
     context->frameCounter++;
 
+    uint32_t fps = timer->GetFrameCount();
+
+    sprintf(windowTitle+8, " | FPS : %d | FrameTime : %5.3f \0", fps, 1000.0f/fps);
+
+    glfwSetWindowTitle(window, windowTitle);
     glfwSwapBuffers(window);
     glfwPollEvents();
 

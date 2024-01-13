@@ -112,7 +112,7 @@ float IntersectDisk(const struct Ray *ray, global const struct Object *object) {
 
     float t = IntersectPlane(ray, object);
 
-    float3 p = ray->origin + ray->direction * t * 1.000005f;
+    float3 p = ray->origin + ray->direction * t * 1.000001f;
     float3 v = p - object->position;
     float d2 = dot(v, v);
 
@@ -151,7 +151,7 @@ float IntersectCube(const struct Ray *ray, global const struct Object *object) {
     tyMax = max;
 
     if ( isgreater(tMin, tyMax) || isgreater(tyMin, tMax)) {
-        return -1.0f;  
+        return INFINITY;  
     }
 
     tMin = fmax(tMin, tyMin);
@@ -167,7 +167,7 @@ float IntersectCube(const struct Ray *ray, global const struct Object *object) {
     tzMax = max;
     
     if ( isgreater(tMin, tzMax) || isgreater(tzMin, tMax)) {
-        return -1.0f; 
+        return INFINITY; 
     }
 
     tMin = fmax(tMin, tzMin);
@@ -177,7 +177,7 @@ float IntersectCube(const struct Ray *ray, global const struct Object *object) {
         return tMin;
     }
 
-    return -1.0f;
+    return INFINITY;
 }
 
 float3 ComputeBoxNormal(global const float3 * nearVertice, global const float3 * farVertice, const float3 * intersectionPoint){
@@ -186,9 +186,9 @@ float3 ComputeBoxNormal(global const float3 * nearVertice, global const float3 *
     float3 radius = (*farVertice - *nearVertice)*0.5f;
     float3 pointToCenter = *intersectionPoint - boxCenter;
 
-    const float bias = 1.000005f;
+    const float bias = 1.000001f;
 
-    float3 normal = sign(pointToCenter) * step(fabs(fabs(pointToCenter)- radius), bias);
+    float3 normal = sign(pointToCenter) * step(fabs(fabs(pointToCenter) - radius), bias);
 
     return normalize(normal);
 }
@@ -200,7 +200,7 @@ struct Sample FindClosestIntersection(global const struct Object* objects, globa
 
     for (int i = 0; i < *numObject; ++i) {
 
-        float length = -1.0f;
+        float length = INFINITY;
 
         switch(objects[i].type){
             case CUBE:
@@ -218,7 +218,7 @@ struct Sample FindClosestIntersection(global const struct Object* objects, globa
 
         if( isless(length, sample.length) && isgreater(length, 0.1f) ){
             sample.length = length ;
-            sample.point = ray->origin + ray->direction * length * 1.000005f;
+            sample.point = mad(ray->direction, length, ray->origin);
             sample.materialID = objects[i].materialID;
 
             switch(objects[i].type){
@@ -275,9 +275,8 @@ float4 ComputeColor(struct Ray *ray, global const struct Object* objects, global
     float4 accumulatedColor = 0.0f;
     float4 colorMask = 1.0f;
     float intensity = 1.0f;
-    float lastRefrectance = 1.00029f;
 
-    for(int i = 0; i < 32; ++i){
+    for(int i = 0; i < 8; ++i){
         struct Sample sample = FindClosestIntersection(objects, numObject, ray);
 
         if( isinf(sample.length) ){
@@ -292,13 +291,12 @@ float4 ComputeColor(struct Ray *ray, global const struct Object* objects, global
         float3 diffusionDirection = RandomReflection(sample.normal, seed);
         float3 reflectionDirection = Reflect(&ray->direction, &sample.normal);
 
-        ray->direction = diffusionDirection + (reflectionDirection - diffusionDirection) * material.smoothness;
-        ray->direction = normalize(ray->direction);
+        ray->direction = mix(diffusionDirection, reflectionDirection , material.smoothness);
 
         float lightIntensity = clamp(dot(ray->direction, sample.normal), 0.0f, 1.0f);
 
-        float4 emmisionComponent = material.emission * material.emmissionScale * 2 ;
-        float4 reflectionComponent = material.diffuse * material.diffusionScale * 2 * lightIntensity/M_PI_F ;
+        float4 emmisionComponent = material.emission * material.emmissionScale * 2;
+        float4 reflectionComponent = material.diffuse * material.diffusionScale * 2 * lightIntensity * (1.0f/3.1415926535f);
 
         accumulatedColor += (emmisionComponent +  reflectionComponent) * colorMask;
         colorMask *= material.baseColor;
@@ -316,6 +314,7 @@ float3 CalculatePixelPosition(const int x, const int y, const int width, const i
 
     return camera->position + camera->front * camera->near + camera->right * pixelXPos + camera->up * pixelYPos;
 }
+
 
 // Main
 
@@ -339,11 +338,7 @@ global const int *numFrames
 
     // Simple anti-aliasing techinque 
     float3 offset = RandomDirection(&seed);
-    float3 pixelPosition = CalculatePixelPosition(x + offset.x - 0.5f, y + offset.y - 0.5f, width, height, camera);
-
-    pixelPosition.x = fmax(pixelPosition.x, 0.00001f);
-    pixelPosition.y = fmax(pixelPosition.y, 0.00001f);
-    pixelPosition.z = fmin(pixelPosition.z, 0.00001f);
+    float3 pixelPosition = CalculatePixelPosition(x, y, width, height, camera);
 
     struct Ray ray;
     ray.origin = camera->position;
@@ -354,8 +349,40 @@ global const int *numFrames
     // Supersampling approach results in no noise but very low amount of fps
     float4 sample = ComputeColor(&ray, objects, numObject, materials, &seed);
 
-    float scale = 1.0f / (*numFrames+1);
+    float scale = 1.0f / (*numFrames + 1);
 
-    pixels[index] =  pixels[index] + (sample - pixels[index]) * scale;
+    pixels[index] =  mix(pixels[index], sample, scale);
 }
 
+void kernel AntiAlias(global float4 * input, global float4 * output){
+    
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    int width = get_global_size(0);
+    int height = get_global_size(1);
+
+    int index = y * width + x;
+
+    float4 pixelValue = 0.0f;
+
+    constant float matrix[3][3] = {
+            {-0.2f, 2.0f, -0.2f},
+            {0.8f, 1.0f, 0.8f},
+            {-0.2f, 2.0f, -0.2f}
+    };
+
+    for (int i = -1; i <= 1; i++) {
+        for (int j = -1; j <= 1; j++) {
+            uint neighborX = clamp(x + i, 0, width - 1);
+            uint neighborY = clamp(y + j, 0, height - 1);
+            float4 neighborValue = input[neighborY * width + neighborX];
+
+            float weight = matrix[i + 1][j + 1]/8.0f;
+            pixelValue += weight * neighborValue;
+        }
+    }
+
+    output[index] = pixelValue;
+    
+}

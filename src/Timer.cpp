@@ -17,15 +17,18 @@ void Timer::TicTac(){
     double delta = currentTime - lastTime;
     if(delta >= 1.0f){
         deltaTime = timeScale/frameCount;
-        printf("Frametime : % 3.3lf ms   FPS: % 5d\r", 1000.0f/frameCount, frameCount);
-        fflush(stdout);
+        lastFrameCount = frameCount;
         frameCount = 0;
         lastTime = currentTime;
     }
 }
 
-double Timer::GetDeltaTime(){
+double Timer::GetDeltaTime() const{
     return deltaTime;
+}
+
+uint32_t Timer::GetFrameCount() const{
+    return lastFrameCount;
 }
 
 void Timer::SetTimeScale(const double& _timeScale){

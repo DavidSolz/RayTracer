@@ -17,7 +17,8 @@ void ParallelRendering::Init(RenderingContext * _context){
     }
 
     dataSize = sizeof(Color) * context->width * context->height;
-    pixelBuffer = cl::Buffer(deviceContext, CL_MEM_READ_WRITE | CL_MEM_HOST_READ_ONLY, dataSize);
+    pixelBuffer = cl::Buffer(deviceContext, CL_MEM_READ_WRITE | CL_MEM_HOST_WRITE_ONLY, dataSize);
+    antialiasBuffer = cl::Buffer(deviceContext, CL_MEM_READ_WRITE | CL_MEM_HOST_READ_ONLY, dataSize);
 
     context->frameCounter = 0;
     frameCounter = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, sizeof(int));
@@ -40,6 +41,10 @@ void ParallelRendering::Init(RenderingContext * _context){
     kernel.setArg(4, cameraBuffer);
     kernel.setArg(5, frameCounter);
 
+    antialiasingKernel = cl::Kernel(program, "AntiAlias");
+    antialiasingKernel.setArg(0, pixelBuffer);
+    antialiasingKernel.setArg(1, antialiasBuffer);
+
     globalRange = cl::NDRange(context->width, context->height);
     localRange = cl::NDRange(16, 16);
 
@@ -57,13 +62,15 @@ void ParallelRendering::Render(Color * _pixels){
 
     #ifdef __APPLE__
         queue.enqueueNDRangeKernel(kernel, cl::NullRange, globalRange);
+        queue.enqueueNDRangeKernel(antialiasingKernel, cl::NullRange, globalRange);
     #else
         queue.enqueueNDRangeKernel(kernel, cl::NullRange, globalRange, localRange);
+        queue.enqueueNDRangeKernel(antialiasingKernel, cl::NullRange, globalRange, localRange);
     #endif
     
     queue.finish();
 
-    queue.enqueueReadBuffer(pixelBuffer, CL_TRUE, 0, dataSize, _pixels);
+    queue.enqueueReadBuffer(antialiasBuffer, CL_TRUE, 0, dataSize, _pixels);
 
 }
 

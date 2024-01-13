@@ -17,6 +17,7 @@
 #include "Sample.h"
 #include "Ray.h"
 
+
 class ThreadedRendering : public IFrameRender{
 
     unsigned int numThreads;
@@ -32,17 +33,33 @@ class ThreadedRendering : public IFrameRender{
 
     Vector3 Reflect(const Vector3& incident, const Vector3& normal);
 
-    float IntersectSphere(const Ray &ray, const Object &object);
+    static float IntersectSphere(const Ray &ray, const Object &object);
 
-    float IntersectPlane(const Ray& ray, const Object& object);
+    static float IntersectPlane(const Ray& ray, const Object& object);
+
+    static float IntersectDisk(const Ray & ray, const Object & object);
+
+    static float IntersectCube(const Ray & ray, const Object & object);
 
     Sample FindClosestIntersection(const struct Ray& ray);
 
+    Color GetSkyBoxColor(const float & intensity, const Ray & ray);
+    
     Color ComputeColor(struct Ray& ray, unsigned int& seed);
 
     void ComputeRows(const int& _startY, const int& _endY, Color* pixels);
 
     bool CheckForHyperthreading();
+
+    using IntersectionFunction = float (*)(const Ray &, const Object &);
+
+    IntersectionFunction intersectionFunctions[5] = {
+        &ThreadedRendering::IntersectSphere,
+        &ThreadedRendering::IntersectPlane,
+        &ThreadedRendering::IntersectDisk,
+        &ThreadedRendering::IntersectCube,
+        NULL
+    };
 
 public:
 
