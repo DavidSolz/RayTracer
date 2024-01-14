@@ -5,7 +5,8 @@ enum SpatialType{
     SPHERE,
     PLANE,
     DISK,
-    CUBE
+    CUBE,
+    TRIANGLE
 };
 
 #endif

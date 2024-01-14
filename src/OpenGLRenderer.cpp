@@ -138,7 +138,6 @@ bool OpenGLRenderer::ShouldClose(){
     return glfwWindowShouldClose(window);
 }
 
-
 void OpenGLRenderer::SetRenderingService(IFrameRender * _service){
     this->renderingService = _service;
 }
@@ -157,7 +156,7 @@ void OpenGLRenderer::Update(){
 
     uint32_t fps = timer->GetFrameCount();
 
-    sprintf(windowTitle+8, " | FPS : %d | FrameTime : %5.3f \0", fps, 1000.0f/fps);
+    sprintf(windowTitle+8, " | FPS : %d | Frametime : %5.3f ms\0", fps, 1000.0f/fps);
 
     glfwSetWindowTitle(window, windowTitle);
     glfwSwapBuffers(window);

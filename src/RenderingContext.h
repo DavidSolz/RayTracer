@@ -16,8 +16,13 @@ struct RenderingContext {
     uint32_t height;
     uint32_t depth;
 
+    // Object data
     std::vector<Object> objects;
     std::vector<Material> materials;
+
+    // Mesh data
+    std::vector<Vector3> vertices;
+    std::vector<Vector3> normals;
 
     Camera camera;
     uint32_t frameCounter;

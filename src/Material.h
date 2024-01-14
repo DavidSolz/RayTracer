@@ -31,7 +31,7 @@ static float Difference(const Material & _materialA, const Material & _materialB
     return baseSimilarity + diffuseSimilarity + specularSimilarity + emissionSimilarity + factorSimilarity;
 }
 
-};
+} __attribute((aligned(128)));
 
 
 #endif

@@ -17,7 +17,7 @@ void ParallelRendering::Init(RenderingContext * _context){
     }
 
     dataSize = sizeof(Color) * context->width * context->height;
-    pixelBuffer = cl::Buffer(deviceContext, CL_MEM_READ_WRITE | CL_MEM_HOST_WRITE_ONLY, dataSize);
+    pixelBuffer = cl::Buffer(deviceContext, CL_MEM_READ_WRITE, dataSize);
     antialiasBuffer = cl::Buffer(deviceContext, CL_MEM_READ_WRITE | CL_MEM_HOST_READ_ONLY, dataSize);
 
     context->frameCounter = 0;
@@ -33,6 +33,10 @@ void ParallelRendering::Init(RenderingContext * _context){
 
     cameraBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, sizeof(Camera));
 
+    verticesBufferSize = sizeof(Vector3) * context->vertices.size();
+    verticesBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, verticesBufferSize);
+
+
     kernel = cl::Kernel(program, "RayTrace");
     kernel.setArg(0, pixelBuffer);
     kernel.setArg(1, objectBuffer);
@@ -40,6 +44,7 @@ void ParallelRendering::Init(RenderingContext * _context){
     kernel.setArg(3, materialBuffer);
     kernel.setArg(4, cameraBuffer);
     kernel.setArg(5, frameCounter);
+    kernel.setArg(6, verticesBuffer);
 
     antialiasingKernel = cl::Kernel(program, "AntiAlias");
     antialiasingKernel.setArg(0, pixelBuffer);
@@ -59,6 +64,7 @@ void ParallelRendering::Render(Color * _pixels){
     queue.enqueueWriteBuffer(materialBuffer, CL_FALSE, 0, materialBufferSize, context->materials.data());
     queue.enqueueWriteBuffer(cameraBuffer, CL_FALSE, 0, sizeof(Camera), &context->camera);
     queue.enqueueWriteBuffer(frameCounter, CL_FALSE, 0, sizeof(int), &context->frameCounter);
+    queue.enqueueWriteBuffer(verticesBuffer, CL_FALSE, 0, verticesBufferSize, context->vertices.data());
 
     #ifdef __APPLE__
         queue.enqueueNDRangeKernel(kernel, cl::NullRange, globalRange);

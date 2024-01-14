@@ -148,7 +148,7 @@ float ThreadedRendering::IntersectCube(const Ray & ray, const Object & object) {
     tyMax = max;
 
     if ( (tMin > tyMax) || (tyMin > tMax)) {
-        return INFINITY;  
+        return -1.0f;  
     }
 
     tMin = fmax(tMin, tyMin);
@@ -164,7 +164,7 @@ float ThreadedRendering::IntersectCube(const Ray & ray, const Object & object) {
     tzMax = max;
     
     if ( (tMin > tzMax) || (tzMin > tMax)) {
-        return INFINITY; 
+        return -1.0f; 
     }
 
     tMin = fmax(tMin, tzMin);
@@ -174,7 +174,7 @@ float ThreadedRendering::IntersectCube(const Ray & ray, const Object & object) {
         return tMin;
     }
 
-    return INFINITY;
+    return -1.0f;
 }
 
 Vector3 ComputeBoxNormal(const Vector3 & nearVertice, const Vector3 & farVertice, const Vector3 & intersectionPoint){
@@ -183,13 +183,14 @@ Vector3 ComputeBoxNormal(const Vector3 & nearVertice, const Vector3 & farVertice
     Vector3 radius = (farVertice - nearVertice)*0.5f;
     Vector3 pointToCenter = intersectionPoint - boxCenter;
 
-    static const Vector3 bias = {1.000001f, 1.000001f, 1.000001f};
+    static const float bias = 1.000001f;
 
-    Vector3 temp = ((Vector3)pointToCenter.Absolute() - radius).Absolute();
+    Vector3 sign = { std::copysign(1.0f, pointToCenter.x), std::copysign(1.0f, pointToCenter.y), std::copysign(1.0f, pointToCenter.z) };
+    Vector3 abs = ((pointToCenter).Absolute() - radius).Absolute();
 
-    Vector3 normal = (pointToCenter).Directions() * 1.0f * (1-(bias < temp));
+    Vector3 step = { (abs.x < bias) ? 1.0f : 0.0f, (abs.y < bias) ? 1.0f : 0.0f, (abs.z < bias) ? 1.0f : 0.0f };
 
-    return normal.Normalize();
+    return sign * step;
 }
 
 Color ThreadedRendering::GetSkyBoxColor(const float & intensity, const Ray & ray){
@@ -241,9 +242,12 @@ Sample ThreadedRendering::FindClosestIntersection(const Ray& ray){
     sample.distance = INFINITY;
 
     for (int i = 0; i < context->objects.size(); i++) {
-        float distance = INFINITY;
+        float distance = -1.0f;
 
         IntersectionFunction function = intersectionFunctions[ context->objects[i].type ];
+
+        if(function==NULL)
+            continue;
 
         distance = function(ray, context->objects[i]);
 

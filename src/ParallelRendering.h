@@ -42,6 +42,7 @@ class ParallelRendering : public IFrameRender {
     size_t dataSize;
     size_t objectBufferSize;
     size_t materialBufferSize;
+    size_t verticesBufferSize;
 
     cl::Buffer pixelBuffer;
     cl::Buffer antialiasBuffer;
@@ -50,6 +51,7 @@ class ParallelRendering : public IFrameRender {
     cl::Buffer objectsCountBuffer;
     cl::Buffer materialBuffer;
     cl::Buffer cameraBuffer;
+    cl::Buffer verticesBuffer;
 
     cl::Device GetDefaultCLDevice();
     cl::Program FetchProgram();

@@ -10,14 +10,14 @@ struct Material {
     float diffusionScale;
     float transparency;
     float refractiveIndex;
-} ;
+} __attribute((aligned(128)));;
 
 enum SpatialType{
     SPHERE,
     PLANE,
     DISK,
     CUBE,
-    CYLINDER
+    TRIANGLE
 };
 
 struct Ray{
@@ -32,8 +32,10 @@ struct Object{
     float3 position;
     float3 normal;
     float3 maxPos;
+    float3 indiceID;
+    float3 normalID;
     uint materialID;
-};
+} __attribute((aligned(128)));
 
 struct Sample{
     float length;
@@ -112,13 +114,13 @@ float IntersectDisk(const struct Ray *ray, global const struct Object *object) {
 
     float t = IntersectPlane(ray, object);
 
-    float3 p = ray->origin + ray->direction * t * 1.000001f;
+    float3 p = ray->origin + ray->direction * t * 1.000005f;
     float3 v = p - object->position;
     float d2 = dot(v, v);
 
     bool condition = islessequal(d2, object->radius * object->radius);
 
-    return t * condition - 1 + condition;
+    return condition * (1 + t) -1.0f;
 }
 
 float IntersectCube(const struct Ray *ray, global const struct Object *object) {
@@ -151,7 +153,7 @@ float IntersectCube(const struct Ray *ray, global const struct Object *object) {
     tyMax = max;
 
     if ( isgreater(tMin, tyMax) || isgreater(tyMin, tMax)) {
-        return INFINITY;  
+        return -1.0f;  
     }
 
     tMin = fmax(tMin, tyMin);
@@ -166,18 +168,32 @@ float IntersectCube(const struct Ray *ray, global const struct Object *object) {
     tzMin = min;
     tzMax = max;
     
-    if ( isgreater(tMin, tzMax) || isgreater(tzMin, tMax)) {
-        return INFINITY; 
+    if ( tMin > tzMax || tzMin > tMax) {
+        return -1.0f; 
     }
 
     tMin = fmax(tMin, tzMin);
     tMax = fmin(tMax, tzMax);
 
-    if ( isgreater(tMin, 0.0f) ) {
+    if ( tMin > 0.0f ) {
         return tMin;
     }
 
-    return INFINITY;
+    return -1.0f;
+}
+
+float IntersectTriangle(const struct Ray *ray, global const struct Object *object, global const float3 * vertices) {
+
+    int idA = (int)floor( object->indiceID.x );
+
+    float3 A = vertices[ idA ];
+
+    float discriminator = dot(object->normal, ray->direction);
+    
+    if(fabs(discriminator) < 1e-6f)
+        return INFINITY;
+
+    return dot(A - ray->origin, object-> normal)/discriminator;
 }
 
 float3 ComputeBoxNormal(global const float3 * nearVertice, global const float3 * farVertice, const float3 * intersectionPoint){
@@ -193,14 +209,43 @@ float3 ComputeBoxNormal(global const float3 * nearVertice, global const float3 *
     return normalize(normal);
 }
 
-struct Sample FindClosestIntersection(global const struct Object* objects, global const int * numObject, const struct Ray * ray){
+float3 ComputeTriangleNormal(const float3 * intersection, global const struct Object *object, global const float3 * vertices){
+
+    int idA = (int)floor( object->indiceID.x );
+    int idB = (int)floor( object->indiceID.y );
+    int idC = (int)floor( object->indiceID.z );
+
+    float3 A = vertices[ idA ];
+    float3 B = vertices[ idB ];
+    float3 C = vertices[ idC ];
+
+    float3 e1 = B - A;
+    float3 e2 = C - B;
+    float3 e3 = A - C;
+
+    float3 c1 = *intersection - A;
+    float3 c2 = *intersection - B;
+    float3 c3 = *intersection - C;
+    
+    float3 cross1 = cross(e1, c1); 
+    float3 cross2 = cross(e2, c2); 
+    float3 cross3 = cross(e3, c3); 
+
+    if( dot(object->normal, cross1) > 0 && dot(object->normal, cross2) > 0 && dot(object->normal, cross3) > 0)
+        return object->normal;
+
+
+    return 0.0f;
+}
+
+struct Sample FindClosestIntersection(global const struct Object* objects, global const int * numObject, const struct Ray * ray, global const float3 * vertices){
 
     struct Sample sample = {0};
     sample.length = INFINITY;
 
     for (int i = 0; i < *numObject; ++i) {
 
-        float length = INFINITY;
+        float length = -1.0f;
 
         switch(objects[i].type){
             case CUBE:
@@ -212,13 +257,16 @@ struct Sample FindClosestIntersection(global const struct Object* objects, globa
             case DISK:
                 length = IntersectDisk(ray, objects + i);
                 break;
+            case TRIANGLE:
+                length = IntersectTriangle(ray, objects + i, vertices);
+                break;
             default:
                 length = IntersectSphere(ray, objects + i);
         }
 
-        if( isless(length, sample.length) && isgreater(length, 0.1f) ){
+        if( (length < sample.length) && (length > 0.1f) ){
             sample.length = length ;
-            sample.point = mad(ray->direction, length, ray->origin);
+            sample.point = ray->origin + ray->direction * length;
             sample.materialID = objects[i].materialID;
 
             switch(objects[i].type){
@@ -231,8 +279,13 @@ struct Sample FindClosestIntersection(global const struct Object* objects, globa
                     sample.normal = normalize(sample.point - objects[i].position);
                     break;
 
+                case TRIANGLE:
+                    sample.normal = ComputeTriangleNormal(&sample.point, objects + i, vertices);
+                    break;
+
                 default:
                     sample.normal = objects[i].normal;
+                    break;
             }
             
         }
@@ -270,14 +323,14 @@ float4 GetSkyBoxColor(const float intensity, const struct Ray * ray){
     return skyColor * t;
 }
 
-float4 ComputeColor(struct Ray *ray, global const struct Object* objects, global const int * numObject, global const struct Material* materials,  uint *seed) {
+float4 ComputeColor(struct Ray *ray, global const struct Object* objects, global const int * numObject, global const struct Material* materials,  uint *seed, global const float3 * vertices) {
 
     float4 accumulatedColor = 0.0f;
     float4 colorMask = 1.0f;
     float intensity = 1.0f;
 
     for(int i = 0; i < 8; ++i){
-        struct Sample sample = FindClosestIntersection(objects, numObject, ray);
+        struct Sample sample = FindClosestIntersection(objects, numObject, ray, vertices);
 
         if( isinf(sample.length) ){
             accumulatedColor += GetSkyBoxColor(intensity, ray);
@@ -324,7 +377,8 @@ global struct Object * objects,
 global const int * numObject,
 global struct Material * materials,
 global const struct Camera * camera,
-global const int *numFrames
+global const int *numFrames,
+global const float3 * vertices
 ){
 
     uint x = get_global_id(0);
@@ -347,7 +401,7 @@ global const int *numFrames
     // Monte - Carlo path tracing have issue with glaring (dark and light spots on consistent color)
 
     // Supersampling approach results in no noise but very low amount of fps
-    float4 sample = ComputeColor(&ray, objects, numObject, materials, &seed);
+    float4 sample = ComputeColor(&ray, objects, numObject, materials, &seed, vertices);
 
     float scale = 1.0f / (*numFrames + 1);
 
@@ -367,16 +421,19 @@ void kernel AntiAlias(global float4 * input, global float4 * output){
     float4 pixelValue = 0.0f;
 
     constant float matrix[3][3] = {
-            {-0.2f, 2.0f, -0.2f},
-            {0.8f, 1.0f, 0.8f},
-            {-0.2f, 2.0f, -0.2f}
+            {-0.1f, 1.0f, -0.1f},
+            {1.0f, 1.0f, 1.0f},
+            {-0.1f, 1.0f, -0.1f}
     };
 
     for (int i = -1; i <= 1; i++) {
         for (int j = -1; j <= 1; j++) {
-            uint neighborX = clamp(x + i, 0, width - 1);
-            uint neighborY = clamp(y + j, 0, height - 1);
-            float4 neighborValue = input[neighborY * width + neighborX];
+            int neighborX = clamp(x + i, 0, width - 1);
+            int neighborY = clamp(y + j, 0, height - 1);
+
+            int idx = neighborY * width + neighborX;
+
+            float4 neighborValue = input[ idx ];
 
             float weight = matrix[i + 1][j + 1]/8.0f;
             pixelValue += weight * neighborValue;

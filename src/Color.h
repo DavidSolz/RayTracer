@@ -56,12 +56,12 @@ struct Color {
             };
     }
 
-    Color operator*=(const Color& other) const {
+    Color operator*=(const Color& other) {
         
-        this->R * other.R;
-        this->G * other.G;
-        this->B * other.B;
-        this->A * other.A;
+        this->R *= other.R;
+        this->G *= other.G;
+        this->B *= other.B;
+        this->A *= other.A;
 
         return *this;
     }
