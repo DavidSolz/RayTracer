@@ -104,7 +104,7 @@ float IntersectSphere(const struct Ray *ray, global const struct Object *object)
 
 float IntersectPlane(const struct Ray *ray, global const struct Object *object) {
 
-    float d = dot(object->position, -object->normal);
+    float d = dot(object->position, object->normal);
     float rayToPlane = dot(ray->origin, object->normal);
 
     return (rayToPlane - d) / dot(-ray->direction, object->normal);
@@ -114,13 +114,18 @@ float IntersectDisk(const struct Ray *ray, global const struct Object *object) {
 
     float t = IntersectPlane(ray, object);
 
-    float3 p = ray->origin + ray->direction * t * 1.000005f;
+    if( fabs(t) < 1e-6f)
+        return -1.0f;
+
+    float3 p = ray->origin + ray->direction * t * 1.000001f;
     float3 v = p - object->position;
     float d2 = dot(v, v);
 
-    bool condition = islessequal(d2, object->radius * object->radius);
+    if (d2 <= object->radius * object->radius )
+        return t;
 
-    return condition * (1 + t) -1.0f;
+    return -1.0f;
+
 }
 
 float IntersectCube(const struct Ray *ray, global const struct Object *object) {
@@ -329,7 +334,7 @@ float4 ComputeColor(struct Ray *ray, global const struct Object* objects, global
     float4 colorMask = 1.0f;
     float intensity = 1.0f;
 
-    for(int i = 0; i < 8; ++i){
+    for(int i = 0; i < 16; ++i){
         struct Sample sample = FindClosestIntersection(objects, numObject, ray, vertices);
 
         if( isinf(sample.length) ){
@@ -348,12 +353,12 @@ float4 ComputeColor(struct Ray *ray, global const struct Object* objects, global
 
         float lightIntensity = clamp(dot(ray->direction, sample.normal), 0.0f, 1.0f);
 
-        float4 emmisionComponent = material.emission * material.emmissionScale * 2;
-        float4 reflectionComponent = material.diffuse * material.diffusionScale * 2 * lightIntensity * (1.0f/3.1415926535f);
+        float4 emmisionComponent = material.emission * material.emmissionScale ;
+        float4 reflectionComponent = material.diffuse * material.diffusionScale * 2 * lightIntensity;
 
-        accumulatedColor += (emmisionComponent +  reflectionComponent) * colorMask;
+        accumulatedColor += (2*emmisionComponent +  reflectionComponent/M_PI_F) * colorMask;
         colorMask *= material.baseColor;
-        intensity *= lightIntensity * 0.01f;
+        intensity *= lightIntensity * 0.1f;
     }
 
     return accumulatedColor;

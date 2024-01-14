@@ -93,7 +93,7 @@ float ThreadedRendering::IntersectSphere(const Ray &ray, const Object &object) {
 }
 
 float ThreadedRendering::IntersectPlane(const Ray & ray, const Object & object) {
-    float d = -Vector3::DotProduct(object.position, object.normal);
+    float d = Vector3::DotProduct(object.position, object.normal);
     float rayToPlane = Vector3::DotProduct(ray.origin, object.normal);
     float temp = -Vector3::DotProduct(ray.direction, object.normal);
 

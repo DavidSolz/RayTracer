@@ -61,7 +61,7 @@ int main(int argc, char* argv[]){
 
 // BLUE CUBE
 
-    p.position = Vector3(context.width/2.0f, context.height/4.0f+20.0f, context.depth);
+    p.position = Vector3(context.width/2.0f, context.height/4.0f, context.depth);
     p.maxPos = p.position + Vector3(300, 400, 300);
     p.type = CUBE;
 
@@ -74,7 +74,7 @@ int main(int argc, char* argv[]){
 
 // RED CUBE
 
-    p.position = Vector3(context.width/3.0f, context.height/4.0f+20.0f, context.depth/2.0f);
+    p.position = Vector3(context.width/3.0f, context.height/4.0f, context.depth/2.0f);
     p.maxPos = p.position + Vector3(200, 200, 200);
     p.type = CUBE;
 
@@ -87,7 +87,7 @@ int main(int argc, char* argv[]){
 
 // GREEN CUBE
 
-    p.position = Vector3(context.width/5.0f, context.height/4.0f+20.0f, 3*context.depth/4.0f);
+    p.position = Vector3(context.width/5.0f, context.height/4.0f, 3*context.depth/4.0f);
     p.maxPos = p.position + Vector3(100, 100, 100);
     p.type = CUBE;
 
@@ -106,7 +106,32 @@ int main(int argc, char* argv[]){
 
     p.materialID = materialBuilder
                     .SetBaseColor({0.5f, 0.5f, 0.5f, 1.0f})
-                    ->SetSmoothness(1.52f)
+                    ->SetDiffusion(1.0f)
+                    ->SetSmoothness(1.0f)
+                    ->Build();
+
+    context.objects.emplace_back(p);
+
+    p.position = Vector3(context.width/2.0f + 120.0f, context.height/4.0f + 50.0f, 0.0f);
+    p.type = SPHERE;
+    p.radius = 50.0f;
+
+    p.materialID = materialBuilder
+                    .SetBaseColor({0.5f, 0.5f, 0.5f, 1.0f})
+                    ->SetDiffusion(1.0f)
+                    ->SetSmoothness(0.5f)
+                    ->Build();
+
+    context.objects.emplace_back(p);
+
+    p.position = Vector3(context.width/2.0f + 240.0f, context.height/4.0f + 50.0f, 0.0f);
+    p.type = SPHERE;
+    p.radius = 50.0f;
+
+    p.materialID = materialBuilder
+                    .SetBaseColor({0.5f, 0.5f, 0.5f, 1.0f})
+                    ->SetDiffusion(1.0f)
+                    ->SetSmoothness(0.0f)
                     ->Build();
 
     context.objects.emplace_back(p);
@@ -127,10 +152,9 @@ int main(int argc, char* argv[]){
 
 // PLANE
 
-    p.position = Vector3(0, 0, -context.depth);
-    p.maxPos = p.position + Vector3(context.width, context.height/4.0f, 2*context.depth);
+    p.position = Vector3(context.width/2.0f, context.height/4.0f, context.depth/4.0f);
     p.normal = Vector3(0.0f, 1.0f ,0.0f);
-    p.radius = 300.0f;
+    p.radius = 1000.0f * aspectRatio;
     p.type = DISK;
 
     p.materialID = materialBuilder
@@ -141,14 +165,14 @@ int main(int argc, char* argv[]){
 
     context.objects.emplace_back(p);
 
-// WALL
-    p.position = Vector3(0, 0, -context.depth );
-    p.maxPos = p.position + Vector3(context.width, context.height, context.depth/4.0f);
-    p.type = CUBE;
+// SUN
+    p.position = Vector3(context.width/2.0f, 2*context.height, context.depth/4.0f);
+    p.radius = 600.0f;
+    p.type = SPHERE;
 
     p.materialID = materialBuilder
                     .SetEmissionColor({1.0f, 1.0f, 1.0f, 1.0f})
-                    ->SetEmission(0.7f)
+                    ->SetEmission(1.0f)
                     ->Build();
 
     context.objects.emplace_back(p);
