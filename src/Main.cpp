@@ -1,32 +1,7 @@
 
 #include "OpenGLRenderer.h"
 #include "MaterialBuilder.h"
-
-#define BUFFER_SIZE 100
-
-int ReadLine(FILE * file, char *buffer){
-
-    int i=0;
-
-    while ( i < BUFFER_SIZE ){
-
-        char symbol;
-        fscanf(file, "%c", &symbol);
-
-        if(symbol == '\n' || feof(file))
-            break;
-
-        buffer[i] = symbol;
-        i++;
-
-    }
-
-    i = std::min(BUFFER_SIZE-1, i);
-
-    buffer[i] = '\0';
-
-    return i;
-}
+#include "MeshReader.h"
 
 int main(int argc, char* argv[]){
 
@@ -54,7 +29,7 @@ int main(int argc, char* argv[]){
     context.camera.position = Vector3(context.width/2.0f, context.height/2.0f, -900.0f);
     context.camera.aspectRatio = aspectRatio;
 
-
+/*
 {
 
     Object p;
@@ -166,7 +141,7 @@ int main(int argc, char* argv[]){
     context.objects.emplace_back(p);
 
 // SUN
-    p.position = Vector3(context.width/2.0f, 2*context.height, context.depth/4.0f);
+    p.position = Vector3(context.width/2.0f, 2*context.height, context.depth/4.0f) * aspectRatio;
     p.radius = 600.0f;
     p.type = SPHERE;
 
@@ -178,7 +153,7 @@ int main(int argc, char* argv[]){
     context.objects.emplace_back(p);
 
 }
-
+*/
 
 /*
 {
@@ -226,101 +201,75 @@ int main(int argc, char* argv[]){
 }
 */
 
-/*
+
 {
-    uint32_t materialID = materialBuilder
-                      .SetEmissionColor(255, 255, 255)
-                      ->SetEmission(1.0f)
-                      ->Build();    
+
+// DISK
+
+    Object p;
+
+    // p.position = Vector3(context.width/2.0f, context.height/4.0f, context.depth/4.0f);
+    // p.normal = Vector3(0.0f, 1.0f ,0.0f);
+    // p.radius = 1000.0f * aspectRatio;
+    // p.type = DISK;
+
+    // p.materialID = materialBuilder
+    //                 .SetBaseColor({0.5f, 0.5f, 0.5f, 1.0f})
+    //                 ->SetDiffuseColor({0.5f, 0.5f, 0.5f, 1.0f})
+    //                 ->SetDiffusion(0.1f)
+    //                 ->SetSmoothness(0.1f)
+    //                 ->Build();
+
+    // context.objects.emplace_back(p);
+
+// SUN
+
+    p.position = Vector3(context.width/2.0f, 2*context.height, context.depth/4.0f) * aspectRatio;
+    p.radius = 600.0f;
+    p.type = SPHERE;
+
+    p.materialID = materialBuilder
+                    .SetEmissionColor({1.0f, 1.0f, 1.0f, 1.0f})
+                    ->SetEmission(1.0f)
+                    ->Build();
+
+    context.objects.emplace_back(p);
 
 
-    FILE * input = fopen("resources/mesh.obj", "rb");
+    MeshReader reader;
 
-    if ( input == NULL ){
-        fprintf(stderr, "File can't be opened\n");
-        return EXIT_FAILURE;
+    Mesh sh = reader.LoadObject("resources/mesh.obj");
+
+    Object temp;
+    temp.type = TRIANGLE;
+    temp.materialID = materialBuilder
+                        .SetBaseColor({0.7f, 0.7f, 0.5f, 1.0f})
+                        ->SetDiffuseColor({0.7f, 0.7f, 0.5f, 1.0f})
+                        ->SetDiffusion(0.5f)
+                        ->SetSmoothness(1.0f)
+                        ->Build();
+
+    float scale = 100;
+
+    for(int i=0; i < sh.numVertices; ++i){
+        sh.vertices[i] = sh.vertices[i]*scale + Vector3(context.width/2.0f, context.height/2.0f, context.depth/4.0f);
     }
 
-    std::vector<int> indices;
+    for(int i=0; i < sh.numIndices; ++i){
 
-    char buffer[BUFFER_SIZE] = {0};
+        int t = 3*i;
 
-    int a, b, c;
-    float x, y, z;
+        temp.indicesID.x = sh.indices[t];
+        temp.indicesID.y = sh.indices[t+1];
+        temp.indicesID.z = sh.indices[t+2];
 
-    while ( true ){
-
-        int character_count = ReadLine(input, buffer);
-
-        if( character_count == 0 || feof(input))
-            break;
-
-        char *token = strtok(buffer, " ");
-        char * numA = strtok(NULL, " ");
-        char * numB = strtok(NULL, " ");
-        char * numC = strtok(NULL, " ");
-
-        switch (buffer[0]){
-
-        case 'v':
-
-            x = atof(numA);
-            y = atof(numB);
-            z = atof(numC);
-
-            if(buffer[1] == '\0'){
-                context.vertices.emplace_back((Vector3){x, y, z});
-            }
-
-            break;
-
-        case 'f':
-            
-            a = atoi(numA);
-            b = atoi(numB);
-            c = atoi(numC);
-
-            indices.emplace_back(a);
-            indices.emplace_back(b);
-            indices.emplace_back(c);
-            break;
-
-        default:
-            break;
-        }
+        context.objects.emplace_back(temp);
 
     }
 
-    fclose(input);
-
-    for( int i = 0; i< indices.size(); i+=3){
-
-        Object p;
-        p.type = TRIANGLE;
-
-        Vector3 a = context.vertices[ indices[i]-1 ];
-        Vector3 b = context.vertices[ indices[i+1]-1 ];
-        Vector3 c = context.vertices[ indices[i+2]-1 ];
-
-        p.position = a;
-
-        Vector3 u = b - a;
-        Vector3 v = c - a;
-
-        Vector3 normal = Vector3::CrossProduct(v, u).Normalize();
-
-        p.indicesID = (Vector3){indices[i]-1, indices[i+1]-1, indices[i+2]-1};
-
-        p.materialID = materialID;
-
-        context.objects.emplace_back(p);
-        context.normals.emplace_back(normal);
-    }
-
+    context.mesh = sh;
 }
-*/
 
-fprintf(stdout, "Object count : %d\n", context.objects.size());
 OpenGLRenderer renderer(&context, VSync);
 
 //Main loop

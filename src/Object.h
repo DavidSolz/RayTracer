@@ -12,7 +12,6 @@ struct Object{
     Vector3 normal;
     Vector3 maxPos;
     Vector3 indicesID;
-    Vector3 normalsID;
     uint32_t materialID;
 } __attribute((aligned(128)));
 

@@ -4,9 +4,7 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
-#include <vector>
-
-#include "Vector3.h"
+#include "Mesh.h"
 #include "Object.h"
 #include "Camera.h"
 
@@ -21,8 +19,7 @@ struct RenderingContext {
     std::vector<Material> materials;
 
     // Mesh data
-    std::vector<Vector3> vertices;
-    std::vector<Vector3> normals;
+    Mesh mesh;
 
     Camera camera;
     uint32_t frameCounter;

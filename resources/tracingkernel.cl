@@ -33,7 +33,6 @@ struct Object{
     float3 normal;
     float3 maxPos;
     float3 indiceID;
-    float3 normalID;
     uint materialID;
 } __attribute((aligned(128)));
 
@@ -187,63 +186,73 @@ float IntersectCube(const struct Ray *ray, global const struct Object *object) {
     return -1.0f;
 }
 
-float IntersectTriangle(const struct Ray *ray, global const struct Object *object, global const float3 * vertices) {
+float IntersectTriangle(
+    const struct Ray *ray, 
+    global const struct Object *object, 
+    global const float3 * vertices
+    ) {
 
-    int idA = (int)floor( object->indiceID.x );
+    const float epsilon = 1e-6f;
 
-    float3 A = vertices[ idA ];
+    int idA = object->indiceID.x;
+    int idB = object->indiceID.y;
+    int idC = object->indiceID.z;
 
-    float discriminator = dot(object->normal, ray->direction);
-    
-    if(fabs(discriminator) < 1e-6f)
-        return INFINITY;
+    float3 e1 = (vertices[idB] - vertices[idA]);
+    float3 e2 = (vertices[idC] - vertices[idA]);
 
-    return dot(A - ray->origin, object-> normal)/discriminator;
+    float3 normal = cross(ray->direction, e2);
+    float det = dot(e1, normal);
+
+    if( fabs(det) < epsilon)
+        return -1.0f;
+
+    float f = 1.0f/det;
+    float3 rayToTriangle = ray->origin - vertices[idA];
+    float u = f * dot(rayToTriangle, normal);
+
+    if( u < 0.0f || u >1.0f)
+        return -1.0f;
+
+    float3 q = cross(rayToTriangle, e1);
+    float v = f *dot(ray->direction, q);
+
+    if( v < 0.0f || u+v >1.0f)
+        return -1.0f;
+
+    return f * dot(e2, q);
 }
 
 float3 ComputeBoxNormal(global const float3 * nearVertice, global const float3 * farVertice, const float3 * intersectionPoint){
     
+    const float epsilon = 1.000001f;
+
     float3 boxCenter = (*farVertice + *nearVertice)*0.5f;
     float3 radius = (*farVertice - *nearVertice)*0.5f;
     float3 pointToCenter = *intersectionPoint - boxCenter;
 
-    const float bias = 1.000001f;
-
-    float3 normal = sign(pointToCenter) * step(fabs(fabs(pointToCenter) - radius), bias);
+    float3 normal = sign(pointToCenter) * step(fabs(fabs(pointToCenter) - radius), epsilon);
 
     return normalize(normal);
 }
 
 float3 ComputeTriangleNormal(const float3 * intersection, global const struct Object *object, global const float3 * vertices){
 
-    int idA = (int)floor( object->indiceID.x );
-    int idB = (int)floor( object->indiceID.y );
-    int idC = (int)floor( object->indiceID.z );
+    int idA = object->indiceID.x;
+    int idB = object->indiceID.y;
+    int idC = object->indiceID.z;
 
-    float3 A = vertices[ idA ];
-    float3 B = vertices[ idB ];
-    float3 C = vertices[ idC ];
+    float3 e1 = vertices[idB] - vertices[idA];
+    float3 e2 = vertices[idC] - vertices[idA];
 
-    float3 e1 = B - A;
-    float3 e2 = C - B;
-    float3 e3 = A - C;
-
-    float3 c1 = *intersection - A;
-    float3 c2 = *intersection - B;
-    float3 c3 = *intersection - C;
-    
-    float3 cross1 = cross(e1, c1); 
-    float3 cross2 = cross(e2, c2); 
-    float3 cross3 = cross(e3, c3); 
-
-    if( dot(object->normal, cross1) > 0 && dot(object->normal, cross2) > 0 && dot(object->normal, cross3) > 0)
-        return object->normal;
-
-
-    return 0.0f;
+    return normalize(cross(e2, e1));
 }
 
-struct Sample FindClosestIntersection(global const struct Object* objects, global const int * numObject, const struct Ray * ray, global const float3 * vertices){
+struct Sample FindClosestIntersection(
+    global const struct Object* objects, 
+    global const int * numObject, 
+    const struct Ray * ray, 
+    global const float3 * vertices){
 
     struct Sample sample = {0};
     sample.length = INFINITY;
@@ -323,18 +332,24 @@ float3 Refract(const float3 * incident, const float3 * normal, const float n1, c
 float4 GetSkyBoxColor(const float intensity, const struct Ray * ray){
     float t = intensity/fmax(ray->direction.y + 1.0f, 0.00001f);
 
-    const float4 skyColor = (float4)(0.5f, 0.7f, 1.0f, 1.0f);
+    const float4 skyColor = (float4)(ray->direction.x, ray->direction.y, ray->direction.z, 1.0f);
 
-    return skyColor * t;
+    return skyColor;
 }
 
-float4 ComputeColor(struct Ray *ray, global const struct Object* objects, global const int * numObject, global const struct Material* materials,  uint *seed, global const float3 * vertices) {
+float4 ComputeColor(
+    struct Ray *ray, 
+    global const struct Object* objects, 
+    global const int * numObject, 
+    global const struct Material* materials,  
+    uint *seed, 
+    global const float3 * vertices) {
 
     float4 accumulatedColor = 0.0f;
     float4 colorMask = 1.0f;
     float intensity = 1.0f;
 
-    for(int i = 0; i < 16; ++i){
+    for(int i = 0; i < 128; ++i){
         struct Sample sample = FindClosestIntersection(objects, numObject, ray, vertices);
 
         if( isinf(sample.length) ){
@@ -377,14 +392,14 @@ float3 CalculatePixelPosition(const int x, const int y, const int width, const i
 // Main
 
 void kernel RayTrace(
-global float4* pixels,
-global struct Object * objects,
-global const int * numObject,
-global struct Material * materials,
-global const struct Camera * camera,
-global const int *numFrames,
-global const float3 * vertices
-){
+    global float4* pixels,
+    global struct Object * objects,
+    global const int * numObject,
+    global struct Material * materials,
+    global const struct Camera * camera,
+    global const int *numFrames,
+    global const float3 * vertices
+    ){
 
     uint x = get_global_id(0);
     uint y = get_global_id(1);
@@ -397,7 +412,7 @@ global const float3 * vertices
 
     // Simple anti-aliasing techinque 
     float3 offset = RandomDirection(&seed);
-    float3 pixelPosition = CalculatePixelPosition(x, y, width, height, camera);
+    float3 pixelPosition = CalculatePixelPosition(x + offset.x + 0.5f, y + offset.y + 0.5f, width, height, camera);
 
     struct Ray ray;
     ray.origin = camera->position;

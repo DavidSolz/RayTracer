@@ -17,8 +17,8 @@ void ParallelRendering::Init(RenderingContext * _context){
     }
 
     dataSize = sizeof(Color) * context->width * context->height;
-    pixelBuffer = cl::Buffer(deviceContext, CL_MEM_READ_WRITE | CL_MEM_HOST_READ_ONLY | CL_MEM_ALLOC_HOST_PTR, dataSize);
-    antialiasBuffer = cl::Buffer(deviceContext, CL_MEM_READ_WRITE | CL_MEM_HOST_READ_ONLY | CL_MEM_ALLOC_HOST_PTR, dataSize);
+    pixelBuffer = cl::Buffer(deviceContext, CL_MEM_READ_WRITE, dataSize);
+    antialiasBuffer = cl::Buffer(deviceContext, CL_MEM_READ_WRITE, dataSize);
 
     context->frameCounter = 0;
     frameCounter = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, sizeof(int));
@@ -33,7 +33,7 @@ void ParallelRendering::Init(RenderingContext * _context){
 
     cameraBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, sizeof(Camera));
 
-    verticesBufferSize = sizeof(Vector3) * context->vertices.size();
+    verticesBufferSize = sizeof(Vector3) * context->mesh.vertices.size();
     verticesBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, verticesBufferSize);
 
 
@@ -90,14 +90,14 @@ void ParallelRendering::Render(Color * _pixels){
     queue.enqueueWriteBuffer(materialBuffer, CL_FALSE, 0, materialBufferSize, context->materials.data());
     queue.enqueueWriteBuffer(cameraBuffer, CL_FALSE, 0, sizeof(Camera), &context->camera);
     queue.enqueueWriteBuffer(frameCounter, CL_FALSE, 0, sizeof(int), &context->frameCounter);
-    queue.enqueueWriteBuffer(verticesBuffer, CL_FALSE, 0, verticesBufferSize, context->vertices.data());
+    queue.enqueueWriteBuffer(verticesBuffer, CL_FALSE, 0, verticesBufferSize, context->mesh.vertices.data());
 
     queue.enqueueNDRangeKernel(kernel, cl::NullRange, globalRange, localRange);
-    queue.enqueueNDRangeKernel(antialiasingKernel, cl::NullRange, globalRange, localRange);
+    //queue.enqueueNDRangeKernel(antialiasingKernel, cl::NullRange, globalRange, localRange);
     
     queue.finish();
 
-    queue.enqueueReadBuffer(antialiasBuffer, CL_TRUE, 0, dataSize, _pixels);
+    queue.enqueueReadBuffer(pixelBuffer, CL_TRUE, 0, dataSize, _pixels);
 
 }
 
