@@ -425,10 +425,10 @@ void kernel AntiAlias(global float4 * input, global float4 * output){
 
     float4 pixelValue = 0.0f;
 
-    constant float matrix[3][3] = {
-            {-0.1f, 1.0f, -0.1f},
-            {1.0f, 1.0f, 1.0f},
-            {-0.1f, 1.0f, -0.1f}
+    const float matrix[3][3] = {
+            {-0.1f, 0.9f, -0.1f},
+            {1.1f, 1.0f, 1.1f},
+            {-0.1f, 0.9f, -0.1f}
     };
 
     for (int i = -1; i <= 1; i++) {

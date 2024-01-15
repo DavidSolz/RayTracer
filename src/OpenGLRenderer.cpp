@@ -68,19 +68,19 @@ void OpenGLRenderer::KeyboardCallback(GLFWwindow* window, int key, int scancode,
     float deltaTime = timer->GetDeltaTime();
 
     switch (key){
-        case GLFW_KEY_W:
+        case GLFW_KEY_UP:
             context->camera.Move(context->camera.front, deltaTime);
             context->frameCounter=0;
             break;
-        case GLFW_KEY_S:
+        case GLFW_KEY_DOWN:
             context->camera.Move(context->camera.front*(-1.0f), deltaTime);
             context->frameCounter=0;
             break;
-        case GLFW_KEY_A:
+        case GLFW_KEY_LEFT:
             context->camera.Move(context->camera.right*(-1.0f), deltaTime);
             context->frameCounter=0;
             break;
-        case GLFW_KEY_D:
+        case GLFW_KEY_RIGHT:
             context->camera.Move(context->camera.right, deltaTime);
             context->frameCounter=0;
             break;

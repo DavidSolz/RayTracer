@@ -17,8 +17,8 @@ void ParallelRendering::Init(RenderingContext * _context){
     }
 
     dataSize = sizeof(Color) * context->width * context->height;
-    pixelBuffer = cl::Buffer(deviceContext, CL_MEM_READ_WRITE, dataSize);
-    antialiasBuffer = cl::Buffer(deviceContext, CL_MEM_READ_WRITE | CL_MEM_HOST_READ_ONLY, dataSize);
+    pixelBuffer = cl::Buffer(deviceContext, CL_MEM_READ_WRITE | CL_MEM_HOST_READ_ONLY | CL_MEM_ALLOC_HOST_PTR, dataSize);
+    antialiasBuffer = cl::Buffer(deviceContext, CL_MEM_READ_WRITE | CL_MEM_HOST_READ_ONLY | CL_MEM_ALLOC_HOST_PTR, dataSize);
 
     context->frameCounter = 0;
     frameCounter = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, sizeof(int));
@@ -51,8 +51,34 @@ void ParallelRendering::Init(RenderingContext * _context){
     antialiasingKernel.setArg(1, antialiasBuffer);
 
     globalRange = cl::NDRange(context->width, context->height);
-    localRange = cl::NDRange(16, 16);
+    
+    DetermineLocalSize(context->width, context->height, 16);
 
+}
+
+void ParallelRendering::DetermineLocalSize(const uint32_t & width, const uint32_t & height, const uint32_t & maxRange){
+
+    uint32_t rangeX, rangeY;
+
+    for(uint32_t x = maxRange-1; x >0; --x){
+
+        if(x < maxRange && width%x==0){
+            rangeX = x;
+            break;
+        }
+
+    }
+
+    for(uint32_t y = maxRange-1; y >0; --y){
+
+        if(y < maxRange && height%y==0){
+            rangeY = y;
+            break;
+        }
+
+    }
+
+    localRange = cl::NDRange(rangeX, rangeY);
 }
 
 void ParallelRendering::Render(Color * _pixels){
@@ -66,13 +92,8 @@ void ParallelRendering::Render(Color * _pixels){
     queue.enqueueWriteBuffer(frameCounter, CL_FALSE, 0, sizeof(int), &context->frameCounter);
     queue.enqueueWriteBuffer(verticesBuffer, CL_FALSE, 0, verticesBufferSize, context->vertices.data());
 
-    #ifdef __APPLE__
-        queue.enqueueNDRangeKernel(kernel, cl::NullRange, globalRange);
-        queue.enqueueNDRangeKernel(antialiasingKernel, cl::NullRange, globalRange);
-    #else
-        queue.enqueueNDRangeKernel(kernel, cl::NullRange, globalRange, localRange);
-        queue.enqueueNDRangeKernel(antialiasingKernel, cl::NullRange, globalRange, localRange);
-    #endif
+    queue.enqueueNDRangeKernel(kernel, cl::NullRange, globalRange, localRange);
+    queue.enqueueNDRangeKernel(antialiasingKernel, cl::NullRange, globalRange, localRange);
     
     queue.finish();
 

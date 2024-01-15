@@ -56,6 +56,8 @@ class ParallelRendering : public IFrameRender {
     cl::Device GetDefaultCLDevice();
     cl::Program FetchProgram();
 
+    void DetermineLocalSize(const uint32_t & width, const uint32_t & height, const uint32_t & maxRange);
+
 public:
 
     void Init(RenderingContext * _context);
