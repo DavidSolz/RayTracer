@@ -2,33 +2,42 @@
 
 Vector3 MeshReader::ParseVertice(const std::string & line){
 
-    Vector3 temp;
+    char *data = (char*)line.c_str()+2;
 
-    const char *data = line.c_str()+1;
-
-    std::sscanf(data, "%f %f %f", &temp.x, &temp.y, &temp.z);
-
-    return temp;
+    char * tok1 = strtok(data, " ");
+    char * tok2 = strtok(NULL, " ");
+    char * tok3 = strtok(NULL, " ");
+    
+    return (Vector3){std::stof(tok1), std::stof(tok2), std::stof(tok3)};
 }
 
 
 Vector3 MeshReader::ParseFace(const std::string & line){
-    int a,b,c;
+    
+    int temp[3];
 
-    int vertexIndex, textureCoordIndex, normalIndex;
+    char * token_start = (char*)line.c_str()+2;
+    char * token_end = nullptr;
 
-    const char * data = line.c_str();
+    const char * delimiter = "/";
 
-    int vertexIndex1, textureCoordIndex1, normalIndex1;
-    int vertexIndex2, textureCoordIndex2, normalIndex2;
-    int vertexIndex3, textureCoordIndex3, normalIndex3;
+    for(int i=0; i<3; i++){
 
-    sscanf(data, "f %d//%d %d//%d %d//%d",
-           &a , &normalIndex1,
-           &b , &normalIndex2,
-           &c , &normalIndex3);
+        char * token_end = strpbrk(token_start, " ");
+        char * data_str = strtok(token_start, delimiter);
 
-    return Vector3(a, b, c);
+        temp[i] = atoi(data_str);
+
+        // char * texture = strtok(NULL, delimiter);
+        // char * normal = strtok(NULL, delimiter);
+
+        token_start =  token_end;
+        if(token_start == nullptr)
+            break;
+        token_start++;
+    }
+ 
+    return Vector3(temp[0], temp[1], temp[2]);
 }
 
 Mesh MeshReader::LoadObject(const std::string & filename){

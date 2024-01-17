@@ -293,9 +293,9 @@ struct Sample FindClosestIntersection(
                     sample.normal = normalize(sample.point - objects[i].position);
                     break;
 
-                case TRIANGLE:
-                    sample.normal = ComputeTriangleNormal(&sample.point, objects + i, vertices);
-                    break;
+                // case TRIANGLE:
+                //     sample.normal = ComputeTriangleNormal(&sample.point, objects + i, vertices);
+                //     break;
 
                 default:
                     sample.normal = objects[i].normal;

@@ -263,12 +263,24 @@ int main(int argc, char* argv[]){
         temp.indicesID.y = sh.indices[t+1];
         temp.indicesID.z = sh.indices[t+2];
 
+        Vector3 A = sh.vertices[ sh.indices[t] ];
+        Vector3 B = sh.vertices[ sh.indices[t+1] ];
+        Vector3 C = sh.vertices[ sh.indices[t+2] ];
+
+        Vector3 u = B - A;
+        Vector3 v = C - A;
+        
+        Vector3 normal = Vector3::CrossProduct(u,v).Normalize();
+
+        temp.normal = normal;
+
         context.objects.emplace_back(temp);
 
     }
 
     context.mesh = sh;
 }
+
 
 OpenGLRenderer renderer(&context, VSync);
 
