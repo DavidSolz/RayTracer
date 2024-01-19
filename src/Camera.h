@@ -34,12 +34,16 @@ struct Camera{
         float cosPitch = cos(pitch * deg2rad);
         float yaw2rad = yaw * deg2rad;
 
-        front.x = cos(yaw2rad) * cosPitch;
-        front.y = sin(pitch * deg2rad);
-        front.z = sin(yaw2rad) * cosPitch;
+        Vector3 temp;
 
-        right = Vector3::CrossProduct(worldUp, front);
-        up  = Vector3::CrossProduct(front, right);
+        temp.x = cos(yaw2rad) * cosPitch;
+        temp.y = -sin(pitch * deg2rad);
+        temp.z = sin(yaw2rad) * cosPitch;
+
+        front = (front - temp).Normalize();
+
+        right = Vector3::CrossProduct(worldUp, front).Normalize();
+        up  = Vector3::CrossProduct(front, right).Normalize();
 
     }
 
@@ -47,6 +51,12 @@ struct Camera{
 
         position = position + (Vector3)direction * movementSpeed * deltaTime;
 
+    }
+
+    void LookAt(const Vector3& target){
+        front = (target-position).Normalize();
+        right = Vector3::CrossProduct(worldUp, front).Normalize();
+        up  = Vector3::CrossProduct(front, right).Normalize();
     }
 
     Vector3 CalculatePixelPosition(const int x, const int y, const int width, const int height){

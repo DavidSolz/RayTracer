@@ -93,11 +93,11 @@ void ParallelRendering::Render(Color * _pixels){
     queue.enqueueWriteBuffer(verticesBuffer, CL_FALSE, 0, verticesBufferSize, context->mesh.vertices.data());
 
     queue.enqueueNDRangeKernel(kernel, cl::NullRange, globalRange, localRange);
-    //queue.enqueueNDRangeKernel(antialiasingKernel, cl::NullRange, globalRange, localRange);
+    queue.enqueueNDRangeKernel(antialiasingKernel, cl::NullRange, globalRange, localRange);
     
     queue.finish();
 
-    queue.enqueueReadBuffer(pixelBuffer, CL_TRUE, 0, dataSize, _pixels);
+    queue.enqueueReadBuffer(antialiasBuffer, CL_TRUE, 0, dataSize, _pixels);
 
 }
 

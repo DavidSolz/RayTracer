@@ -114,6 +114,7 @@ void OpenGLRenderer::ProcessInput(){
         lastMouseX = currentX;
         lastMouseY = currentY;
 
+
         context->camera.Rotate(offsetX, offsetY);
 
         context->frameCounter=0;

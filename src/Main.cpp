@@ -202,7 +202,7 @@ int main(int argc, char* argv[]){
 */
 
 
-{
+
 
 // DISK
 
@@ -251,9 +251,16 @@ int main(int argc, char* argv[]){
 
     float scale = 100;
 
+    Vector3 center(0,0,0);
+
     for(int i=0; i < sh.numVertices; ++i){
         sh.vertices[i] = sh.vertices[i]*scale + Vector3(context.width/2.0f, context.height/2.0f, context.depth/4.0f);
+        center.x += sh.vertices[i].x;
+        center.y += sh.vertices[i].y;
+        center.z += sh.vertices[i].z;
     }
+
+    center = center * (1.0f/sh.numVertices);
 
     for(int i=0; i < sh.numIndices; ++i){
 
@@ -270,23 +277,43 @@ int main(int argc, char* argv[]){
         Vector3 u = B - A;
         Vector3 v = C - A;
         
-        Vector3 normal = Vector3::CrossProduct(u,v).Normalize();
-
-        temp.normal = normal;
+        temp.normal = Vector3::CrossProduct(u,v).Normalize();
 
         context.objects.emplace_back(temp);
 
     }
 
     context.mesh = sh;
-}
+
 
 
 OpenGLRenderer renderer(&context, VSync);
 
 //Main loop
 
+    float angle = 0.0f;
+    Camera * camera = &context.camera;
+    Vector3 pos = camera->position;
+    Timer *t = Timer::GetInstance();
+
+    camera->position = center + Vector3(sin(angle*deg2rad), 0, cos(angle*deg2rad))*900;
+
     while (!renderer.ShouldClose()) {
+
+        pos.x = 900 * sin(angle * deg2rad)  + center.x;
+        pos.z = 900 * cos(angle * deg2rad) + center.z;
+
+        Vector3 direction = (pos - camera->position).Normalize();
+
+        camera->position = camera->position + direction * t->GetDeltaTime() * 1000.0f;
+        camera->position.y = 3*context.height/4.0f;
+        camera->LookAt( center );
+
+        context.frameCounter = 0;
+
+        angle *= angle<360.0f;
+        angle+=0.1f;
+
         renderer.Update();
     }
 

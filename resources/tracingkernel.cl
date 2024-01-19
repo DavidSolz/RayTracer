@@ -334,7 +334,7 @@ float4 GetSkyBoxColor(const float intensity, const struct Ray * ray){
 
     const float4 skyColor = (float4)(ray->direction.x, ray->direction.y, ray->direction.z, 1.0f);
 
-    return skyColor;
+    return skyColor * t;
 }
 
 float4 ComputeColor(
@@ -438,13 +438,14 @@ void kernel AntiAlias(global float4 * input, global float4 * output){
 
     int index = y * width + x;
 
-    float4 pixelValue = 0.0f;
+    float4 pixelValue = input[index];
 
     const float matrix[3][3] = {
             {-0.1f, 0.9f, -0.1f},
             {1.1f, 1.0f, 1.1f},
             {-0.1f, 0.9f, -0.1f}
     };
+
 
     for (int i = -1; i <= 1; i++) {
         for (int j = -1; j <= 1; j++) {
@@ -453,10 +454,8 @@ void kernel AntiAlias(global float4 * input, global float4 * output){
 
             int idx = neighborY * width + neighborX;
 
-            float4 neighborValue = input[ idx ];
-
-            float weight = matrix[i + 1][j + 1]/8.0f;
-            pixelValue += weight * neighborValue;
+            pixelValue = fmax(pixelValue, input[idx] * matrix[i][j]);
+        
         }
     }
 
