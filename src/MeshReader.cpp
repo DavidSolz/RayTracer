@@ -88,5 +88,7 @@ Mesh MeshReader::LoadObject(const std::string & filename){
 
     input.close();
 
+    mesh.CalculateNormals();
+
     return mesh;
 }

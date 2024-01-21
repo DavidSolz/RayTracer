@@ -12,7 +12,10 @@ void ParallelRendering::Init(RenderingContext * _context){
     cl::Program program = FetchProgram();
 
     if(!program()){
-        printf("Unable to compile kernel!\n");
+
+        if(context->loggingService)
+            context->loggingService->Write(MessageType::ISSUE, "Unable to compile kernel!");
+            
         return ;
     }
 
@@ -118,7 +121,10 @@ cl::Device ParallelRendering::GetDefaultCLDevice(){
     cl::Platform::get(&all_platforms);
 
     if(all_platforms.size()==0){
-        fprintf(stderr, "No available platforms. \n");
+
+        if(context->loggingService)
+            context->loggingService->Write(MessageType::ISSUE, "No available platforms");
+
         exit(-1);
     }
 
@@ -143,7 +149,10 @@ cl::Device ParallelRendering::GetDefaultCLDevice(){
     all_platforms[selectedPlatform].getDevices(CL_DEVICE_TYPE_ALL, &all_devices);
 
     if(all_devices.size()==0){
-        fprintf(stderr, "No available devices. \n");
+
+        if(context->loggingService)
+            context->loggingService->Write(MessageType::ISSUE, "No available devices");
+
         exit(-1);
     }
 
@@ -164,11 +173,18 @@ cl::Device ParallelRendering::GetDefaultCLDevice(){
 
     auto const & device = all_devices[selectedDevice];
 
-    fprintf(stdout, "========[ Accelerator Config ]========\nPlatform :\n\tName : %s\nDevice :\n\tVendor : %s\n\tName : %s\n\tLocal work size : %ld\n",
+    char buffer[250] = {0};
+
+    sprintf(buffer, "========[ Accelerator Config ]========\nPlatform :\n\tName : %s\nDevice :\n\tVendor : %s\n\tName : %s\n\tVersion : %s\n\tLocal work size : %ld\n",
     all_platforms[selectedPlatform].getInfo<CL_PLATFORM_NAME>().c_str(),
     device.getInfo<CL_DEVICE_VENDOR>().c_str(),
     device.getInfo<CL_DEVICE_NAME>().c_str(),
+    device.getInfo<CL_DEVICE_OPENCL_C_VERSION>().c_str(),
     device.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>());
+
+    if(context->loggingService)
+            context->loggingService->Write(MessageType::INFO, buffer);
+          
 
     return device;
 }
@@ -182,7 +198,10 @@ cl::Program ParallelRendering::FetchProgram(){
     std::fstream input("resources/tracingkernel.cl");
 
     if(!input){
-        fprintf(stderr,"File can't be opened\n");
+
+        if(context->loggingService)
+            context->loggingService->Write(MessageType::ISSUE, "Kernel can't be loaded");
+
         exit(-1);
     }
 
@@ -194,13 +213,23 @@ cl::Program ParallelRendering::FetchProgram(){
 
     cl::Program program(deviceContext, sources);
 
+    char buffer[250] = {0};
+
     if(program.build() != CL_SUCCESS){
         std::string buildLog = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(default_device);
-        fprintf(stderr, "Error during building program. Build log:\n%s\n", buildLog.c_str());
+
+        sprintf(buffer, "Error during building program. Build log:\n%s\n", buildLog.c_str());
+
+        if(context->loggingService)
+            context->loggingService->Write(MessageType::ISSUE, buffer);
+
         exit(-1);
     }
 
-    fprintf(stdout, "Program :\n\tName : %s\n", program.getInfo<CL_PROGRAM_KERNEL_NAMES>().c_str());
+    sprintf(buffer, "Program :\n\tName : %s\n", program.getInfo<CL_PROGRAM_KERNEL_NAMES>().c_str());
+
+    if(context->loggingService)
+            context->loggingService->Write(MessageType::INFO, buffer);
 
     return program;
 

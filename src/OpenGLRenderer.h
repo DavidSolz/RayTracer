@@ -5,6 +5,7 @@
 #include <unordered_map>
 
 #include "IFrameRender.h"
+#include "ILog.h"
 #include "Timer.h"
 
 #include "ThreadedRendering.h"
@@ -37,7 +38,7 @@ private:
     static void KeyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
 public:
-    OpenGLRenderer(RenderingContext * _context, const bool& _enableVSync = true);
+    OpenGLRenderer(RenderingContext * _context, const bool & _enableVSync = true);
     bool ShouldClose();
     void SetRenderingService(IFrameRender * _service);
     void Update();

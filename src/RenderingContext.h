@@ -6,24 +6,27 @@
 
 #include "Mesh.h"
 #include "Object.h"
+#include "ILog.h"
 #include "Camera.h"
 
 struct RenderingContext {
 
+    // Window settings
     uint32_t width;
     uint32_t height;
     uint32_t depth;
 
-    // Object data
+    // Objects data
     std::vector<Object> objects;
     std::vector<Material> materials;
-
-    // Mesh data
     Mesh mesh;
 
+    // Camera info
     Camera camera;
     uint32_t frameCounter;
 
+    // Logging service
+    ILog * loggingService;
 
 };
 

@@ -2,10 +2,10 @@
 #include "OpenGLRenderer.h"
 #include "MaterialBuilder.h"
 #include "MeshReader.h"
+#include "Logger.h"
 
 int main(int argc, char* argv[]){
 
-    srand(time(NULL));
     int VSync = true;
 
     if( argc > 1)
@@ -15,12 +15,15 @@ int main(int argc, char* argv[]){
 
     RenderingContext context;
     MaterialBuilder materialBuilder(&context);
+    Logger logger("RayTracer_log.txt");
+    OpenGLRenderer renderer(&context, VSync);
 
 // Context setup
 
     context.width = 1000;
     context.height = 1000;
     context.depth = 480;
+    context.loggingService = &logger;
 
     float aspectRatio = context.width/(float)context.height;
 
@@ -201,26 +204,24 @@ int main(int argc, char* argv[]){
 }
 */
 
-
-
-
+{
 // DISK
 
     Object p;
 
-    // p.position = Vector3(context.width/2.0f, context.height/4.0f, context.depth/4.0f);
-    // p.normal = Vector3(0.0f, 1.0f ,0.0f);
-    // p.radius = 1000.0f * aspectRatio;
-    // p.type = DISK;
+    p.position = Vector3(context.width/2.0f, context.height/4.0f, context.depth/4.0f);
+    p.normal = Vector3(0.0f, 1.0f ,0.0f);
+    p.radius = 1000.0f * aspectRatio;
+    p.type = DISK;
 
-    // p.materialID = materialBuilder
-    //                 .SetBaseColor({0.5f, 0.5f, 0.5f, 1.0f})
-    //                 ->SetDiffuseColor({0.5f, 0.5f, 0.5f, 1.0f})
-    //                 ->SetDiffusion(0.1f)
-    //                 ->SetSmoothness(0.1f)
-    //                 ->Build();
+    p.materialID = materialBuilder
+                    .SetBaseColor({0.5f, 0.5f, 0.5f, 1.0f})
+                    ->SetDiffuseColor({0.5f, 0.5f, 0.5f, 1.0f})
+                    ->SetDiffusion(0.1f)
+                    ->SetSmoothness(0.1f)
+                    ->Build();
 
-    // context.objects.emplace_back(p);
+    context.objects.emplace_back(p);
 
 // SUN
 
@@ -238,7 +239,7 @@ int main(int argc, char* argv[]){
 
     MeshReader reader;
 
-    Mesh sh = reader.LoadObject("resources/mesh.obj");
+    Mesh mesh = reader.LoadObject("resources/mesh.obj");
 
     Object temp;
     temp.type = TRIANGLE;
@@ -250,72 +251,31 @@ int main(int argc, char* argv[]){
                         ->Build();
 
     float scale = 100;
+    Vector3 offset(context.width/2.0f, context.height/2.0f, context.depth/4.0f);
 
-    Vector3 center(0,0,0);
+    mesh.Translate(offset, scale);
 
-    for(int i=0; i < sh.numVertices; ++i){
-        sh.vertices[i] = sh.vertices[i]*scale + Vector3(context.width/2.0f, context.height/2.0f, context.depth/4.0f);
-        center.x += sh.vertices[i].x;
-        center.y += sh.vertices[i].y;
-        center.z += sh.vertices[i].z;
-    }
+    for(uint32_t i=0; i < mesh.numIndices; ++i){
 
-    center = center * (1.0f/sh.numVertices);
+        uint32_t t = 3*i;
 
-    for(int i=0; i < sh.numIndices; ++i){
-
-        int t = 3*i;
-
-        temp.indicesID.x = sh.indices[t];
-        temp.indicesID.y = sh.indices[t+1];
-        temp.indicesID.z = sh.indices[t+2];
-
-        Vector3 A = sh.vertices[ sh.indices[t] ];
-        Vector3 B = sh.vertices[ sh.indices[t+1] ];
-        Vector3 C = sh.vertices[ sh.indices[t+2] ];
-
-        Vector3 u = B - A;
-        Vector3 v = C - A;
-
-        temp.normal = Vector3::CrossProduct(u,v).Normalize();
+        temp.indicesID.x = mesh.indices[t];
+        temp.indicesID.y = mesh.indices[t+1];
+        temp.indicesID.z = mesh.indices[t+2];
+        temp.normal = mesh.normals[i];
 
         context.objects.emplace_back(temp);
 
     }
 
-    context.mesh = sh;
-
-
-
-OpenGLRenderer renderer(&context, VSync);
+    context.mesh = mesh;
+}
 
 //Main loop
 
-    float angle = 0.0f;
-    Camera * camera = &context.camera;
-    Vector3 pos = camera->position;
-    Timer *t = Timer::GetInstance();
-
-    camera->position = center + Vector3(sin(angle*deg2rad), 0, cos(angle*deg2rad))*900;
-
-    while (!renderer.ShouldClose()) {
-
-        pos.x = 1000 * sin(angle * deg2rad)  + center.x;
-        pos.z = 1000 * cos(angle * deg2rad) + center.z;
-
-        Vector3 direction = (pos - camera->position).Normalize();
-
-        camera->position = camera->position + direction * t->GetDeltaTime() * 1000.0f;
-        camera->position.y = 3*context.height/4.0f;
-        camera->LookAt( center );
-
-        context.frameCounter = 0;
-
-        angle *= angle<360.0f;
-        angle+=5.0f;
-
+    while (!renderer.ShouldClose()) 
         renderer.Update();
-    }
+    
 
     return EXIT_SUCCESS;
 }

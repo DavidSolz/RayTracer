@@ -40,14 +40,15 @@ bool ThreadedRendering::CheckForHyperthreading(){
 void ThreadedRendering::Init(RenderingContext * _context){
     context = _context;
 
-    fprintf(stdout, "========[ CPU Config ]========\n");
-
     numThreads = std::thread::hardware_concurrency();
-    fprintf(stdout, "\tLogic cores : %d\n", numThreads);
-
     bool isHyperThreadinEnabled = CheckForHyperthreading();
 
-    fprintf(stdout, "\tHyperthreading : %s\n", isHyperThreadinEnabled?"YES":"NO");
+    char buffer[250]={0};
+
+    sprintf(buffer, "========[ CPU Config ]========\nLogic cores : %d\nHyperthreading : %s\n", numThreads, isHyperThreadinEnabled?"YES":"NO");
+
+    if(context->loggingService)
+        context->loggingService->Write(MessageType::INFO, buffer);
 
     threads = new std::thread[numThreads];
 

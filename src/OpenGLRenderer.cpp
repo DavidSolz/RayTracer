@@ -3,7 +3,7 @@
 static RenderingContext * context;
 static Timer* timer;
 
-OpenGLRenderer::OpenGLRenderer(RenderingContext * _context, const bool& _enableVSync){
+OpenGLRenderer::OpenGLRenderer(RenderingContext * _context, const bool & _enableVSync){
 
     context = _context;
 
@@ -15,7 +15,7 @@ OpenGLRenderer::OpenGLRenderer(RenderingContext * _context, const bool& _enableV
     selection = ACC;
 
     if(!glfwInit()){
-        printf("Cannot initialize GLFW \n");
+        context->loggingService->Write(MessageType::ISSUE, "Cannot initialize GLFW");
         return;
     }
 
@@ -30,7 +30,10 @@ OpenGLRenderer::OpenGLRenderer(RenderingContext * _context, const bool& _enableV
 
     if(!window){
         glfwTerminate();
-        printf("Cannot create GLFW window\n");
+
+        if(context->loggingService)
+            context->loggingService->Write(MessageType::ISSUE, "Cannot create GLFW window");
+
         return;
     }
 
@@ -45,13 +48,18 @@ OpenGLRenderer::OpenGLRenderer(RenderingContext * _context, const bool& _enableV
     if (glewInit() != GLEW_OK) {
         glfwDestroyWindow(window);
         glfwTerminate();
-        fprintf(stderr, "Failed to initialize GLEW\n");
+        context->loggingService->Write(MessageType::ISSUE, "Failed to initialize GLEW");
         return;
     }
 
-    fprintf(stdout, "========[ Window Config ]========\n\tResolution : %d x %d\n\tV-Sync : %s\n",
+    char buffer[200] = {0};
+
+    sprintf(buffer, "========[ Window Config ]========\n\tResolution : %d x %d\n\tV-Sync : %s\n",
         context->width, context->height,
         _enableVSync ? "YES" : "NO");
+
+    if(context->loggingService)
+        context->loggingService->Write(MessageType::INFO, buffer);
 
     pixels = new Color[context->width * context->height];
 
@@ -131,7 +139,6 @@ void OpenGLRenderer::ProcessInput(){
         selection = ACC;
     }
 
-
 }
 
 bool OpenGLRenderer::ShouldClose(){
@@ -163,8 +170,12 @@ void OpenGLRenderer::Update(){
     glfwPollEvents();
 
     GLenum error = glGetError();
-    if(error!=GL_NO_ERROR)
-        printf("Error : %d\n", error);
+    if(error!=GL_NO_ERROR){
+        if(context->loggingService)
+            context->loggingService->Write(MessageType::ISSUE, "OpenGL buffer error");
+        return;
+    }
+
 }
 
 OpenGLRenderer::~OpenGLRenderer(){
@@ -175,5 +186,4 @@ OpenGLRenderer::~OpenGLRenderer(){
     glfwDestroyWindow(window);
     glfwTerminate();
 
-    fprintf(stdout, "\nProgram exited succesfully.\n");
 }
