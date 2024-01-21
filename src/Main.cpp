@@ -276,7 +276,7 @@ int main(int argc, char* argv[]){
 
         Vector3 u = B - A;
         Vector3 v = C - A;
-        
+
         temp.normal = Vector3::CrossProduct(u,v).Normalize();
 
         context.objects.emplace_back(temp);
@@ -300,8 +300,8 @@ OpenGLRenderer renderer(&context, VSync);
 
     while (!renderer.ShouldClose()) {
 
-        pos.x = 900 * sin(angle * deg2rad)  + center.x;
-        pos.z = 900 * cos(angle * deg2rad) + center.z;
+        pos.x = 1000 * sin(angle * deg2rad)  + center.x;
+        pos.z = 1000 * cos(angle * deg2rad) + center.z;
 
         Vector3 direction = (pos - camera->position).Normalize();
 
@@ -312,7 +312,7 @@ OpenGLRenderer renderer(&context, VSync);
         context.frameCounter = 0;
 
         angle *= angle<360.0f;
-        angle+=0.1f;
+        angle+=5.0f;
 
         renderer.Update();
     }

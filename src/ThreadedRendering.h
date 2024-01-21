@@ -25,8 +25,6 @@ class ThreadedRendering : public IFrameRender{
 
     std::thread *threads;
 
-    RenderingContext *context;
-
     Vector3 RandomReflection(const struct Vector3& normal, unsigned int& seed);
 
     Vector3 RandomDirection(unsigned int& seed);
@@ -41,10 +39,12 @@ class ThreadedRendering : public IFrameRender{
 
     static float IntersectCube(const Ray & ray, const Object & object);
 
+    static float IntersectTriangle(const Ray & ray, const Object & object);
+
     Sample FindClosestIntersection(const struct Ray& ray);
 
     Color GetSkyBoxColor(const float & intensity, const Ray & ray);
-    
+
     Color ComputeColor(struct Ray& ray, unsigned int& seed);
 
     void ComputeRows(const int& _startY, const int& _endY, Color* pixels);
@@ -53,11 +53,12 @@ class ThreadedRendering : public IFrameRender{
 
     using IntersectionFunction = float (*)(const Ray &, const Object &);
 
-    IntersectionFunction intersectionFunctions[5] = {
+    IntersectionFunction intersectionFunctions[6] = {
         &ThreadedRendering::IntersectSphere,
         &ThreadedRendering::IntersectPlane,
         &ThreadedRendering::IntersectDisk,
         &ThreadedRendering::IntersectCube,
+        &ThreadedRendering::IntersectTriangle,
         NULL
     };
 

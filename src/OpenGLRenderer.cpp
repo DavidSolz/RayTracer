@@ -98,7 +98,7 @@ void OpenGLRenderer::KeyboardCallback(GLFWwindow* window, int key, int scancode,
         default:
             break;
     }
-    
+
 }
 
 void OpenGLRenderer::ProcessInput(){
@@ -109,11 +109,10 @@ void OpenGLRenderer::ProcessInput(){
         glfwGetCursorPos(window, &currentX, &currentY);
 
         float offsetX = lastMouseX - currentX;
-        float offsetY = lastMouseY - currentY;
+        float offsetY = currentY - lastMouseY;
 
         lastMouseX = currentX;
         lastMouseY = currentY;
-
 
         context->camera.Rotate(offsetX, offsetY);
 

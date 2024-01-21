@@ -38,7 +38,7 @@ class ParallelRendering : public IFrameRender {
 
     cl::NDRange globalRange;
     cl::NDRange localRange;
-    
+
     size_t dataSize;
     size_t objectBufferSize;
     size_t materialBufferSize;
@@ -56,7 +56,7 @@ class ParallelRendering : public IFrameRender {
     cl::Device GetDefaultCLDevice();
     cl::Program FetchProgram();
 
-    void DetermineLocalSize(const uint32_t & width, const uint32_t & height, const uint32_t & maxRange);
+    void DetermineLocalSize(const uint32_t & width, const uint32_t & height);
 
 public:
 

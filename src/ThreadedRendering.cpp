@@ -1,5 +1,6 @@
 #include "ThreadedRendering.h"
 
+static RenderingContext *context;
 
 bool ThreadedRendering::CheckForHyperthreading(){
 
@@ -7,24 +8,24 @@ bool ThreadedRendering::CheckForHyperthreading(){
     char var[5] = {0};
     int corecount = 0;
 
-#ifdef _WIN32 
+#ifdef _WIN32
 
     fp = popen("wmic cpu get NumberOfCores", "r");
 
-    while (fgets(var,sizeof(var),fp) != NULL) 
+    while (fgets(var,sizeof(var),fp) != NULL)
         sscanf(var,"%d",&corecount);
 
 #elif __APPLE__
 
     fp = popen("sysctl -n hw.physicalcpu", "r");
 
-    while (fgets(var,sizeof(var),fp) != NULL) 
+    while (fgets(var,sizeof(var),fp) != NULL)
         sscanf(var,"%d",&corecount);
 
 #else
 
     fp = popen("lscpu | grep 'Core(s) per socket' | awk '{print $NF}'", "r");
-    
+
     fscanf(fd, "%d", &corecount);
 
 #endif
@@ -37,7 +38,7 @@ bool ThreadedRendering::CheckForHyperthreading(){
 }
 
 void ThreadedRendering::Init(RenderingContext * _context){
-    this->context = _context;
+    context = _context;
 
     fprintf(stdout, "========[ CPU Config ]========\n");
 
@@ -113,8 +114,40 @@ float ThreadedRendering::IntersectDisk(const Ray & ray, const Object & object) {
     return t * condition - 1 + condition;
 }
 
+float ThreadedRendering::IntersectTriangle(const Ray & ray, const Object & object){
+    const float epsilon = 1e-6f;
+
+    int idA = object.indicesID.x;
+    int idB = object.indicesID.y;
+    int idC = object.indicesID.z;
+
+    Vector3 e1 = (context->mesh.vertices[idB] - context->mesh.vertices[idA]);
+    Vector3 e2 = (context->mesh.vertices[idC] - context->mesh.vertices[idA]);
+
+    Vector3 normal = Vector3::CrossProduct(ray.direction, e2);
+    float det = Vector3::DotProduct(e1, normal);
+
+    if( fabs(det) < epsilon)
+        return -1.0f;
+
+    float f = 1.0f/det;
+    Vector3 rayToTriangle = ray.origin - context->mesh.vertices[idA];
+    float u = f * Vector3::DotProduct(rayToTriangle, normal);
+
+    if( u < 0.0f || u >1.0f)
+        return -1.0f;
+
+    Vector3 q = Vector3::CrossProduct(rayToTriangle, e1);
+    float v = f * Vector3::DotProduct(ray.direction, q);
+
+    if( v < 0.0f || u+v >1.0f)
+        return -1.0f;
+
+    return f * Vector3::DotProduct(e2, q);
+}
+
 float ThreadedRendering::IntersectCube(const Ray & ray, const Object & object) {
-    
+
     Vector3 dirs = ((Vector3)ray.direction).Directions();
     Vector3 values = ((Vector3)ray.direction).Absolute();
 
@@ -148,7 +181,7 @@ float ThreadedRendering::IntersectCube(const Ray & ray, const Object & object) {
     tyMax = max;
 
     if ( (tMin > tyMax) || (tyMin > tMax)) {
-        return -1.0f;  
+        return -1.0f;
     }
 
     tMin = fmax(tMin, tyMin);
@@ -162,9 +195,9 @@ float ThreadedRendering::IntersectCube(const Ray & ray, const Object & object) {
 
     tzMin = min;
     tzMax = max;
-    
+
     if ( (tMin > tzMax) || (tzMin > tMax)) {
-        return -1.0f; 
+        return -1.0f;
     }
 
     tMin = fmax(tMin, tzMin);
@@ -178,7 +211,7 @@ float ThreadedRendering::IntersectCube(const Ray & ray, const Object & object) {
 }
 
 Vector3 ComputeBoxNormal(const Vector3 & nearVertice, const Vector3 & farVertice, const Vector3 & intersectionPoint){
-    
+
     Vector3 boxCenter = (farVertice + nearVertice)*0.5f;
     Vector3 radius = (farVertice - nearVertice)*0.5f;
     Vector3 pointToCenter = intersectionPoint - boxCenter;
@@ -196,13 +229,13 @@ Vector3 ComputeBoxNormal(const Vector3 & nearVertice, const Vector3 & farVertice
 Color ThreadedRendering::GetSkyBoxColor(const float & intensity, const Ray & ray){
     float t = intensity/fmax(ray.direction.y + 1.0f, 0.00001f);
 
-    static const Color skyColor = (Color){0.5f, 0.7f, 1.0f, 1.0f};
+    static const Color skyColor = (Color){ray.direction.x, ray.direction.y, ray.direction.z, 1.0f};
 
     return skyColor * t;
 }
 
 Color ThreadedRendering::ComputeColor(struct Ray& ray, unsigned int& seed) {
-    
+
     Color accumulatedColor = {0.0f, 0.0f, 0.0f, 0.0f};
     Color colorMask = {1.0f, 1.0f, 1.0f, 1.0f};
     float intensity = 1.0f;
@@ -226,12 +259,12 @@ Color ThreadedRendering::ComputeColor(struct Ray& ray, unsigned int& seed) {
             float lightIntensity = Vector3::DotProduct(ray.direction, sample.normal);
             lightIntensity = fmax(0.0f, fmin(lightIntensity, 1.0f));
 
-            Color emmisionComponent = material->emission * material->emmissionScale * 2;
-            Color diffuseComponent = material->diffuse *  material->diffusionScale * 2 * lightIntensity * (1.0f/3.1415926535f);
-            
+            Color emmisionComponent = material->emission * material->emmissionScale;
+            Color diffuseComponent = material->diffuse *  material->diffusionScale * 2 * lightIntensity;
+
             accumulatedColor += (diffuseComponent + emmisionComponent) * colorMask;
             colorMask *= material->baseColor;
-            intensity *= lightIntensity * 0.01f;
+            intensity *= lightIntensity * 0.1f;
     }
 
     return accumulatedColor;
@@ -255,7 +288,7 @@ Sample ThreadedRendering::FindClosestIntersection(const Ray& ray){
             sample.distance = distance;
             sample.point = ray.origin + (Vector3)ray.direction * distance;
             sample.materialID = context->objects[i].materialID;
-            
+
             switch(context->objects[i].type){
 
                 case CUBE:
@@ -269,7 +302,7 @@ Sample ThreadedRendering::FindClosestIntersection(const Ray& ray){
                 default:
                     sample.normal = context->objects[i].normal;
             }
-            
+
         }
     }
 
@@ -286,7 +319,7 @@ void ThreadedRendering::ComputeRows(const int& _startY, const int& _endY, Color*
 
             Vector3 offset = RandomDirection(seed);
             Vector3 pixelPosition = context->camera.CalculatePixelPosition(x + offset.x - 0.5f, y + offset.y - 0.5f, context->width, context->height);
-            
+
             Ray ray;
             ray.origin = context->camera.position;
             ray.direction = (pixelPosition - ray.origin).Normalize();
@@ -307,7 +340,7 @@ void ThreadedRendering::Render(Color * _pixels){
         int endY =  startY + rowsPerThread;
 
         threads[i] = std::thread([this, startY, endY, _pixels](){
-                this->ComputeRows(startY, endY, _pixels);
+            this->ComputeRows(startY, endY, _pixels);
         });
     }
 

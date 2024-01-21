@@ -51,32 +51,43 @@ void ParallelRendering::Init(RenderingContext * _context){
     antialiasingKernel.setArg(1, antialiasBuffer);
 
     globalRange = cl::NDRange(context->width, context->height);
-    
-    DetermineLocalSize(context->width, context->height, 16);
+
+    DetermineLocalSize(context->width, context->height);
 
 }
 
-void ParallelRendering::DetermineLocalSize(const uint32_t & width, const uint32_t & height, const uint32_t & maxRange){
+void ParallelRendering::DetermineLocalSize(const uint32_t & width, const uint32_t & height){
+
+    std::vector<size_t> maxWorkItemSizes = default_device.getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>();
+    size_t maxGroupSize = default_device.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>();
 
     uint32_t rangeX, rangeY;
 
-    for(uint32_t x = maxRange-1; x >0; --x){
+    rangeX = static_cast<uint32_t>(maxWorkItemSizes[0]);
+    rangeY = static_cast<uint32_t>(maxWorkItemSizes[1]);
 
-        if(x < maxRange && width%x==0){
+    for (uint32_t x = rangeX; x > 0; --x) {
+        if (width % x == 0) {
             rangeX = x;
             break;
         }
-
     }
 
-    for(uint32_t y = maxRange-1; y >0; --y){
-
-        if(y < maxRange && height%y==0){
+    for (uint32_t y = rangeY; y > 0; --y) {
+        if (height % y == 0 && rangeX * y <= maxGroupSize) {
             rangeY = y;
             break;
         }
-
     }
+
+
+    // This should be redone to support 1D groups
+    if(maxWorkItemSizes[1]==1)
+        rangeX = 100;
+
+
+    rangeX = std::max(rangeX, (uint32_t)1);
+    rangeY = std::max(rangeY, (uint32_t)1);
 
     localRange = cl::NDRange(rangeX, rangeY);
 }
@@ -94,7 +105,7 @@ void ParallelRendering::Render(Color * _pixels){
 
     queue.enqueueNDRangeKernel(kernel, cl::NullRange, globalRange, localRange);
     queue.enqueueNDRangeKernel(antialiasingKernel, cl::NullRange, globalRange, localRange);
-    
+
     queue.finish();
 
     queue.enqueueReadBuffer(antialiasBuffer, CL_TRUE, 0, dataSize, _pixels);
@@ -126,7 +137,7 @@ cl::Device ParallelRendering::GetDefaultCLDevice(){
     }else{
         fprintf(stdout, "> Selected default platform.\n");
     }
-    
+
     std::vector<cl::Device> all_devices;
 
     all_platforms[selectedPlatform].getDevices(CL_DEVICE_TYPE_ALL, &all_devices);

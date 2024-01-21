@@ -7,13 +7,13 @@ Vector3 MeshReader::ParseVertice(const std::string & line){
     char * tok1 = strtok(data, " ");
     char * tok2 = strtok(NULL, " ");
     char * tok3 = strtok(NULL, " ");
-    
+
     return (Vector3){std::stof(tok1), std::stof(tok2), std::stof(tok3)};
 }
 
 
 Vector3 MeshReader::ParseFace(const std::string & line){
-    
+
     int temp[3];
 
     char * token_start = (char*)line.c_str()+2;
@@ -27,16 +27,17 @@ Vector3 MeshReader::ParseFace(const std::string & line){
         char * data_str = strtok(token_start, delimiter);
 
         temp[i] = atoi(data_str);
-
         // char * texture = strtok(NULL, delimiter);
         // char * normal = strtok(NULL, delimiter);
 
         token_start =  token_end;
+
         if(token_start == nullptr)
             break;
+
         token_start++;
     }
- 
+
     return Vector3(temp[0], temp[1], temp[2]);
 }
 
@@ -69,9 +70,9 @@ Mesh MeshReader::LoadObject(const std::string & filename){
             }
 
             break;
-        
+
         case 'f':
-            
+
             data = ParseFace(line);
             mesh.indices.emplace_back((int)data.x-1);
             mesh.indices.emplace_back((int)data.y-1);

@@ -128,7 +128,7 @@ float IntersectDisk(const struct Ray *ray, global const struct Object *object) {
 }
 
 float IntersectCube(const struct Ray *ray, global const struct Object *object) {
-    
+
     float3 dirs = sign(ray->direction);
     float3 values = fabs(ray->direction);
 
@@ -157,7 +157,7 @@ float IntersectCube(const struct Ray *ray, global const struct Object *object) {
     tyMax = max;
 
     if ( isgreater(tMin, tyMax) || isgreater(tyMin, tMax)) {
-        return -1.0f;  
+        return -1.0f;
     }
 
     tMin = fmax(tMin, tyMin);
@@ -171,9 +171,9 @@ float IntersectCube(const struct Ray *ray, global const struct Object *object) {
 
     tzMin = min;
     tzMax = max;
-    
+
     if ( tMin > tzMax || tzMin > tMax) {
-        return -1.0f; 
+        return -1.0f;
     }
 
     tMin = fmax(tMin, tzMin);
@@ -187,8 +187,8 @@ float IntersectCube(const struct Ray *ray, global const struct Object *object) {
 }
 
 float IntersectTriangle(
-    const struct Ray *ray, 
-    global const struct Object *object, 
+    const struct Ray *ray,
+    global const struct Object *object,
     global const float3 * vertices
     ) {
 
@@ -224,7 +224,7 @@ float IntersectTriangle(
 }
 
 float3 ComputeBoxNormal(global const float3 * nearVertice, global const float3 * farVertice, const float3 * intersectionPoint){
-    
+
     const float epsilon = 1.000001f;
 
     float3 boxCenter = (*farVertice + *nearVertice)*0.5f;
@@ -249,9 +249,9 @@ float3 ComputeTriangleNormal(const float3 * intersection, global const struct Ob
 }
 
 struct Sample FindClosestIntersection(
-    global const struct Object* objects, 
-    global const int * numObject, 
-    const struct Ray * ray, 
+    global const struct Object* objects,
+    global const int * numObject,
+    const struct Ray * ray,
     global const float3 * vertices){
 
     struct Sample sample = {0};
@@ -301,7 +301,7 @@ struct Sample FindClosestIntersection(
                     sample.normal = objects[i].normal;
                     break;
             }
-            
+
         }
 
     }
@@ -338,18 +338,18 @@ float4 GetSkyBoxColor(const float intensity, const struct Ray * ray){
 }
 
 float4 ComputeColor(
-    struct Ray *ray, 
-    global const struct Object* objects, 
-    global const int * numObject, 
-    global const struct Material* materials,  
-    uint *seed, 
+    struct Ray *ray,
+    global const struct Object* objects,
+    global const int * numObject,
+    global const struct Material* materials,
+    uint *seed,
     global const float3 * vertices) {
 
     float4 accumulatedColor = 0.0f;
     float4 colorMask = 1.0f;
     float intensity = 1.0f;
 
-    for(int i = 0; i < 128; ++i){
+    for(int i = 0; i < 8; ++i){
         struct Sample sample = FindClosestIntersection(objects, numObject, ray, vertices);
 
         if( isinf(sample.length) ){
@@ -371,7 +371,7 @@ float4 ComputeColor(
         float4 emmisionComponent = material.emission * material.emmissionScale ;
         float4 reflectionComponent = material.diffuse * material.diffusionScale * 2 * lightIntensity;
 
-        accumulatedColor += (2*emmisionComponent +  reflectionComponent/M_PI_F) * colorMask;
+        accumulatedColor += (emmisionComponent +  reflectionComponent) * colorMask;
         colorMask *= material.baseColor;
         intensity *= lightIntensity * 0.1f;
     }
@@ -410,7 +410,7 @@ void kernel RayTrace(
     uint index = y * width + x;
     uint seed = (*numFrames<<16) ^ (*numFrames >>13) + index;
 
-    // Simple anti-aliasing techinque 
+    // Simple anti-aliasing techinque
     float3 offset = RandomDirection(&seed);
     float3 pixelPosition = CalculatePixelPosition(x + offset.x + 0.5f, y + offset.y + 0.5f, width, height, camera);
 
@@ -429,7 +429,7 @@ void kernel RayTrace(
 }
 
 void kernel AntiAlias(global float4 * input, global float4 * output){
-    
+
     int x = get_global_id(0);
     int y = get_global_id(1);
 
@@ -455,10 +455,10 @@ void kernel AntiAlias(global float4 * input, global float4 * output){
             int idx = neighborY * width + neighborX;
 
             pixelValue = fmax(pixelValue, input[idx] * matrix[i][j]);
-        
+
         }
     }
 
     output[index] = pixelValue;
-    
+
 }

@@ -10,7 +10,7 @@ struct Camera{
 
     Vector3 front = {0.0f, 0.0f, 1.0f};
     Vector3 up = {0.0f, 1.0f, 0.0f};
-    Vector3 right = {1.0f, 0.0f, 0.0f}; 
+    Vector3 right = {1.0f, 0.0f, 0.0f};
 
     Vector3 position = {0.0f, 0.0f, 0.0f};
 
@@ -34,13 +34,9 @@ struct Camera{
         float cosPitch = cos(pitch * deg2rad);
         float yaw2rad = yaw * deg2rad;
 
-        Vector3 temp;
-
-        temp.x = cos(yaw2rad) * cosPitch;
-        temp.y = -sin(pitch * deg2rad);
-        temp.z = sin(yaw2rad) * cosPitch;
-
-        front = (front - temp).Normalize();
+        front.x = cos(yaw2rad) * cosPitch;
+        front.y = -sin(pitch * deg2rad);
+        front.z = sin(yaw2rad) * cosPitch;
 
         right = Vector3::CrossProduct(worldUp, front).Normalize();
         up  = Vector3::CrossProduct(front, right).Normalize();
@@ -63,7 +59,7 @@ struct Camera{
         float tanHalfFOV = tan(deg2rad * fov * 0.5f);
         float cameraX = (2.0 * x / (float)width - 1.0f) * aspectRatio * tanHalfFOV * nearView;
         float cameraY = (2.0 * y / (float)height - 1.0f) * tanHalfFOV * nearView;
-        
+
         return position + front*nearView + right*cameraX + up*cameraY;
 
     }
