@@ -30,7 +30,7 @@ int main(int argc, char* argv[]){
     MaterialBuilder materialBuilder(&context);
     PerformanceMonitor monitor;
 
-/*    
+/*
 {
 
     Object p;
@@ -277,7 +277,7 @@ int main(int argc, char* argv[]){
         monitor.GatherInformation();
         renderer.Update();
     }
-    
+
 
     return EXIT_SUCCESS;
 }

@@ -47,15 +47,15 @@ void PerformanceMonitor::CalculateMean(){
     mean.fpsCount/=samplesCount;
     mean.frameTime/=samplesCount;
 }
-    
+
 void PerformanceMonitor::CalculateVariance(){
     PerformanceSample& variance = statistics.variance;
 
     uint32_t samplesCount = samples.size()-1;
 
     for(uint32_t id = 1; id < samples.size(); ++id){
-        float deltaFps =  (statistics.mean.fpsCount - samples[id].fpsCount );
-        float deltaFrametime =  (statistics.mean.frameTime - samples[id].frameTime );
+        float deltaFps =  ( statistics.mean.fpsCount - samples[id].fpsCount );
+        float deltaFrametime =  ( statistics.mean.frameTime - samples[id].frameTime );
 
         variance.fpsCount +=  deltaFps * deltaFps;
         variance.frameTime += deltaFrametime * deltaFrametime;
@@ -78,9 +78,9 @@ void PerformanceMonitor::CalculateMedian(){
     PerformanceSample& median = statistics.median;
 
     uint32_t size = samples.size();
-    
+
     std::sort(samples.begin(), samples.end(), [](PerformanceSample & a, PerformanceSample & b){ return a.fpsCount>b.fpsCount; });
-    
+
     if(size%2==0){
         median.fpsCount = ( samples[ size>>1 ].fpsCount + samples[ size>>1 + 1 ].fpsCount)/2.0f;
     }else{
@@ -109,10 +109,10 @@ PerformanceMonitor::~PerformanceMonitor(){
 
     this->samplingEnd = Timer::GetCurrentTime();
     this->samplingDuration = Timer::GetDurationInSeconds(samplingEnd - samplingStart);
-    
+
     CalculateStatistics();
 
-    fprintf(stdout, "========[ Statistics ]========\nSampling duration : %f s\nMean : \n\tFPS : %f \n\tframetime : %f \nVariance : \n\tFPS : %f\n\tframetime : %f \nDeviation :\n\tFPS : %f\n\tframetime : %f \nMedian :\n\tFPS : %f\n\tframetime : %f \n",
+    fprintf(stdout, "========[ Statistics ]========\nSampling duration : %f s\nMean : \n\tFPS : %f\n\tframetime : %f \nVariance : \n\tFPS : %f\n\tframetime : %f \nDeviation :\n\tFPS : %f\n\tframetime : %f \nMedian :\n\tFPS : %f\n\tframetime : %f \n",
     samplingDuration,
     statistics.mean.fpsCount, statistics.mean.frameTime,
     statistics.variance.fpsCount, statistics.variance.frameTime,

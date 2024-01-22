@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-file_path = 'Performance_log.csv' 
+file_path = 'Performance_log.csv'
 data = []
 
 with open(file_path, 'r') as file:
@@ -62,8 +62,8 @@ plt.legend()
 plt.grid(True)
 
 plt.tight_layout()
-plt.show()
+# plt.show()
 
-# plt.savefig('performance_plots.png')
+plt.savefig('performance_plots.png')
 
-# plt.close()
+plt.close()

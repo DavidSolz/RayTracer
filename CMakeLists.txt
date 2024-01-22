@@ -8,6 +8,8 @@ set(CMAKE_COLOR_DIAGNOSTICS ON)
 
 project(RayTracer VERSION 1.0)
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w -Wall")
+
 if(WIN32)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w -Wall -lopengl32 -lglfw3 -lglew32 -lgdi32 -fopenmp")
