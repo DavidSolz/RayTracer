@@ -28,7 +28,7 @@ plt.subplot(3, 1, 1)
 plt.plot(fps, linestyle='-', color='b')
 plt.axhline(mean_fps, linestyle='--', color='k', label='Mean FPS')
 plt.fill_between(range(len(fps)), mean_fps - std_fps, mean_fps + std_fps, color='b', alpha=0.2, label='FPS ± Std Dev')
-plt.fill_between(range(len(frametime)), mean_fps - np.sqrt(var_fps), mean_fps + np.sqrt(var_fps), color='r', alpha=0.1, label='Frametime ± Variance')
+plt.fill_between(range(len(frametime)), mean_fps - np.sqrt(var_fps), mean_fps + np.sqrt(var_fps), color='r', alpha=0.1, label='FPS ± Variance')
 
 plt.xlabel('Sample')
 plt.ylabel('FPS')

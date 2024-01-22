@@ -361,7 +361,7 @@ float4 ComputeColor(
 
         struct Material material =  materials[sample.materialID];
 
-        float3 diffusionDirection = RandomReflection(sample.normal, seed);
+        float3 diffusionDirection = normalize(RandomReflection(sample.normal, seed) + sample.normal);
         float3 reflectionDirection = Reflect(&ray->direction, &sample.normal);
 
         ray->direction = mix(diffusionDirection, reflectionDirection , material.smoothness);
@@ -369,11 +369,11 @@ float4 ComputeColor(
         float lightIntensity = clamp(dot(ray->direction, sample.normal), 0.0f, 1.0f);
 
         float4 emmisionComponent = material.emission * material.emmissionScale ;
-        float4 reflectionComponent = material.diffuse * material.diffusionScale * 2 * lightIntensity;
+        float4 reflectionComponent = material.diffuse * material.diffusionScale ;
 
         accumulatedColor += (emmisionComponent +  reflectionComponent) * colorMask;
-        colorMask *= material.baseColor;
-        intensity *= lightIntensity * 0.1f;
+        colorMask *= material.baseColor * lightIntensity;
+        intensity *= 0.1f;
     }
 
     return accumulatedColor;
