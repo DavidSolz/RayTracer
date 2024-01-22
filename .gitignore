@@ -34,4 +34,7 @@ OpenCL
 *.exe
 *.out
 *.app
+
+# Artifacts
 *.txt
+*.csv

@@ -1,16 +1,17 @@
 #ifndef TIMER_H
 #define TIMER_H
 
-#include <GLFW/glfw3.h>
-#include <stdio.h>
 #include <stdint.h>
+#include <chrono>
+
+typedef std::chrono::high_resolution_clock::time_point Timepoint;
 
 class Timer {
 
 private:
 
     double timeScale;
-    double lastTime;
+    Timepoint lastTime;
     double deltaTime;
 
     uint32_t lastFrameCount;
@@ -18,6 +19,7 @@ private:
 
     Timer();
 
+    
 public:
 
     void TicTac();
@@ -29,6 +31,10 @@ public:
     uint32_t GetFrameCount() const;
 
     static Timer* GetInstance();
+
+    static Timepoint GetCurrentTime();
+
+    static double GetDurationInSeconds(const std::chrono::high_resolution_clock::duration& duration);
 
     ~Timer();
 

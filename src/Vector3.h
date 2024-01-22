@@ -44,6 +44,14 @@ struct Vector3 {
         return a + (b-a)*t;
     }
 
+    static Vector3 Minimal(const Vector3 & a, const Vector3 & b){
+        return Vector3(fmin(a.x,b.x), fmin(a.y,b.y), fmin(a.z,b.z));
+    }
+
+    static Vector3 Maximal(const Vector3 & a, const Vector3 & b){
+        return Vector3(fmax(a.x,b.x), fmax(a.y,b.y), fmax(a.z,b.z));
+    }
+
     Vector3 operator-(const Vector3 & b) const {
         return Vector3(x - b.x, y - b.y, z - b.z);
     }

@@ -1,8 +1,8 @@
 
 #include "OpenGLRenderer.h"
 #include "MaterialBuilder.h"
+#include "PerformanceMonitor.h"
 #include "MeshReader.h"
-#include "Logger.h"
 
 int main(int argc, char* argv[]){
 
@@ -14,25 +14,23 @@ int main(int argc, char* argv[]){
 // Objects setup
 
     RenderingContext context;
-    MaterialBuilder materialBuilder(&context);
     Logger logger("RayTracer_log.txt");
-    OpenGLRenderer renderer(&context, VSync);
 
 // Context setup
 
     context.width = 1000;
     context.height = 1000;
     context.depth = 480;
-    context.loggingService = &logger;
-
-    float aspectRatio = context.width/(float)context.height;
-
-// Setup camera
 
     context.camera.position = Vector3(context.width/2.0f, context.height/2.0f, -900.0f);
-    context.camera.aspectRatio = aspectRatio;
+    context.camera.aspectRatio = context.width/(float)context.height;
 
-/*
+    context.loggingService = &logger;
+
+    MaterialBuilder materialBuilder(&context);
+    PerformanceMonitor monitor;
+
+/*    
 {
 
     Object p;
@@ -211,7 +209,7 @@ int main(int argc, char* argv[]){
 
     p.position = Vector3(context.width/2.0f, context.height/4.0f, context.depth/4.0f);
     p.normal = Vector3(0.0f, 1.0f ,0.0f);
-    p.radius = 1000.0f * aspectRatio;
+    p.radius = 1000.0f;
     p.type = DISK;
 
     p.materialID = materialBuilder
@@ -225,7 +223,7 @@ int main(int argc, char* argv[]){
 
 // SUN
 
-    p.position = Vector3(context.width/2.0f, 2*context.height, context.depth/4.0f) * aspectRatio;
+    p.position = Vector3(context.width/2.0f, 2*context.height, context.depth/4.0f);
     p.radius = 600.0f;
     p.type = SPHERE;
 
@@ -273,8 +271,12 @@ int main(int argc, char* argv[]){
 
 //Main loop
 
-    while (!renderer.ShouldClose()) 
+    OpenGLRenderer renderer(&context, VSync);
+
+    while (!renderer.ShouldClose()) {
+        monitor.GatherInformation();
         renderer.Update();
+    }
     
 
     return EXIT_SUCCESS;
