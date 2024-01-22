@@ -131,12 +131,14 @@ void OpenGLRenderer::ProcessInput(){
         memcpy(windowTitle, "CPU Mode", 9);
         SetRenderingService(&cpuRender);
         selection = CPU;
+        context->frameCounter=0;
     }
 
     if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS && selection != ACC){
         memcpy(windowTitle, "ACC Mode", 9);
         SetRenderingService(&gpuRender);
         selection = ACC;
+        context->frameCounter=0;
     }
 
 }

@@ -45,7 +45,6 @@ class ParallelRendering : public IFrameRender {
     size_t verticesBufferSize;
 
     cl::Buffer pixelBuffer;
-    cl::Buffer antialiasBuffer;
     cl::Buffer frameCounter;
     cl::Buffer objectBuffer;
     cl::Buffer objectsCountBuffer;

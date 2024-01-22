@@ -21,7 +21,6 @@ void ParallelRendering::Init(RenderingContext * _context){
 
     dataSize = sizeof(Color) * context->width * context->height;
     pixelBuffer = cl::Buffer(deviceContext, CL_MEM_READ_WRITE, dataSize);
-    antialiasBuffer = cl::Buffer(deviceContext, CL_MEM_READ_WRITE, dataSize);
 
     context->frameCounter = 0;
     frameCounter = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, sizeof(int));
@@ -51,7 +50,6 @@ void ParallelRendering::Init(RenderingContext * _context){
 
     antialiasingKernel = cl::Kernel(program, "AntiAlias");
     antialiasingKernel.setArg(0, pixelBuffer);
-    antialiasingKernel.setArg(1, antialiasBuffer);
 
     globalRange = cl::NDRange(context->width, context->height);
 
@@ -111,7 +109,7 @@ void ParallelRendering::Render(Color * _pixels){
 
     queue.finish();
 
-    queue.enqueueReadBuffer(antialiasBuffer, CL_TRUE, 0, dataSize, _pixels);
+    queue.enqueueReadBuffer(pixelBuffer, CL_TRUE, 0, dataSize, _pixels);
 
 }
 

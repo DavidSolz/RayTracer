@@ -428,7 +428,7 @@ void kernel RayTrace(
     pixels[index] =  mix(pixels[index], sample, scale);
 }
 
-void kernel AntiAlias(global float4 * input, global float4 * output){
+void kernel AntiAlias(global float4 * input){
 
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -441,24 +441,24 @@ void kernel AntiAlias(global float4 * input, global float4 * output){
     float4 pixelValue = input[index];
 
     const float matrix[3][3] = {
-            {-0.1f, 0.9f, -0.1f},
-            {1.1f, 1.0f, 1.1f},
-            {-0.1f, 0.9f, -0.1f}
+            {-1.0f, 1.0f, -1.0f},
+            {1.0f, 1.0f, 1.0f},
+            {-1.0f, 1.0f, -1.0f}
     };
 
 
-    for (int i = -1; i <= 1; i++) {
-        for (int j = -1; j <= 1; j++) {
-            int neighborX = clamp(x + i, 0, width - 1);
-            int neighborY = clamp(y + j, 0, height - 1);
+    // for (int i = -1; i <= 1; i++) {
+    //     for (int j = -1; j <= 1; j++) {
+    //         int neighborX = clamp(x + i, 0, width - 1);
+    //         int neighborY = clamp(y + j, 0, height - 1);
 
-            int idx = neighborY * width + neighborX;
+    //         int idx = neighborY * width + neighborX;
 
-            pixelValue = fmax(pixelValue, input[idx] * matrix[i][j]);
+    //         pixelValue = fmax(pixelValue, input[idx] * matrix[i+1][j+1]);
 
-        }
-    }
+    //     }
+    // }
 
-    output[index] = pixelValue;
+    input[index] = pixelValue;
 
 }

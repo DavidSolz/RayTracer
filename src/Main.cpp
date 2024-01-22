@@ -130,7 +130,7 @@ int main(int argc, char* argv[]){
 
     p.position = Vector3(context.width/2.0f, context.height/4.0f, context.depth/4.0f);
     p.normal = Vector3(0.0f, 1.0f ,0.0f);
-    p.radius = 1000.0f * aspectRatio;
+    p.radius = 1000.0f;
     p.type = DISK;
 
     p.materialID = materialBuilder
@@ -142,7 +142,7 @@ int main(int argc, char* argv[]){
     context.objects.emplace_back(p);
 
 // SUN
-    p.position = Vector3(context.width/2.0f, 2*context.height, context.depth/4.0f) * aspectRatio;
+    p.position = Vector3(context.width/2.0f, 2*context.height, context.depth/4.0f);
     p.radius = 600.0f;
     p.type = SPHERE;
 
@@ -156,7 +156,7 @@ int main(int argc, char* argv[]){
 }
 */
 
-/*
+
 {
     const int rows = 10;
     const int cols = 10;
@@ -172,7 +172,7 @@ int main(int argc, char* argv[]){
             s.position.x = startX + i * spacing;
             s.position.y = startY + j * spacing;
             s.position.z = -200.f + (rand() / (float)RAND_MAX) * spacing ;
-            s.maxPos = s.position + (Vector3){1, 1, 1} * spacing * aspectRatio;
+            s.maxPos = s.position + (Vector3){1, 1, 1} * spacing;
             s.radius = spacing/2.0f;
             s.normal = Vector3(0.0f, 1.0f, 0.0f);
             s.type = CUBE;
@@ -200,8 +200,9 @@ int main(int argc, char* argv[]){
     }
 
 }
-*/
 
+
+/*
 {
 // DISK
 
@@ -268,6 +269,7 @@ int main(int argc, char* argv[]){
 
     context.mesh = mesh;
 }
+*/
 
 //Main loop
 
