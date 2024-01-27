@@ -1,21 +1,23 @@
 #include <iostream>
+#include <cstdlib>
 #include <cstring>
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
+
 #define CL_HPP_TARGET_OPENCL_VERSION 200
 
 #ifdef __APPLE__
 
-#include <GL/gl.h>
-#include <GL/wglew.h>
+#include <OpenGL/gl3.h>
 #include <OpenCL/opencl.h>
-#include <OpenCL/cl_gl.h>
-#include <CL/cl_gl_ext.h>
+#include <OpenGL/OpenGL.h>
 #include "../OpenCL/include/CL/cl.hpp"
+#include <OpenCL/cl_gl.h>
+#include <OpenCL/cl_gl_ext.h>
 
-#elif __WIN32__
+#elif _WIN32
 
 #include <windows.h>
 #include <GL/gl.h>
@@ -28,11 +30,11 @@
 #endif
 
 int main(){
-    const int width = 640;
-    const int height = 480;
+    const int width = 500;
+    const int height = 500;
 
-    const int texture_width = 4;
-    const int texture_height = 4;
+    const int texture_width = 64;
+    const int texture_height = 64;
 
     if(!glfwInit()){
         return EXIT_FAILURE;
@@ -64,92 +66,120 @@ int main(){
         return EXIT_FAILURE;
     }
 
-    cl_platform_id platform;
-    cl_device_id device;
+    cl::Platform platform;
+    cl::Device device;
 
-    clGetPlatformIDs(1, &platform, NULL);
+    std::vector<cl::Platform> platforms;
+    cl::Platform::get(&platforms);
 
-    clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, 1, &device, NULL);
+    if (platforms.empty()) {
+        std::cerr << "No OpenCL platforms found" << std::endl;
+        return EXIT_FAILURE;
+    }
 
-    size_t platformNameSize;
-    clGetPlatformInfo(platform, CL_PLATFORM_NAME, 0, NULL, &platformNameSize);
-    char* platformName = (char*)malloc(platformNameSize);
-    clGetPlatformInfo(platform, CL_PLATFORM_NAME, platformNameSize, platformName, NULL);
-    fprintf(stdout, "Default Platform:\n\tName: %s\n", platformName);
-    free(platformName);
+    platform = platforms[0];
 
-    size_t deviceNameSize;
-    clGetDeviceInfo(device, CL_DEVICE_NAME, 0, NULL, &deviceNameSize);
-    char* deviceName = (char*)malloc(deviceNameSize);
-    clGetDeviceInfo(device, CL_DEVICE_NAME, deviceNameSize, deviceName, NULL);
-    fprintf(stdout, "Default Device:\n\tName: %s\n", deviceName);
-    free(deviceName);
+    std::vector<cl::Device> devices;
+    platform.getDevices(CL_DEVICE_TYPE_ALL, &devices);
 
-    cl_int status;
+    if (devices.empty()) {
+        std::cerr << "No OpenCL devices found" << std::endl;
+        return EXIT_FAILURE;
+    }
 
-    char extension_string[1024];
-    memset(extension_string, ' ', 1024);
-    
-    clGetPlatformInfo( 0, CL_PLATFORM_EXTENSIONS, sizeof(extension_string), extension_string, NULL);
 
-    char *extStringStart = NULL;
-    extStringStart = strstr(extension_string, "cl_khr_gl_sharing");
+#ifdef __APPLE__
 
-    if(extStringStart != 0)
-        fprintf(stderr, "Platform does support cl_khr_gl_sharing\n");
+    device = devices[2];
 
-    cl_context_properties cps[] = 
-    { 
-        CL_CONTEXT_PLATFORM, (cl_context_properties)platform, 
-        CL_GL_CONTEXT_KHR, (cl_context_properties)wglGetCurrentContext(),
-        CL_WGL_HDC_KHR, (cl_context_properties)wglGetCurrentDC(),
-        0 
+#else
+
+    device = devices[0];
+
+#endif
+
+    std::string platformName;
+    platform.getInfo(CL_PLATFORM_NAME, &platformName);
+    fprintf(stdout, "Default Platform:\n\tName: %s\n", platformName.c_str());
+
+    std::string deviceName;
+    device.getInfo(CL_DEVICE_NAME, &deviceName);
+    fprintf(stdout, "Default Device:\n\tName: %s\n", deviceName.c_str());
+
+    std::string platformExtensions;
+    platform.getInfo(CL_PLATFORM_EXTENSIONS, &platformExtensions);
+
+#ifdef __APPLE__
+    size_t found = platformExtensions.find("cl_APPLE_gl_sharing");
+    if (found == std::string::npos) {
+        fprintf(stderr, "Platform does not support cl_APPLE_gl_sharing\n");
+        glfwDestroyWindow(window);
+        glfwTerminate();
+        return EXIT_FAILURE;
+    }
+
+    fprintf(stdout, "Platform supports cl_APPLE_gl_sharing\n");
+
+#else
+
+    size_t found = platformExtensions.find("cl_khr_gl_sharing");
+    if (found == std::string::npos) {
+        fprintf(stderr, "Platform does not support cl_khr_gl_sharing\n");
+        glfwDestroyWindow(window);
+        glfwTerminate();
+        return EXIT_FAILURE;
+    }
+
+    fprintf(stdout, "Platform supports cl_khr_gl_sharing\n");
+
+#endif
+
+#ifdef __APPLE__
+
+    CGLContextObj glContext = CGLGetCurrentContext();
+    CGLShareGroupObj shareGroup = CGLGetShareGroup(glContext);
+
+    cl_context_properties properties[] = {
+        CL_CONTEXT_PROPERTY_USE_CGL_SHAREGROUP_APPLE,
+        (cl_context_properties)shareGroup,
+        0
     };
 
-    cl_context context = clCreateContext(cps, 1, &device, NULL, NULL, &status);
+#elif __WIN32__
 
-    if (context == NULL) {
-        fprintf(stderr, "Failed to create OpenCL context\n");
-        glfwDestroyWindow(window);
-        glfwTerminate();
-        return EXIT_FAILURE;
-    }
+    cl_context_properties properties[] = {
+        CL_CONTEXT_PLATFORM, (cl_context_properties)platform,
+        CL_GL_CONTEXT_KHR, (cl_context_properties)wglGetCurrentContext(),
+        CL_WGL_HDC_KHR, (cl_context_properties)wglGetCurrentDC(),
+        0
+    };
 
-    clGetGLContextInfoKHR_fn pclGetGLContextInfoKHR = (clGetGLContextInfoKHR_fn)clGetExtensionFunctionAddressForPlatform(0, "clGetGLContextInfoKHR");
+#else
 
-    size_t bytes = 0;
-	pclGetGLContextInfoKHR(cps, CL_CURRENT_DEVICE_FOR_GL_CONTEXT_KHR, 0, NULL, &bytes);
+     cl_context_properties properties[] = {
+        CL_GL_CONTEXT_KHR, (cl_context_properties) glXGetCurrentContext(),
+        CL_GLX_DISPLAY_KHR, (cl_context_properties) glXGetCurrentDisplay(),
+        CL_CONTEXT_PLATFORM, (cl_context_properties) platform,
+        0
+    };
 
-    if( bytes == 0 ){
-        fprintf(stderr, "Can't find any compatible devices\n");
-        glfwDestroyWindow(window);
-        glfwTerminate();
-        return EXIT_FAILURE;
-    }
+#endif
 
-    cl_command_queue commandQueue = clCreateCommandQueue(context, device, 0, &status);
+    cl::Context context = cl::Context(device, properties);
+
+    cl::CommandQueue commandQueue = cl::CommandQueue(context, device);
 
     GLuint texture;
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture);
-    glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, texture_width, texture_height);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texture_width, texture_height, 0, GL_RGBA, GL_FLOAT, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-    unsigned char pixels[4 * texture_width * texture_height] = {0};
+    cl_int error;
+    cl_mem shared_mem = clCreateFromGLTexture2D(context(), CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, texture, &error);
 
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, texture_width, texture_height, GL_RGBA, GL_UNSIGNED_BYTE, (void*)pixels);     
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST); 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
-
-
-    cl_GLuint g_RGBAbufferGLBindName = texture;
-    cl_mem shared_mem = clCreateFromGLTexture(context, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, g_RGBAbufferGLBindName, &status);
-
-    if(status != 0){
+    if(error != CL_SUCCESS){
         fprintf(stderr, "Sharing failed!\n");
         glfwDestroyWindow(window);
         glfwTerminate();
@@ -158,27 +188,43 @@ int main(){
 
 
 	fprintf(stdout, "Successfully shared!\n");
-		
+
 
     const char * kernel_code = R"(
 
-        kernel void drawImage(__write_only image2d_t output, float dimm){
+        kernel void drawImage(__write_only image2d_t output, float dimm) {
             int x = get_global_id(0);
             int y = get_global_id(1);
 
-            write_imagef(output, (int2)(x, y), (float4)(dimm, dimm, dimm, 1.f));
-            
+            int width = get_global_size(0);
+            int height = get_global_size(1);
+
+            float galacticRed = cos(x * M_PI / 180.0f * dimm) * 0.5f + 0.5f;
+            float galacticGreen = sin(y * M_PI / 180.0f * dimm) * 0.5f + 0.5f;
+            float galacticBlue = (cos(dimm * M_PI / 180.0f) + 1.0f) * 0.5f;
+
+            float spatialPattern = cos((x + y) * M_PI / 180.0f * dimm) * 0.5f + 0.5f;
+
+            galacticRed *= spatialPattern;
+            galacticGreen *= spatialPattern;
+            galacticBlue *= spatialPattern;
+
+            write_imagef(output, (int2)(x, y), (float4)(galacticRed, galacticGreen, galacticBlue, 1.0f));
         }
+
+
 
     )";
 
     size_t sourceSize = strlen(kernel_code);
 
-    cl_program program = clCreateProgramWithSource(context, 1, (const char **)&kernel_code, &sourceSize, &status);
+    cl::Program::Sources sources;
 
-    status = clBuildProgram(program, 1, &device, NULL, NULL, NULL);
+    sources.push_back({kernel_code, sourceSize});
 
-    if(status != 0){
+    cl::Program program = cl::Program(context, sources);
+
+    if(program.build() != CL_SUCCESS){
         fprintf(stderr, "Build failed!\n");
         glfwDestroyWindow(window);
         glfwTerminate();
@@ -187,33 +233,28 @@ int main(){
 
     fprintf(stdout, "Successfully builded!\n");
 
-    cl_kernel kernel = clCreateKernel(program, "drawImage", &status);
+    cl_float dimmer = 1e-6f;
 
-    float dimmer = 0.0f;
-    size_t global_dim[2];
+    cl::Kernel kernel = cl::Kernel(program, "drawImage");
+    kernel.setArg( 0, sizeof(cl_mem), &shared_mem);
+    kernel.setArg( 1, sizeof(cl_float), &dimmer);
+
 
     while( !glfwWindowShouldClose(window)){
 
+        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        clEnqueueAcquireGLObjects(commandQueue, 1, &shared_mem, 0, 0, 0);
+        clEnqueueAcquireGLObjects(commandQueue(), 1, &shared_mem, 0, NULL, NULL);
+        commandQueue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(texture_width, texture_height), cl::NDRange(16, 16));
+        clEnqueueReleaseGLObjects(commandQueue(), 1, &shared_mem, 0, NULL, NULL);
 
-        clSetKernelArg(kernel, 0, sizeof(cl_mem), &shared_mem);
-        clSetKernelArg(kernel, 1, sizeof(cl_float), &dimmer);
+        commandQueue.finish();
 
-        global_dim[0] = texture_width;
-        global_dim[1] = texture_height;
-
-        clEnqueueNDRangeKernel(commandQueue, kernel, 2, NULL, global_dim, NULL, 0, NULL, NULL);
-        clEnqueueReleaseGLObjects(commandQueue, 1, &shared_mem, 0, NULL, NULL);
-
-        clFinish(commandQueue); 
-
-        dimmer *= (dimmer < 1.0f);
-        dimmer += .001f;
+        dimmer += 1.0f;
+        kernel.setArg( 1, sizeof(cl_float), &dimmer);
 
         glEnable(GL_TEXTURE_2D);
-        glBindTexture(GL_TEXTURE_2D, g_RGBAbufferGLBindName);
 
         glBegin(GL_QUADS);
         glTexCoord2i(0, 0); glVertex2f(0, 0);
@@ -222,26 +263,21 @@ int main(){
         glTexCoord2i(0, 1); glVertex2f(0, height);
         glEnd();
 
-        glBindTexture(GL_TEXTURE_2D, 0);
         glDisable(GL_TEXTURE_2D);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
 
         GLenum error = glGetError();
-
         if(error!=GL_NO_ERROR){
             fprintf(stderr, "OpenGL buffer error : %d\n", error);
             break;
         }
 
+
     }
 
     clReleaseMemObject(shared_mem);
-	clReleaseKernel(kernel);
-	clReleaseProgram(program);
-	clReleaseCommandQueue(commandQueue);
-	clReleaseContext(context);
 
     glDeleteTextures(1, &texture);
 
