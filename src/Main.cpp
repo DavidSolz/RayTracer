@@ -4,7 +4,7 @@
 #include "PerformanceMonitor.h"
 #include "MeshReader.h"
 
-int main(int argc, char* argv[]){
+int Tmain(int argc, char* argv[]){
 
     int VSync = true;
 
@@ -279,7 +279,6 @@ int main(int argc, char* argv[]){
         monitor.GatherInformation();
         renderer.Update();
     }
-
 
     return EXIT_SUCCESS;
 }

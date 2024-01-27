@@ -369,9 +369,9 @@ float4 ComputeColor(
         float lightIntensity = clamp(dot(ray->direction, sample.normal), 0.0f, 1.0f);
 
         float4 emmisionComponent = material.emission * material.emmissionScale ;
-        float4 reflectionComponent = material.diffuse * material.diffusionScale ;
+        float4 reflectionComponent = material.diffuse * material.diffusionScale * 2 * lightIntensity;
 
-        accumulatedColor += (emmisionComponent +  reflectionComponent) * colorMask;
+        accumulatedColor += (2*emmisionComponent +  reflectionComponent/M_PI_F) * colorMask;
         colorMask *= material.baseColor * lightIntensity;
         intensity *= 0.1f;
     }

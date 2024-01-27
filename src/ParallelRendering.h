@@ -17,8 +17,11 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <GL/gl.h>
+#include <GL/wglew.h>
 #include <CL/opencl.hpp>
+#include <CL/cl.h>
 #include <CL/cl_gl.h>
+#include <CL/cl_gl_ext.h>
 
 #endif
 
