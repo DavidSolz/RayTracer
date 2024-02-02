@@ -29,7 +29,7 @@
 
 #endif
 
-int main(){
+int Tmain(){
     const int width = 500;
     const int height = 500;
 
@@ -148,7 +148,7 @@ int main(){
 #elif __WIN32__
 
     cl_context_properties properties[] = {
-        CL_CONTEXT_PLATFORM, (cl_context_properties)platform,
+        CL_CONTEXT_PLATFORM, (cl_context_properties)platform(),
         CL_GL_CONTEXT_KHR, (cl_context_properties)wglGetCurrentContext(),
         CL_WGL_HDC_KHR, (cl_context_properties)wglGetCurrentDC(),
         0

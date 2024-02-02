@@ -3,8 +3,6 @@
 MaterialBuilder::MaterialBuilder(const RenderingContext * _context){
     this->context = (RenderingContext *)_context;
     this->temporaryMaterial = {0};
-    
-    // Default refractive index for air
     this->temporaryMaterial.refractiveIndex = 1.00029f; 
 }       
 
@@ -13,10 +11,6 @@ MaterialBuilder * MaterialBuilder::SetBaseColor(const Color & _color){
     return this;
 }
 
-MaterialBuilder * MaterialBuilder::SetDiffuseColor(const Color & _color){
-    temporaryMaterial.diffuse = _color;
-    return this;
-}
 
 MaterialBuilder * MaterialBuilder::SetSpecularColor(const Color & _color){
     temporaryMaterial.specular = _color;
@@ -45,11 +39,6 @@ MaterialBuilder * MaterialBuilder::SetBaseColor(const uint8_t & _R, const uint8_
     return this;
 }
 
-MaterialBuilder * MaterialBuilder::SetDiffuseColor(const uint8_t & _R, const uint8_t & _G, const uint8_t & _B){
-    Color color = {_R/255.0f, _G/255.0f, _B/255.0f};
-    temporaryMaterial.diffuse = color;
-    return this;
-}
 
 MaterialBuilder * MaterialBuilder::SetSpecularColor(const uint8_t & _R, const uint8_t & _G, const uint8_t & _B){
     Color color = {_R/255.0f, _G/255.0f, _B/255.0f};
@@ -64,7 +53,12 @@ MaterialBuilder * MaterialBuilder::SetEmissionColor(const uint8_t & _R, const ui
 }
 
 MaterialBuilder * MaterialBuilder::SetSmoothness(const float & _factor){
-    temporaryMaterial.smoothness = std::fmax(0.0f, std::fmin(_factor, 1.0f));
+    temporaryMaterial.metallic = std::fmax(0.0f, std::fmin(_factor, 1.0f));
+    return this;
+}
+
+MaterialBuilder * MaterialBuilder::SetRoughness(const float & _factor){
+    temporaryMaterial.roughness = std::fmax(0.0f, std::fmin(_factor, 1.0f));
     return this;
 }
 
@@ -80,29 +74,18 @@ MaterialBuilder * MaterialBuilder::SetDiffusion(const float & _factor){
 
 uint32_t MaterialBuilder::Build(){
 
-    uint32_t mostSimilar = FindSimilarMaterial();
-
-
-    context->materials.emplace_back(temporaryMaterial);
+    context->materials.push_back(temporaryMaterial);
     temporaryMaterial = {0};
     return context->materials.size()-1;
 
-    //TODO
+    
 
 }
 
 
 uint32_t MaterialBuilder::FindSimilarMaterial(){
 
-    for(int i=0; i < context->materials.size(); i++){
-
-        float difference = Material::Difference(context->materials[i], temporaryMaterial);
-
-        if(difference < EPSILON){
-            return i;
-        }
-
-    }
+    //TODO
 
     return UINT32_MAX;
 }

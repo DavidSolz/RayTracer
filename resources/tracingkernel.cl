@@ -2,15 +2,15 @@
 
 struct Material {
     float4 baseColor;
-    float4 diffuse;
     float4 specular;
     float4 emission;
-    float smoothness;
+    float metallic;
+    float roughness;
     float emmissionScale;
     float diffusionScale;
     float transparency;
     float refractiveIndex;
-} __attribute((aligned(128)));;
+} __attribute__((aligned(128)));
 
 enum SpatialType{
     SPHERE,
@@ -75,19 +75,19 @@ float3 RandomDirection(uint *seed){
 
     float cosLatitude = cos(latitude);
 
-    return (float3)(
+    return normalize((float3)(
         cosLatitude * cos(longitude),
         cosLatitude * sin(longitude),
         sin(latitude)
-    );
+    ));
 }
 
-float3 RandomReflection(float3 normal, uint *seed){
+float3 DiffuseReflection(float3 normal, uint *seed){
     float3 direction = RandomDirection(seed);
     return direction * sign( dot(normal, direction) );
 }
 
-float IntersectSphere(const struct Ray *ray, global const struct Object *object) {
+float IntersectSphere(const struct Ray * ray, global const struct Object *object) {
     float3 originToSphereCenter = ray->origin - object->position;
 
     float b = dot(originToSphereCenter, ray->direction);
@@ -101,7 +101,7 @@ float IntersectSphere(const struct Ray *ray, global const struct Object *object)
     return fmin(t1, t2);
 }
 
-float IntersectPlane(const struct Ray *ray, global const struct Object *object) {
+float IntersectPlane(const struct Ray * ray, global const struct Object *object) {
 
     float d = dot(object->position, object->normal);
     float rayToPlane = dot(ray->origin, object->normal);
@@ -109,7 +109,7 @@ float IntersectPlane(const struct Ray *ray, global const struct Object *object) 
     return (rayToPlane - d) / dot(-ray->direction, object->normal);
 }
 
-float IntersectDisk(const struct Ray *ray, global const struct Object *object) {
+float IntersectDisk(const struct Ray * ray, global const struct Object *object) {
 
     float t = IntersectPlane(ray, object);
 
@@ -127,7 +127,7 @@ float IntersectDisk(const struct Ray *ray, global const struct Object *object) {
 
 }
 
-float IntersectCube(const struct Ray *ray, global const struct Object *object) {
+float IntersectCube(const struct Ray * ray, global const struct Object *object) {
 
     float3 dirs = sign(ray->direction);
     float3 values = fabs(ray->direction);
@@ -187,7 +187,7 @@ float IntersectCube(const struct Ray *ray, global const struct Object *object) {
 }
 
 float IntersectTriangle(
-    const struct Ray *ray,
+    const struct Ray * ray,
     global const struct Object *object,
     global const float3 * vertices
     ) {
@@ -223,7 +223,11 @@ float IntersectTriangle(
     return f * dot(e2, q);
 }
 
-float3 ComputeBoxNormal(global const float3 * nearVertice, global const float3 * farVertice, const float3 * intersectionPoint){
+float3 ComputeBoxNormal(
+    global const float3 * nearVertice, 
+    global const float3 * farVertice, 
+    const float3 * intersectionPoint
+    ){
 
     const float epsilon = 1.000001f;
 
@@ -236,17 +240,6 @@ float3 ComputeBoxNormal(global const float3 * nearVertice, global const float3 *
     return normalize(normal);
 }
 
-float3 ComputeTriangleNormal(const float3 * intersection, global const struct Object *object, global const float3 * vertices){
-
-    int idA = object->indiceID.x;
-    int idB = object->indiceID.y;
-    int idC = object->indiceID.z;
-
-    float3 e1 = vertices[idB] - vertices[idA];
-    float3 e2 = vertices[idC] - vertices[idA];
-
-    return normalize(cross(e2, e1));
-}
 
 struct Sample FindClosestIntersection(
     global const struct Object* objects,
@@ -293,10 +286,6 @@ struct Sample FindClosestIntersection(
                     sample.normal = normalize(sample.point - objects[i].position);
                     break;
 
-                // case TRIANGLE:
-                //     sample.normal = ComputeTriangleNormal(&sample.point, objects + i, vertices);
-                //     break;
-
                 default:
                     sample.normal = objects[i].normal;
                     break;
@@ -309,47 +298,92 @@ struct Sample FindClosestIntersection(
     return sample;
 }
 
-// Negation of Phong illumination reflection formula
+// Schlick Approximation
+float3 FresnelSchlick(const float3 * direction, float cosTheta) {
+    return *direction + (1.0f - *direction) * pow(1.0f - cosTheta, 5.0f);
+}
 
-float3 Reflect(const float3 * incident, const float3 * normal) {
-    return *incident - *normal * 2.0f * dot(*incident, *normal);
+// Negation of Phong illumination reflection formula
+float3 SpecularReflect(const float3 incident, const float3 normal) {
+    return incident - normal * 2.0f * dot(incident, normal);
+}
+
+float3 DiffuseReflect(const float3 normal, const struct Material * material) {
+    float3 F0 = mix(0.04f, material->baseColor.xyz, material->metallic);
+    float3 F = FresnelSchlick(&F0, ( dot(normal, (float3)(0.0f, 0.0f, 1.0f))+1.0f)*0.5f);
+    return (1.0f - F) * (1.0f - material->metallic) * material->baseColor.xyz / M_PI_F;
 }
 
 // Snells law refraction
+float3 Refract(const float3 incident, const float3 normal, const float n1, const float n2){
 
-float3 Refract(const float3 * incident, const float3 * normal, const float n1, const float n2){
+    float eta = n1 / n2;
+    float cosI = -dot(incident, normal);
+    float sinR2 = eta * sqrt(1.0f - cosI * cosI);
 
-    float reflectance  = (n1-n2) / (n1+n2);
+    float3 direction = SpecularReflect(incident, normal);
 
-    float cosI = -dot(*incident, *normal);
-    float sinR2 = reflectance * reflectance * (1.0f - cosI * cosI);
+    if (sinR2 <= 1.0f) {
 
-    float cosR = sqrt(1.0f - sinR2);
+        float cosR2 = sqrt(1.0f - sinR2*sinR2);
 
-    return (*incident * reflectance) + *normal * ( reflectance * cosI - cosR);
+        direction = -incident * eta + normal * (eta * cosI - cosR2);
+    }
+
+    return direction;
+    
 }
 
-float4 GetSkyBoxColor(const float intensity, const struct Ray * ray){
-    float t = intensity/fmax(ray->direction.y + 1.0f, 0.00001f);
 
-    const float4 skyColor = (float4)(ray->direction.x, ray->direction.y, ray->direction.z, 1.0f);
+
+float4 GetSkyBoxColor(const float intensity, const struct Ray * ray){
+    float t = intensity/fmax(ray->direction.y+1.0f, 1e-6f);
+
+    //const float4 skyColor = (float4)(ray->direction.x, ray->direction.y, ray->direction.z, 1.0f);
+
+    const float4 skyColor = (float4)(0.2f, 0.2f, 0.25f, 1.0f);
 
     return skyColor * t;
 }
 
+// Stack definition
+
+#define MAX_STACK_SIZE 10
+
+struct Stack {
+    float4 elements[MAX_STACK_SIZE];
+    int top;
+};
+
+void Push(private struct Stack * stack, float4 element) {
+    if (stack->top < MAX_STACK_SIZE) {
+        stack->elements[stack->top++] = element;
+    }
+}
+
+float4 Pop(private struct Stack * stack) {
+    if (stack->top > 0) {
+        return stack->elements[--stack->top];
+    }
+    return (float4)(0.0f, 0.0f, 0.0f, 0.0f);
+}
+
 float4 ComputeColor(
-    struct Ray *ray,
+    struct Ray * ray,
     global const struct Object* objects,
     global const int * numObject,
-    global const struct Material* materials,
+    global const struct Material * materials,
     uint *seed,
-    global const float3 * vertices) {
+    global const float3 * vertices
+    ){
 
     float4 accumulatedColor = 0.0f;
-    float4 colorMask = 1.0f;
+    float4 lightColor = 1.00f;
     float intensity = 1.0f;
+    float lastRefractance = 1.00029f;
 
-    for(int i = 0; i < 8; ++i){
+
+    for(int i = 0; i < MAX_STACK_SIZE; ++i){
         struct Sample sample = FindClosestIntersection(objects, numObject, ray, vertices);
 
         if( isinf(sample.length) ){
@@ -361,25 +395,40 @@ float4 ComputeColor(
 
         struct Material material =  materials[sample.materialID];
 
-        float3 diffusionDirection = normalize(RandomReflection(sample.normal, seed) + sample.normal);
-        float3 reflectionDirection = Reflect(&ray->direction, &sample.normal);
+        float3 diffusionDirection = DiffuseReflect(sample.normal, &material);
+        float3 reflectionDirection = SpecularReflect(ray->direction, sample.normal);
+        float3 refractionDirecton = Refract(ray->direction, sample.normal, lastRefractance, material.refractiveIndex);
 
-        ray->direction = mix(diffusionDirection, reflectionDirection , material.smoothness);
+        ray->direction = mix(diffusionDirection, reflectionDirection, material.metallic);
 
-        float lightIntensity = clamp(dot(ray->direction, sample.normal), 0.0f, 1.0f);
+        float lightIntensity = (dot(ray->direction, -sample.normal)+1.0f) * 0.5f;
+        float roughness = max(material.roughness, 1e-6f);
 
-        float4 emmisionComponent = material.emission * material.emmissionScale ;
-        float4 reflectionComponent = material.diffuse * material.diffusionScale * 2 * lightIntensity;
+        float4 specularColor = material.baseColor * pow( (-lightIntensity+1.0f)*0.5f, 1.0f/roughness);
+        float4 diffuseColor = mix((float4)(0.04), material.baseColor, material.metallic);
 
-        accumulatedColor += (2*emmisionComponent +  reflectionComponent/M_PI_F) * colorMask;
-        colorMask *= material.baseColor * lightIntensity;
-        intensity *= 0.1f;
+        float4 specularComponent = material.baseColor * lightIntensity;
+        float4 emissionComponent = material.emission * material.emmissionScale ;
+        float4 diffuseComponent = diffuseColor * 2 * lightIntensity ;
+
+        intensity *= lightIntensity * 0.01f;
+
+        accumulatedColor += (2*emissionComponent + diffuseComponent/M_PI_F + specularComponent) * lightColor;
+
+        lightColor *= material.baseColor;
+        lastRefractance = material.refractiveIndex;
     }
 
     return accumulatedColor;
 }
 
-float3 CalculatePixelPosition(const int x, const int y, const int width, const int height, global const struct Camera * camera){
+float3 CalculatePixelPosition(
+    const int x, 
+    const int y, 
+    const int width, 
+    const int height, 
+    global const struct Camera * camera
+    ){
 
     float tanHalfFOV = tan(radians(camera->fov) * 0.5f);
     float pixelXPos = (2.0 * x / width - 1.0f) * camera->aspectRatio * tanHalfFOV * camera->near;
@@ -414,7 +463,7 @@ void kernel RayTrace(
     float3 offset = RandomDirection(&seed);
     float3 pixelPosition = CalculatePixelPosition(x + offset.x + 0.5f, y + offset.y + 0.5f, width, height, camera);
 
-    struct Ray ray;
+    private struct Ray ray;
     ray.origin = camera->position;
     ray.direction = normalize(pixelPosition - ray.origin );
 
@@ -425,7 +474,7 @@ void kernel RayTrace(
 
     float scale = 1.0f / (*numFrames + 1);
 
-    pixels[index] =  mix(pixels[index], sample, scale);
+    pixels[index] = mix(pixels[index], sample, scale);
 }
 
 void kernel AntiAlias(global float4 * input){
@@ -441,11 +490,10 @@ void kernel AntiAlias(global float4 * input){
     float4 pixelValue = input[index];
 
     const float matrix[3][3] = {
-            {-1.0f, 1.0f, -1.0f},
-            {1.0f, 1.0f, 1.0f},
-            {-1.0f, 1.0f, -1.0f}
+            {-0.1f, 0.9f, -0.1f},
+            {0.9f, 1.0f, 0.9f},
+            {-0.1f, 0.9f, -0.1f}
     };
-
 
     // for (int i = -1; i <= 1; i++) {
     //     for (int j = -1; j <= 1; j++) {

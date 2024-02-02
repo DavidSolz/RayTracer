@@ -4,18 +4,54 @@ void ParallelRendering::Init(RenderingContext * _context){
 
     this->context = _context;
 
-    default_device = GetDefaultCLDevice();
-    deviceContext = cl::Context(default_device);
+    context->loggingService.Write(MessageType::INFO, "Configuring accelerator...");
 
-    queue = cl::CommandQueue(deviceContext, default_device);
+    GetDefaultCLDevice();
+
+#ifdef __APPLE__
+
+    CGLContextObj glContext = CGLGetCurrentContext();
+    CGLShareGroupObj shareGroup = CGLGetShareGroup(glContext);
+
+    cl_context_properties properties[] = {
+        CL_CONTEXT_PROPERTY_USE_CGL_SHAREGROUP_APPLE,
+        (cl_context_properties)shareGroup,
+        0
+    };
+
+#elif __WIN32__
+
+    cl_context_properties properties[] = {
+        CL_CONTEXT_PLATFORM, (cl_context_properties)defaultPlatform(),
+        CL_GL_CONTEXT_KHR, (cl_context_properties)wglGetCurrentContext(),
+        CL_WGL_HDC_KHR, (cl_context_properties)wglGetCurrentDC(),
+        0
+    };
+
+#else
+
+     cl_context_properties properties[] = {
+        CL_GL_CONTEXT_KHR, (cl_context_properties) glXGetCurrentContext(),
+        CL_GLX_DISPLAY_KHR, (cl_context_properties) glXGetCurrentDisplay(),
+        CL_CONTEXT_PLATFORM, (cl_context_properties) defaultPlatform(),
+        0
+    };
+
+#endif
+
+    deviceContext = cl::Context(defaultDevice);
+
+    queue = cl::CommandQueue(deviceContext, defaultDevice);
+
+    context->loggingService.Write(MessageType::INFO, "Building programs...");
 
     cl::Program program = FetchProgram();
 
     if(!program()){
 
-        if(context->loggingService)
-            context->loggingService->Write(MessageType::ISSUE, "Unable to compile kernel!");
-            
+        context->loggingService.Write(MessageType::ISSUE, "Unable to compile kernel!");
+        context->loggingService.Write(MessageType::INFO, "Accelerator configuration done");      
+
         return ;
     }
 
@@ -29,7 +65,7 @@ void ParallelRendering::Init(RenderingContext * _context){
     objectBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, objectBufferSize);
 
     materialBufferSize = sizeof(Material) * context->materials.size();
-    materialBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, materialBufferSize);
+    materialBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR, materialBufferSize, context->materials.data(), NULL);
 
     objectsCountBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, sizeof(int));
 
@@ -37,7 +73,6 @@ void ParallelRendering::Init(RenderingContext * _context){
 
     verticesBufferSize = sizeof(Vector3) * context->mesh.vertices.size();
     verticesBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, verticesBufferSize);
-
 
     kernel = cl::Kernel(program, "RayTrace");
     kernel.setArg(0, pixelBuffer);
@@ -48,19 +83,23 @@ void ParallelRendering::Init(RenderingContext * _context){
     kernel.setArg(5, frameCounter);
     kernel.setArg(6, verticesBuffer);
 
+
     antialiasingKernel = cl::Kernel(program, "AntiAlias");
     antialiasingKernel.setArg(0, pixelBuffer);
 
     globalRange = cl::NDRange(context->width, context->height);
 
+    context->loggingService.Write(MessageType::INFO, "Determining local size...");
+
     DetermineLocalSize(context->width, context->height);
 
+    context->loggingService.Write(MessageType::INFO, "Accelerator configuration done");
 }
 
 void ParallelRendering::DetermineLocalSize(const uint32_t & width, const uint32_t & height){
 
-    std::vector<size_t> maxWorkItemSizes = default_device.getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>();
-    size_t maxGroupSize = default_device.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>();
+    std::vector<size_t> maxWorkItemSizes = defaultDevice.getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>();
+    size_t maxGroupSize = defaultDevice.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>();
 
     uint32_t rangeX, rangeY;
 
@@ -80,7 +119,6 @@ void ParallelRendering::DetermineLocalSize(const uint32_t & width, const uint32_
             break;
         }
     }
-
 
     // This should be redone to support 1D groups
     if(maxWorkItemSizes[1]==1)
@@ -113,15 +151,15 @@ void ParallelRendering::Render(Color * _pixels){
 
 }
 
-cl::Device ParallelRendering::GetDefaultCLDevice(){
+void ParallelRendering::GetDefaultCLDevice(){
     std::vector<cl::Platform> all_platforms;
 
     cl::Platform::get(&all_platforms);
 
     if(all_platforms.size()==0){
 
-        if(context->loggingService)
-            context->loggingService->Write(MessageType::ISSUE, "No available platforms");
+        context->loggingService.Write(MessageType::ISSUE, "No available platforms");
+        context->loggingService.Write(MessageType::INFO, "Accelerator configuration done");
 
         exit(-1);
     }
@@ -142,14 +180,32 @@ cl::Device ParallelRendering::GetDefaultCLDevice(){
         fprintf(stdout, "> Selected default platform.\n");
     }
 
+    defaultPlatform = all_platforms[selectedPlatform];
+
     std::vector<cl::Device> all_devices;
 
-    all_platforms[selectedPlatform].getDevices(CL_DEVICE_TYPE_ALL, &all_devices);
+    defaultPlatform.getDevices(CL_DEVICE_TYPE_ALL, &all_devices);
+
+    std::string platformExtensions;
+    defaultPlatform.getInfo(CL_PLATFORM_EXTENSIONS, &platformExtensions);
+
+#ifdef __APPLE__
+    const char * extensionName = "cl_APPLE_gl_sharing";
+#else
+    const char * extensionName = "cl_khr_gl_sharing";
+#endif
+
+    size_t found = platformExtensions.find(extensionName);
+
+    if (found == std::string::npos) {
+        fprintf(stdout, "Platform does not support %s\n", extensionName);
+    }else{
+        fprintf(stdout, "Platform supports %s\n", extensionName);
+    }
 
     if(all_devices.size()==0){
 
-        if(context->loggingService)
-            context->loggingService->Write(MessageType::ISSUE, "No available devices");
+        context->loggingService.Write(MessageType::ISSUE, "No available devices");
 
         exit(-1);
     }
@@ -169,22 +225,27 @@ cl::Device ParallelRendering::GetDefaultCLDevice(){
         fprintf(stdout, "> Selected default device.\n");
     }
 
-    auto const & device = all_devices[selectedDevice];
+    defaultDevice = all_devices[selectedDevice];
+
 
     char buffer[250] = {0};
 
-    sprintf(buffer, "========[ Accelerator Config ]========\nPlatform :\n\tName : %s\nDevice :\n\tVendor : %s\n\tName : %s\n\tVersion : %s\n\tLocal work size : %ld\n",
-    all_platforms[selectedPlatform].getInfo<CL_PLATFORM_NAME>().c_str(),
-    device.getInfo<CL_DEVICE_VENDOR>().c_str(),
-    device.getInfo<CL_DEVICE_NAME>().c_str(),
-    device.getInfo<CL_DEVICE_OPENCL_C_VERSION>().c_str(),
-    device.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>());
+    sprintf(buffer, "Discovered platform : %s", defaultPlatform.getInfo<CL_PLATFORM_NAME>().c_str());
 
-    if(context->loggingService)
-            context->loggingService->Write(MessageType::INFO, buffer);
+    context->loggingService.Write(MessageType::INFO, buffer);   
+
+    sprintf(buffer, "Selected device : %s", defaultDevice.getInfo<CL_DEVICE_NAME>().c_str());
+
+    context->loggingService.Write(MessageType::INFO, buffer);
+
+    sprintf(buffer, "Using : %s", defaultDevice.getInfo<CL_DEVICE_OPENCL_C_VERSION>().c_str());
+    
+    context->loggingService.Write(MessageType::INFO, buffer);
           
-
-    return device;
+    sprintf(buffer, "Discovered max work group size : %ld", defaultDevice.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>());
+    
+    context->loggingService.Write(MessageType::INFO, buffer);
+      
 }
 
 cl::Program ParallelRendering::FetchProgram(){
@@ -197,8 +258,8 @@ cl::Program ParallelRendering::FetchProgram(){
 
     if(!input){
 
-        if(context->loggingService)
-            context->loggingService->Write(MessageType::ISSUE, "Kernel can't be loaded");
+        
+        context->loggingService.Write(MessageType::ISSUE, "Kernel can't be loaded");
 
         exit(-1);
     }
@@ -214,20 +275,17 @@ cl::Program ParallelRendering::FetchProgram(){
     char buffer[250] = {0};
 
     if(program.build() != CL_SUCCESS){
-        std::string buildLog = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(default_device);
+        std::string buildLog = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(defaultDevice);
 
         sprintf(buffer, "Error during building program. Build log:\n%s\n", buildLog.c_str());
 
-        if(context->loggingService)
-            context->loggingService->Write(MessageType::ISSUE, buffer);
-
+        context->loggingService.Write(MessageType::ISSUE, buffer);
+        context->loggingService.Write(MessageType::INFO, "Accelerator configuration done");
         exit(-1);
     }
 
-    sprintf(buffer, "Program :\n\tName : %s\n", program.getInfo<CL_PROGRAM_KERNEL_NAMES>().c_str());
-
-    if(context->loggingService)
-            context->loggingService->Write(MessageType::INFO, buffer);
+    sprintf(buffer, "Discovered programs : %s", program.getInfo<CL_PROGRAM_KERNEL_NAMES>().c_str());
+    context->loggingService.Write(MessageType::INFO, buffer);
 
     return program;
 

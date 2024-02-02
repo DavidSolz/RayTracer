@@ -33,7 +33,9 @@ class ParallelRendering : public IFrameRender {
 
     RenderingContext * context;
 
-    cl::Device default_device;
+    cl::Device defaultDevice;
+    cl::Platform defaultPlatform;
+
     cl::CommandQueue queue;
     cl::Context deviceContext;
     cl::Kernel kernel;
@@ -55,7 +57,8 @@ class ParallelRendering : public IFrameRender {
     cl::Buffer cameraBuffer;
     cl::Buffer verticesBuffer;
 
-    cl::Device GetDefaultCLDevice();
+    void GetDefaultCLDevice();
+    
     cl::Program FetchProgram();
 
     void DetermineLocalSize(const uint32_t & width, const uint32_t & height);

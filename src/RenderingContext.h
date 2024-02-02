@@ -6,8 +6,10 @@
 
 #include "Mesh.h"
 #include "Object.h"
-#include "ILog.h"
+#include "Logger.h"
 #include "Camera.h"
+
+static GLuint textureID;
 
 struct RenderingContext {
 
@@ -26,7 +28,7 @@ struct RenderingContext {
     uint32_t frameCounter;
 
     // Logging service
-    ILog * loggingService;
+    Logger loggingService;
 
 };
 

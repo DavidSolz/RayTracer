@@ -45,10 +45,17 @@ void ThreadedRendering::Init(RenderingContext * _context){
 
     char buffer[250]={0};
 
-    sprintf(buffer, "========[ CPU Config ]========\nLogic cores : %d\nHyperthreading : %s\n", numThreads, isHyperThreadinEnabled?"YES":"NO");
+    context->loggingService.Write(MessageType::INFO, "Configuring CPU...");
 
-    if(context->loggingService)
-        context->loggingService->Write(MessageType::INFO, buffer);
+    sprintf(buffer, "Discovered %d logic cores", numThreads);
+
+    context->loggingService.Write(MessageType::INFO, buffer);
+
+    sprintf(buffer, "Checking for hyperthreading : %s", isHyperThreadinEnabled ? "enabled":"disabled");
+
+    context->loggingService.Write(MessageType::INFO, buffer);
+
+    context->loggingService.Write(MessageType::INFO, "CPU configuration done");
 
     threads = new std::thread[numThreads];
 
@@ -255,13 +262,13 @@ Color ThreadedRendering::ComputeColor(struct Ray& ray, unsigned int& seed) {
             Vector3 diffusionDirection = RandomReflection(sample.normal, seed);
             Vector3 specularDirection = Reflect(ray.direction, sample.normal);
 
-            ray.direction = Vector3::Lerp(diffusionDirection, specularDirection, material->smoothness);
+            ray.direction = Vector3::Lerp(diffusionDirection, specularDirection, material->metallic);
 
             float lightIntensity = Vector3::DotProduct(ray.direction, sample.normal);
             lightIntensity = fmax(0.0f, fmin(lightIntensity, 1.0f));
 
             Color emmisionComponent = material->emission * material->emmissionScale;
-            Color diffuseComponent = material->diffuse *  material->diffusionScale * 2 * lightIntensity;
+            Color diffuseComponent = material->baseColor *  material->diffusionScale * 2 * lightIntensity;
 
             accumulatedColor += (diffuseComponent + emmisionComponent) * colorMask;
             colorMask *= material->baseColor;

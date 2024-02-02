@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <iostream>
 #include <fstream>
+#include <ctime>
 
 class Logger : public ILog{
 private:
@@ -15,11 +16,17 @@ private:
 
 public:
 
-    Logger(const char * filename);
+    Logger();
 
-    Logger(FILE * file);
+    Logger(const char * _filename);
+
+    Logger(FILE * _file);
+
+    void BindOutput(const char * _filename);
 
     void Write(MessageType _type, const char * _data);
+
+    void Write(const char * _data);
 
     ~Logger();
 };

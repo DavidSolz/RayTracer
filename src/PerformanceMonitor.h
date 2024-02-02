@@ -25,7 +25,7 @@ private:
         PerformanceSample median;
     } statistics;
 
-    Logger * logger;
+    Logger logger;
     std::vector<PerformanceSample> samples;
 
     char dataBuffer[BUFFER_SIZE] = {0};

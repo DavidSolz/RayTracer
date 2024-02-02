@@ -1,38 +1,67 @@
 #include "Logger.h"
 
-Logger::Logger(const char * filename){
+Logger::Logger(const char * _filename){
 
     uint32_t len = 0;
-    while(filename[len++]);
+    while( _filename[len++] );
 
     if (len > 0) 
-        output = fopen(filename, "wb");
+       BindOutput(_filename);
     
-    isSystemStream = false;
-
     if ( output == nullptr) {
-        fprintf(stderr, "Error opening log file: %s", filename);
+        fprintf(stderr, "Error opening log file: %s", _filename);
         isSystemStream = true;
         output =  stdout;
     }
 
 }
 
-Logger::Logger(FILE * file) {
+Logger::Logger(FILE * _file) {
 
-    output = file;
+    output = _file;
     isSystemStream = true;
+
+}
+
+Logger::Logger(){
+    output = stdout;
+    isSystemStream = true;
+}
+
+void Logger::BindOutput(const char * _filename){
+
+    if( output != nullptr && !isSystemStream )
+        fclose(output);
+
+    output = fopen(_filename, "wb");
+    isSystemStream = false;
 
 }
 
 void Logger::Write(MessageType _type, const char * _data){
 
-    if(_type == MessageType::INFO){
-        fprintf(output, "%s\n", _data);
-    }else{
-        fprintf(output, "[ %s ] : %s\n", _type==MessageType::WARNING?"WARNING":"ERROR", _data);
-    }
+    static const char *types[]= {
+        "INFO",
+        "WARNING",
+        "ERROR"
+    };
 
+    std::time_t now = std::time(nullptr);
+    std::tm* localTime = std::localtime(&now);
+
+    std::fprintf(output, "[%04d-%02d-%02d %02d:%02d:%02d] [%s] : %s\n",
+                localTime->tm_year + 1900, localTime->tm_mon + 1, localTime->tm_mday,
+                localTime->tm_hour, localTime->tm_min, localTime->tm_sec,
+                types[ _type ],
+                _data);
+    fflush(output);
+    
+}
+
+void Logger::Write(const char * _data){
+
+
+    std::fprintf(output, "%s\n", _data);
     fflush(output);
     
 }

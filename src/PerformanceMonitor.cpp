@@ -2,12 +2,12 @@
 
 PerformanceMonitor::PerformanceMonitor(){
 
-    this->logger = new Logger("Performance_log.csv");
+    this->logger.BindOutput("Performance_log.csv");
     this->samplingStart = Timer::GetCurrentTime();
     this->lastSamplePoint = samplingStart;
     this->timer = Timer::GetInstance();
 
-    logger->Write(INFO, "fps count ; frametime");
+    logger.Write(INFO, "fps count ; frametime");
 }
 
 void PerformanceMonitor::GatherInformation(){
@@ -23,6 +23,7 @@ void PerformanceMonitor::GatherInformation(){
     PerformanceSample sample = {0};
 
     uint32_t frameCount = timer->GetFrameCount();
+    frameCount = std::max(frameCount, (uint32_t)1);
     double frameTime = 1000.0f/frameCount;
 
     sample.fpsCount = frameCount;
@@ -31,13 +32,14 @@ void PerformanceMonitor::GatherInformation(){
     samples.emplace_back(sample);
 
     sprintf(dataBuffer, "%.2f;%f", sample.fpsCount, sample.frameTime);
-    logger->Write(INFO, dataBuffer);
+    logger.Write(dataBuffer);
 }
 
 void PerformanceMonitor::CalculateMean(){
     PerformanceSample& mean = statistics.mean;
 
     uint32_t samplesCount = samples.size()-1;
+    samplesCount = std::max((uint32_t)1, samplesCount);
 
     for(uint32_t id = 1; id < samples.size(); ++id){
         mean.fpsCount += samples[id].fpsCount;
@@ -52,6 +54,7 @@ void PerformanceMonitor::CalculateVariance(){
     PerformanceSample& variance = statistics.variance;
 
     uint32_t samplesCount = samples.size()-1;
+    samplesCount = std::max((uint32_t)1, samplesCount);
 
     for(uint32_t id = 1; id < samples.size(); ++id){
         float deltaFps =  ( statistics.mean.fpsCount - samples[id].fpsCount );
@@ -121,5 +124,4 @@ PerformanceMonitor::~PerformanceMonitor(){
     statistics.median.fpsCount, statistics.median.frameTime
     );
 
-    delete logger;
 }

@@ -7,6 +7,8 @@ OpenGLRenderer::OpenGLRenderer(RenderingContext * _context, const bool & _enable
 
     context = _context;
 
+    context->loggingService.Write(MessageType::INFO, "Configuring window...");
+
     cpuRender.Init(context);
     gpuRender.Init(context);
 
@@ -14,8 +16,11 @@ OpenGLRenderer::OpenGLRenderer(RenderingContext * _context, const bool & _enable
     SetRenderingService(&gpuRender);
     selection = ACC;
 
-    if(!glfwInit()){
-        context->loggingService->Write(MessageType::ISSUE, "Cannot initialize GLFW");
+    if( glfwInit() == GLFW_FALSE ){
+
+        context->loggingService.Write(MessageType::ISSUE, "Cannot initialize GLFW");
+        context->loggingService.Write(MessageType::INFO, "Window configuration done");
+
         return;
     }
 
@@ -31,8 +36,8 @@ OpenGLRenderer::OpenGLRenderer(RenderingContext * _context, const bool & _enable
     if(!window){
         glfwTerminate();
 
-        if(context->loggingService)
-            context->loggingService->Write(MessageType::ISSUE, "Cannot create GLFW window");
+        context->loggingService.Write(MessageType::ISSUE, "Cannot create GLFW window");
+        context->loggingService.Write(MessageType::INFO, "Window configuration done");
 
         return;
     }
@@ -48,18 +53,35 @@ OpenGLRenderer::OpenGLRenderer(RenderingContext * _context, const bool & _enable
     if (glewInit() != GLEW_OK) {
         glfwDestroyWindow(window);
         glfwTerminate();
-        context->loggingService->Write(MessageType::ISSUE, "Failed to initialize GLEW");
+
+        context->loggingService.Write(MessageType::INFO, "Failed to initialize GLEW");
+        context->loggingService.Write(MessageType::INFO, "Window configuration done");
+
         return;
     }
 
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, context->width, context->height, 0, GL_RGBA, GL_FLOAT, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    context->loggingService.Write(MessageType::INFO, "Creating texture buffer");
+
     char buffer[200] = {0};
 
-    sprintf(buffer, "========[ Window Config ]========\n\tResolution : %d x %d\n\tV-Sync : %s\n",
-        context->width, context->height,
-        _enableVSync ? "YES" : "NO");
 
-    if(context->loggingService)
-        context->loggingService->Write(MessageType::INFO, buffer);
+    sprintf(buffer, "Current resolution : %d x %d", context->width, context->height);
+
+    context->loggingService.Write(MessageType::INFO, buffer);
+
+    sprintf(buffer, "Checking for V-Sync : %s", _enableVSync?"enabled":"disabled");
+
+    context->loggingService.Write(MessageType::INFO, buffer);
+
+    context->loggingService.Write(MessageType::INFO, "Window configuration done");
+
 
     pixels = new Color[context->width * context->height];
 
@@ -173,9 +195,10 @@ void OpenGLRenderer::Update(){
 
     GLenum error = glGetError();
     if(error!=GL_NO_ERROR){
-        if(context->loggingService)
-            context->loggingService->Write(MessageType::ISSUE, "OpenGL buffer error");
+
+        context->loggingService.Write(MessageType::ISSUE, "OpenGL buffer error");
         return;
+        
     }
 
 }
@@ -184,6 +207,8 @@ OpenGLRenderer::~OpenGLRenderer(){
 
     if( pixels != NULL)
         delete[] pixels;
+
+    glDeleteTextures(1, &textureID);
 
     glfwDestroyWindow(window);
     glfwTerminate();

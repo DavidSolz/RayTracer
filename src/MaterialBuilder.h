@@ -11,21 +11,19 @@ public:
 
     MaterialBuilder * SetBaseColor(const Color & _color);
 
-    MaterialBuilder * SetDiffuseColor(const Color & _color);
-
     MaterialBuilder * SetSpecularColor(const Color & _color);
 
     MaterialBuilder * SetEmissionColor(const Color & _color);
 
     MaterialBuilder * SetBaseColor(const uint8_t & _R, const uint8_t & _G, const uint8_t & _B);
 
-    MaterialBuilder * SetDiffuseColor(const uint8_t & _R, const uint8_t & _G, const uint8_t & _B);
-
     MaterialBuilder * SetSpecularColor(const uint8_t & _R, const uint8_t & _G, const uint8_t & _B);
 
     MaterialBuilder * SetEmissionColor(const uint8_t & _R, const uint8_t & _G, const uint8_t & _B);
 
     MaterialBuilder * SetSmoothness(const float & _factor);
+
+    MaterialBuilder * SetRoughness(const float & _factor);
 
     MaterialBuilder * SetTransparency(const float & _factor);
 

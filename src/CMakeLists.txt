@@ -38,5 +38,5 @@ target_link_libraries(${LIB_NAME}_lib
     GLEW::GLEW
 )
 
-add_executable(${LIB_NAME}_run TestM.cpp)
+add_executable(${LIB_NAME}_run Main.cpp)
 
