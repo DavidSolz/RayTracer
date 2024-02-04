@@ -50,11 +50,9 @@ class ParallelRendering : public IFrameRender {
     size_t verticesBufferSize;
 
     cl::Buffer pixelBuffer;
-    cl::Buffer frameCounter;
     cl::Buffer objectBuffer;
     cl::Buffer objectsCountBuffer;
     cl::Buffer materialBuffer;
-    cl::Buffer cameraBuffer;
     cl::Buffer verticesBuffer;
 
     void GetDefaultCLDevice();
@@ -65,7 +63,7 @@ class ParallelRendering : public IFrameRender {
 
 public:
 
-    void Init(RenderingContext * _context);
+    void BindContext(RenderingContext * _context);
 
     void Render(Color * _pixels);
 

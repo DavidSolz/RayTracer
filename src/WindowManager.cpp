@@ -1,20 +1,16 @@
-#include "OpenGLRenderer.h"
+#include "WindowManager.h"
 
 static RenderingContext * context;
 static Timer* timer;
 
-OpenGLRenderer::OpenGLRenderer(RenderingContext * _context, const bool & _enableVSync){
+WindowManager::WindowManager(RenderingContext * _context, const bool & _enableVSync){
 
     context = _context;
 
     context->loggingService.Write(MessageType::INFO, "Configuring window...");
 
-    cpuRender.Init(context);
-    gpuRender.Init(context);
-
     memcpy(windowTitle, "ACC Mode", 9);
-    SetRenderingService(&gpuRender);
-    selection = ACC;
+    selectedService = ACC;
 
     if( glfwInit() == GLFW_FALSE ){
 
@@ -87,30 +83,29 @@ OpenGLRenderer::OpenGLRenderer(RenderingContext * _context, const bool & _enable
 
     timer = Timer::GetInstance();
 
-    lastMouseX = context->width/2.0f;
-    lastMouseY = context->height/2.0f;
+    glfwGetCursorPos(window, &lastMouseX, &lastMouseY);
 
 }
 
-void OpenGLRenderer::KeyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mods){
+void WindowManager::KeyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mods){
 
 
     float deltaTime = timer->GetDeltaTime();
 
     switch (key){
-        case GLFW_KEY_UP:
+        case GLFW_KEY_W:
             context->camera.Move(context->camera.front, deltaTime);
             context->frameCounter=0;
             break;
-        case GLFW_KEY_DOWN:
+        case GLFW_KEY_S:
             context->camera.Move(context->camera.front*(-1.0f), deltaTime);
             context->frameCounter=0;
             break;
-        case GLFW_KEY_LEFT:
+        case GLFW_KEY_A:
             context->camera.Move(context->camera.right*(-1.0f), deltaTime);
             context->frameCounter=0;
             break;
-        case GLFW_KEY_RIGHT:
+        case GLFW_KEY_D:
             context->camera.Move(context->camera.right, deltaTime);
             context->frameCounter=0;
             break;
@@ -131,55 +126,92 @@ void OpenGLRenderer::KeyboardCallback(GLFWwindow* window, int key, int scancode,
 
 }
 
-void OpenGLRenderer::ProcessInput(){
+void WindowManager::ProcessInput(){
 
     if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
         double currentX, currentY;
 
         glfwGetCursorPos(window, &currentX, &currentY);
 
-        float offsetX = lastMouseX - currentX;
-        float offsetY = currentY - lastMouseY;
+        if ( currentX == lastMouseX and currentY == lastMouseY)
+            return;
+
+        double offsetX = lastMouseX - currentX;
+        double offsetY = lastMouseY - currentY;
+
+        double deltaTime = timer->GetDeltaTime();
+
+        double len = sqrt(offsetX*offsetX + offsetY*offsetY);
+        offsetX = (offsetX * deltaTime)/len;
+        offsetY = (offsetY * deltaTime)/len;
+
+        context->camera.Rotate(offsetX, offsetY);
 
         lastMouseX = currentX;
         lastMouseY = currentY;
 
-        context->camera.Rotate(offsetX, offsetY);
-
         context->frameCounter=0;
     }
 
-    if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS && selection != CPU){
+    if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS && selectedService != CPU){
         memcpy(windowTitle, "CPU Mode", 9);
-        SetRenderingService(&cpuRender);
-        selection = CPU;
+        selectedService = CPU;
         context->frameCounter=0;
     }
 
-    if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS && selection != ACC){
+    if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS && selectedService != ACC){
         memcpy(windowTitle, "ACC Mode", 9);
-        SetRenderingService(&gpuRender);
-        selection = ACC;
+        selectedService = ACC;
         context->frameCounter=0;
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS){
+        TakeScreenShot();
+        context->loggingService.Write(MessageType::INFO, "Taking screenshoot");
     }
 
 }
 
-bool OpenGLRenderer::ShouldClose(){
-    return glfwWindowShouldClose(window);
+bool WindowManager::ShouldClose(){
+    return !glfwWindowShouldClose(window);
 }
 
-void OpenGLRenderer::SetRenderingService(IFrameRender * _service){
-    this->renderingService = _service;
+void WindowManager::SetDefaultRendering(const uint32_t & _index){
+    this->selectedService = _index;
 }
 
-void OpenGLRenderer::Update(){
+void WindowManager::BindRenderingServices(IFrameRender * _services[], const uint32_t & _size){
+    this->renderingServices = _services;
+    this->servicesSize = _size;
+}
+
+void  WindowManager::HandleErrors(){
+
+    GLenum error = glGetError();
+    if(error!=GL_NO_ERROR){
+
+        context->loggingService.Write(MessageType::ISSUE, "OpenGL buffer error");
+        glfwSetWindowShouldClose(window, GLFW_TRUE);
+        return;
+        
+    }
+
+    if( renderingServices == nullptr || selectedService <0 || selectedService >=servicesSize){
+        context->loggingService.Write(MessageType::ISSUE, "Rendering service error");
+        glfwSetWindowShouldClose(window, GLFW_TRUE);
+        return;
+    }
+}
+
+void WindowManager::Update(){
+
+    HandleErrors();
 
     ProcessInput();
 
     timer->TicTac();
 
-    renderingService->Render(pixels);
+    renderingServices[ selectedService ]->Render(pixels);
 
     glDrawPixels(context->width, context->height, GL_RGBA, GL_FLOAT, pixels);
 
@@ -193,17 +225,46 @@ void OpenGLRenderer::Update(){
     glfwSwapBuffers(window);
     glfwPollEvents();
 
-    GLenum error = glGetError();
-    if(error!=GL_NO_ERROR){
+}
 
-        context->loggingService.Write(MessageType::ISSUE, "OpenGL buffer error");
-        return;
-        
+void WindowManager::TakeScreenShot(){
+
+    std::ofstream outFile("ScreenShot.bmp", std::ios::binary);
+
+    outFile << "BM"; 
+    uint32_t fileSize = 54 + 12 * context->width * context->height; 
+    outFile.write((char*)(&fileSize), 4);
+    outFile.write("\0\0\0\0", 4); 
+    outFile.write("\x36\0\0\0", 4); 
+
+    outFile.write("\x28\0\0\0", 4); 
+    outFile.write((char*)(&context->width), 4); 
+    outFile.write((char*)(&context->height), 4); 
+    outFile.write("\x01\0", 2);
+    outFile.write("\x20\0", 2); 
+    outFile.write("\0\0\0\0", 4);
+    outFile.write((char*)(&fileSize), 4);
+    outFile.write("\x13\x0B\0\0", 4); 
+    outFile.write("\x13\x0B\0\0", 4);
+    outFile.write("\0\0\0\0", 4); 
+    outFile.write("\0\0\0\0", 4); 
+
+    for (int y = context->height - 1; y >= 0; --y) {
+        for (int x = 0; x < context->width; ++x) {
+
+            const Color& pixel = pixels[( context->height - 1 - y) * context->width + x];
+            uint8_t rgba[4] = {pixel.B * 255, pixel.G * 255, pixel.R * 255, pixel.A * 255 };
+            outFile.write((char*)(rgba), 4);
+            
+        }
     }
+
+
+    outFile.close();
 
 }
 
-OpenGLRenderer::~OpenGLRenderer(){
+WindowManager::~WindowManager(){
 
     if( pixels != NULL)
         delete[] pixels;

@@ -7,7 +7,7 @@ PerformanceMonitor::PerformanceMonitor(){
     this->lastSamplePoint = samplingStart;
     this->timer = Timer::GetInstance();
 
-    logger.Write(INFO, "fps count ; frametime");
+    logger.Write("fps count ; frametime");
 }
 
 void PerformanceMonitor::GatherInformation(){

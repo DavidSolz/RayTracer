@@ -37,7 +37,7 @@ bool ThreadedRendering::CheckForHyperthreading(){
 
 }
 
-void ThreadedRendering::Init(RenderingContext * _context){
+void ThreadedRendering::BindContext(RenderingContext * _context){
     context = _context;
 
     numThreads = std::thread::hardware_concurrency();

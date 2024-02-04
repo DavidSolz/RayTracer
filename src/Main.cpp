@@ -1,5 +1,5 @@
 
-#include "OpenGLRenderer.h"
+#include "WindowManager.h"
 #include "MaterialBuilder.h"
 #include "PerformanceMonitor.h"
 #include "MeshReader.h"
@@ -27,135 +27,129 @@ int main(int argc, char* argv[]){
     context.loggingService.BindOutput("RayTracer_log.txt");
 
     MaterialBuilder materialBuilder(&context);
-    PerformanceMonitor monitor;
+    
+
+
+// {
+
+//     Object p;
+
+// // BLUE CUBE
+
+//     p.position = Vector3(context.width/2.0f, context.height/4.0f, context.depth);
+//     p.maxPos = p.position + Vector3(300, 400, 300);
+//     p.type = CUBE;
+
+//     p.materialID = materialBuilder
+//                     .SetBaseColor({0.0f, 0.0f, 1.0f, 1.0f})
+//                     ->Build();
+
+//     context.objects.emplace_back(p);
+
+// // RED CUBE
+
+//     p.position = Vector3(context.width/3.0f, context.height/4.0f, context.depth/2.0f);
+//     p.maxPos = p.position + Vector3(200, 200, 200);
+//     p.type = CUBE;
+
+//     p.materialID = materialBuilder
+//                     .SetBaseColor({1.0f, 0.0f, 0.0f, 1.0f})
+//                     ->Build();
+
+//     context.objects.emplace_back(p);
+
+// // GREEN CUBE
+
+//     p.position = Vector3(context.width/5.0f, context.height/4.0f, 3*context.depth/4.0f);
+//     p.maxPos = p.position + Vector3(100, 100, 100);
+//     p.type = CUBE;
+
+//     p.materialID = materialBuilder
+//                     .SetBaseColor({0.0f, 1.0f, 0.0f, 1.0f})
+//                     ->Build();
+
+//     context.objects.emplace_back(p);
+
+// // GLASS CUBE
+
+//     p.position = Vector3(context.width/3.0f, context.height/4.0f, -130.0f);
+//     p.maxPos = p.position + Vector3(300, 300, 20);
+//     p.type = CUBE;
+
+//     p.materialID = materialBuilder
+//                     .SetBaseColor({1.0f, 1.0f, 1.0f, 1.0f})
+//                     ->SetRefractiveIndex(2.25f)
+//                     ->SetTransparency(1.0f)
+//                     ->Build();
+
+//     context.objects.emplace_back(p);
+
+// // // MIRROR
+
+// //     p.position = Vector3(context.width/2.0f, context.height/4.0f + 50.0f, 0.0f);
+// //     p.type = SPHERE;
+// //     p.radius = 50.0f;
+
+// //     p.materialID = materialBuilder
+// //                     .SetBaseColor({0.5f, 0.5f, 0.5f, 1.0f})
+// //                     ->SetSmoothness(1.0f)
+// //                     ->Build();
+
+// //     context.objects.emplace_back(p);
+
+// //     p.position = Vector3(context.width/2.0f + 120.0f, context.height/4.0f + 50.0f, 0.0f);
+// //     p.type = SPHERE;
+// //     p.radius = 50.0f;
+
+// //     p.materialID = materialBuilder
+// //                     .SetBaseColor({0.5f, 0.5f, 0.5f, 1.0f})
+// //                     ->SetSmoothness(0.5f)
+// //                     ->Build();
+
+// //     context.objects.emplace_back(p);
+
+// //     p.position = Vector3(context.width/2.0f + 240.0f, context.height/4.0f + 50.0f, 0.0f);
+// //     p.type = SPHERE;
+// //     p.radius = 50.0f;
+
+// //     p.materialID = materialBuilder
+// //                     .SetBaseColor({0.5f, 0.5f, 0.5f, 1.0f})
+// //                     ->SetSmoothness(0.0f)
+// //                     ->Build();
+
+// //     context.objects.emplace_back(p);
+
+
+// // PLANE
+
+//     p.position = Vector3(context.width/2.0f, context.height/4.0f, context.depth/4.0f);
+//     p.normal = Vector3(0.0f, 1.0f ,0.0f);
+//     p.radius = 1000.0f;
+//     p.type = DISK;
+
+//     p.materialID = materialBuilder
+//                     .SetBaseColor({0.5f, 0.5f, 0.5f, 1.0f})
+//                     ->SetRoughness(0.5f)
+//                     ->Build();
+
+//     context.objects.emplace_back(p);
+
+// // SUN
+//     p.position = Vector3(context.width/2.0f, 2*context.height, context.depth/4.0f);
+//     p.radius = 600.0f;
+//     p.type = SPHERE;
+
+//     p.materialID = materialBuilder
+//                     .SetEmissionColor({1.0f, 1.0f, 1.0f, 1.0f})
+//                     ->SetEmission(10.0f)
+//                     ->Build();
+
+//     context.objects.emplace_back(p);
+
+// }
+
 
 /*
-{
-
-    Object p;
-
-// BLUE CUBE
-
-    p.position = Vector3(context.width/2.0f, context.height/4.0f, context.depth);
-    p.maxPos = p.position + Vector3(300, 400, 300);
-    p.type = CUBE;
-
-    p.materialID = materialBuilder
-                    .SetBaseColor({0.0f, 0.0f, 1.0f, 1.0f})
-                    ->SetDiffusion(0.4f)
-                    ->Build();
-
-    context.objects.emplace_back(p);
-
-// RED CUBE
-
-    p.position = Vector3(context.width/3.0f, context.height/4.0f, context.depth/2.0f);
-    p.maxPos = p.position + Vector3(200, 200, 200);
-    p.type = CUBE;
-
-    p.materialID = materialBuilder
-                    .SetBaseColor({1.0f, 0.0f, 0.0f, 1.0f})
-                    ->SetDiffusion(0.2f)
-                    ->Build();
-
-    context.objects.emplace_back(p);
-
-// GREEN CUBE
-
-    p.position = Vector3(context.width/5.0f, context.height/4.0f, 3*context.depth/4.0f);
-    p.maxPos = p.position + Vector3(100, 100, 100);
-    p.type = CUBE;
-
-    p.materialID = materialBuilder
-                    .SetBaseColor({0.0f, 1.0f, 0.0f, 1.0f})
-                    ->SetDiffusion(0.1f)
-                    ->Build();
-
-    context.objects.emplace_back(p);
-
-// MIRROR
-
-    p.position = Vector3(context.width/2.0f, context.height/4.0f + 50.0f, 0.0f);
-    p.type = SPHERE;
-    p.radius = 50.0f;
-
-    p.materialID = materialBuilder
-                    .SetBaseColor({0.5f, 0.5f, 0.5f, 1.0f})
-                    ->SetDiffusion(1.0f)
-                    ->SetSmoothness(1.0f)
-                    ->Build();
-
-    context.objects.emplace_back(p);
-
-    p.position = Vector3(context.width/2.0f + 120.0f, context.height/4.0f + 50.0f, 0.0f);
-    p.type = SPHERE;
-    p.radius = 50.0f;
-
-    p.materialID = materialBuilder
-                    .SetBaseColor({0.5f, 0.5f, 0.5f, 1.0f})
-                    ->SetDiffusion(1.0f)
-                    ->SetSmoothness(0.5f)
-                    ->Build();
-
-    context.objects.emplace_back(p);
-
-    p.position = Vector3(context.width/2.0f + 240.0f, context.height/4.0f + 50.0f, 0.0f);
-    p.type = SPHERE;
-    p.radius = 50.0f;
-
-    p.materialID = materialBuilder
-                    .SetBaseColor({0.5f, 0.5f, 0.5f, 1.0f})
-                    ->SetDiffusion(1.0f)
-                    ->SetSmoothness(0.0f)
-                    ->Build();
-
-    context.objects.emplace_back(p);
-
-// RED LIGHT
-
-    p.position = Vector3(context.width/4.0f, context.height/4.0f + 50.0f, 0.0f);
-    p.type = SPHERE;
-    p.radius = 50.0f;
-
-    p.materialID = materialBuilder
-                    .SetEmissionColor({1.0f, 0.0f, 0.0f, 1.0f})
-                    ->SetEmission(1.0f)
-                    ->Build();
-
-    context.objects.emplace_back(p);
-
-
-// PLANE
-
-    p.position = Vector3(context.width/2.0f, context.height/4.0f, context.depth/4.0f);
-    p.normal = Vector3(0.0f, 1.0f ,0.0f);
-    p.radius = 1000.0f;
-    p.type = DISK;
-
-    p.materialID = materialBuilder
-                    .SetBaseColor(255, 126, 13)
-                    ->SetEmissionColor(36, 13, 42)
-                    ->SetEmission(1.0f)
-                    ->Build();
-
-    context.objects.emplace_back(p);
-
-// SUN
-    p.position = Vector3(context.width/2.0f, 2*context.height, context.depth/4.0f);
-    p.radius = 600.0f;
-    p.type = SPHERE;
-
-    p.materialID = materialBuilder
-                    .SetEmissionColor({1.0f, 1.0f, 1.0f, 1.0f})
-                    ->SetEmission(1.0f)
-                    ->Build();
-
-    context.objects.emplace_back(p);
-
-}
-*/
-
-
 {
     const int rows = 10;
     const int cols = 10;
@@ -178,6 +172,8 @@ int main(int argc, char* argv[]){
             s.type = CUBE;
 
             float isEmissive = (rand() / (float)RAND_MAX)>0.8f;
+            float isMetallic = (rand() / (float)RAND_MAX)>0.8f;
+            float isGlass = (rand() / (float)RAND_MAX)>0.5f;
 
             Color color = (Color){(rand() / (float)RAND_MAX), (rand() / (float)RAND_MAX), (rand() / (float)RAND_MAX)};
 
@@ -185,13 +181,13 @@ int main(int argc, char* argv[]){
             s.materialID =  materialBuilder
                             .SetBaseColor(color)
                             ->SetSpecularColor(color)
-                            ->SetEmissionColor((Color){1.0f, 1.0f, 1.0f, 1.0f} * isEmissive)
-                            ->SetRefractiveIndex((rand() / (float)RAND_MAX) + 1e-6f)
+                            ->SetEmissionColor((Color){1.0f, 1.0f, 1.0f, 1.0f} * isEmissive * (1-isGlass))
+                            ->SetRefractiveIndex((rand() / (float)RAND_MAX) + 1.0f)
                             ->SetDiffusion((rand() / (float)RAND_MAX))
-                            ->SetSmoothness((rand() / (float)RAND_MAX) * (1.0f - isEmissive) )
-                            ->SetEmission(((rand() - RAND_MAX)/ (float)RAND_MAX) * isEmissive )
-                            ->SetRoughness( (1.0f -  (rand() / (float)RAND_MAX) ) * (1.0f - isEmissive))
-                            ->SetTransparency((rand() / (float)RAND_MAX))
+                            ->SetSmoothness((rand() / (float)RAND_MAX) * isMetallic  * (1-isGlass))
+                            ->SetEmission(((rand() - RAND_MAX)/ (float)RAND_MAX) * isEmissive * (1 - isMetallic))
+                            ->SetRoughness( (rand() / (float)RAND_MAX) * (1-isMetallic) * (1-isGlass))
+                            ->SetTransparency(1.0f  * isGlass)
                             ->Build();
 
             context.objects.emplace_back(s);
@@ -199,85 +195,120 @@ int main(int argc, char* argv[]){
     }
 
 }
+*/
 
 
+{
+// DISK
 
-// {
-// // DISK
+    Object p;
 
-//     Object p;
+    p.position = Vector3(context.width/2.0f, context.height/4.0f, context.depth/4.0f);
+    p.normal = Vector3(0.0f, 1.0f ,0.0f);
+    p.type = PLANE;
 
-//     p.position = Vector3(context.width/2.0f, context.height/4.0f, context.depth/4.0f);
-//     p.normal = Vector3(0.0f, 1.0f ,0.0f);
-//     p.radius = 1000.0f;
-//     p.type = DISK;
+    p.materialID = materialBuilder
+                    .SetBaseColor({0.5f, 0.5f, 0.5f, 1.0f})
+                    ->Build();
 
-//     p.materialID = materialBuilder
-//                     .SetBaseColor({0.5f, 0.5f, 0.5f, 1.0f})
-//                     ->SetDiffusion(0.1f)
-//                     ->SetSmoothness(0.1f)
-//                     ->Build();
+    context.objects.emplace_back(p);
 
-//     context.objects.emplace_back(p);
+// Light
+    p.position = Vector3(context.width/2.0f, 2*context.height, context.depth/4.0f);
+    p.normal = Vector3(0.0f, -1.0f ,0.0f);
+    p.radius = 300.0f;
+    p.type = DISK;
 
-// // SUN
+    p.materialID = materialBuilder
+                    .SetEmissionColor({1.0f, 1.0f, 1.0f, 1.0f})
+                    ->SetEmission(10.0f)
+                    ->Build();
 
-//     p.position = Vector3(context.width/2.0f, 2*context.height, context.depth/4.0f);
-//     p.radius = 600.0f;
-//     p.type = SPHERE;
+    context.objects.emplace_back(p);
 
-//     p.materialID = materialBuilder
-//                     .SetEmissionColor((Color){1.0f, 1.0f, 1.0f, 1.0f})
-//                     ->SetEmission(1.0f)
-//                     ->Build();
+// SUN
 
-//     context.objects.emplace_back(p);
+    p.position = Vector3(context.width/2.0f, context.height/2.0f, context.depth);
+    p.radius = 100.0f;
+    p.type = SPHERE;
+
+    p.materialID = materialBuilder
+                    .SetEmissionColor((Color){1.0f, 0.0f, 0.0f, 1.0f})
+                    ->SetEmission(100.0f)
+                    ->Build();
+
+    context.objects.emplace_back(p);
+
+    p.position = Vector3(3*context.width/2.0f, context.height/2.0f, context.depth);
+    p.radius = 100.0f;
+    p.type = SPHERE;
+
+    p.materialID = materialBuilder
+                    .SetEmissionColor((Color){0.0f, 0.0f, 1.0f, 1.0f})
+                    ->SetEmission(100.0f)
+                    ->Build();
+
+    context.objects.emplace_back(p);
 
 
-//     MeshReader reader;
+    MeshReader reader;
 
-//     Mesh mesh = reader.LoadObject("resources/mesh.obj");
+    Mesh mesh = reader.LoadObject("resources/mesh.obj");
 
-//     Object temp;
-//     temp.type = TRIANGLE;
-//     temp.materialID = materialBuilder
-//                         .SetBaseColor({1.0f, 0.843f, 0.0f, 1.0f})
-//                         ->SetSpecularColor({1.0f, 0.843f, 0.0f, 1.0f})
-//                         ->SetDiffusion(0.2f)
-//                         ->SetRefractiveIndex(1.26f)
-//                         ->SetTransparency(0.6f)
-//                         ->SetSmoothness(1.0f)
-//                         ->SetRoughness(0.0f)
-//                         ->Build();
+    Object temp;
+    temp.type = TRIANGLE;
+    temp.materialID = materialBuilder
+                        .SetBaseColor({1.0f, 1.0f, 1.0f, 1.0f})
+                        ->SetRefractiveIndex(2.25f)
+                        ->SetTransparency(1.0f)
+                        ->SetRoughness(1.0f)
+                        ->Build();
 
-//     float scale = 100;
-//     Vector3 offset(context.width/2.0f, context.height/2.0f, context.depth/4.0f);
 
-//     mesh.Translate(offset, scale);
+    float scale = 100;
+    Vector3 offset(context.width/2.0f, context.height/2.0f, context.depth/4.0f);
 
-//     for(uint32_t i=0; i < mesh.numIndices; ++i){
+    mesh.Translate(offset, scale);
 
-//         uint32_t t = 3*i;
+    for(uint32_t i=0; i < mesh.numIndices; ++i){
 
-//         temp.indicesID.x = mesh.indices[t];
-//         temp.indicesID.y = mesh.indices[t+1];
-//         temp.indicesID.z = mesh.indices[t+2];
-//         temp.normal = mesh.normals[i];
+        uint32_t t = 3*i;
 
-//         context.objects.emplace_back(temp);
+        temp.indicesID.x = mesh.indices[t];
+        temp.indicesID.y = mesh.indices[t+1];
+        temp.indicesID.z = mesh.indices[t+2];
+        temp.normal = mesh.normals[i];
 
-//     }
+        context.objects.emplace_back(temp);
 
-//     context.mesh = mesh;
-// }
+    }
+
+    context.mesh = mesh;
+}
 
 
 //Main loop
 
-    OpenGLRenderer renderer(&context, VSync);
+    
+    ThreadedRendering cpuRender;
+    cpuRender.BindContext(&context);
+    
+    ParallelRendering gpuRender;
+    gpuRender.BindContext(&context);
 
-    while (!renderer.ShouldClose()) {
-        renderer.Update();
+    std::vector<IFrameRender*> services;
+
+    services.emplace_back(&cpuRender);
+    services.emplace_back(&gpuRender);
+
+    WindowManager manager(&context, VSync);
+    PerformanceMonitor monitor;
+
+   // manager.BindRenderingServices(services.data(), services.size());
+    manager.SetDefaultRendering(1);
+
+    while (manager.ShouldClose()) {
+        manager.Update();
         monitor.GatherInformation();
     }
 

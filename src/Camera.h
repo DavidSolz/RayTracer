@@ -15,6 +15,7 @@ struct Camera{
     Vector3 position = {0.0f, 0.0f, 0.0f};
 
     float movementSpeed = 100.0f;
+    float rotationSpeed = 50.0f;
     float aspectRatio = 1.0f;
     float nearView = 0.1f;
     float farView = 100.0f;
@@ -22,21 +23,19 @@ struct Camera{
     float pitch = 0.0f;
     float yaw = 90.0f;
 
-    void Rotate(float offsetX, float offsetY){
+    void Rotate(double offsetX, double offsetY){
 
-        float sensitivity = 0.1f;
-        offsetX *= sensitivity;
-        offsetY *= sensitivity;
+        yaw += offsetX * rotationSpeed;
+        pitch += offsetY * rotationSpeed;
 
-        yaw += offsetX;
-        pitch += offsetY;
+        pitch = fmax(-89.0f, fmin(pitch, 89.0f));
 
-        float cosPitch = cos(pitch * deg2rad);
+        float pitch2rad = pitch * deg2rad;
         float yaw2rad = yaw * deg2rad;
 
-        front.x = cos(yaw2rad) * cosPitch;
-        front.y = -sin(pitch * deg2rad);
-        front.z = sin(yaw2rad) * cosPitch;
+        front.x = cos(yaw2rad) * cos(pitch2rad);
+        front.y = sin(pitch2rad);
+        front.z = sin(yaw2rad) * cos(pitch2rad);
 
         right = Vector3::CrossProduct(worldUp, front).Normalize();
         up  = Vector3::CrossProduct(front, right).Normalize();

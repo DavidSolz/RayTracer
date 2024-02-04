@@ -4,6 +4,7 @@ MaterialBuilder::MaterialBuilder(const RenderingContext * _context){
     this->context = (RenderingContext *)_context;
     this->temporaryMaterial = {0};
     this->temporaryMaterial.refractiveIndex = 1.00029f; 
+    this->temporaryMaterial.roughness = 1e-6f;
 }       
 
 MaterialBuilder * MaterialBuilder::SetBaseColor(const Color & _color){
@@ -18,7 +19,7 @@ MaterialBuilder * MaterialBuilder::SetSpecularColor(const Color & _color){
 }
 
 MaterialBuilder * MaterialBuilder::SetRefractiveIndex(const float & _factor){
-    temporaryMaterial.refractiveIndex = _factor;
+    temporaryMaterial.refractiveIndex = std::fmax(1.0f, _factor);
     return this;
 }
 
@@ -58,7 +59,7 @@ MaterialBuilder * MaterialBuilder::SetSmoothness(const float & _factor){
 }
 
 MaterialBuilder * MaterialBuilder::SetRoughness(const float & _factor){
-    temporaryMaterial.roughness = std::fmax(0.0f, std::fmin(_factor, 1.0f));
+    temporaryMaterial.roughness = std::fmax(1e-6f, std::fmin(_factor, 1.0f));
     return this;
 }
 
@@ -76,9 +77,9 @@ uint32_t MaterialBuilder::Build(){
 
     context->materials.push_back(temporaryMaterial);
     temporaryMaterial = {0};
+    this->temporaryMaterial.refractiveIndex = 1.00029f; 
+    this->temporaryMaterial.roughness = 1e-6f;
     return context->materials.size()-1;
-
-    
 
 }
 

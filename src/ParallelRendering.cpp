@@ -1,6 +1,6 @@
 #include "ParallelRendering.h"
 
-void ParallelRendering::Init(RenderingContext * _context){
+void ParallelRendering::BindContext(RenderingContext * _context){
 
     this->context = _context;
 
@@ -59,7 +59,6 @@ void ParallelRendering::Init(RenderingContext * _context){
     pixelBuffer = cl::Buffer(deviceContext, CL_MEM_READ_WRITE, dataSize);
 
     context->frameCounter = 0;
-    frameCounter = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, sizeof(int));
 
     objectBufferSize = sizeof(Object)*context->objects.size();
     objectBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, objectBufferSize);
@@ -69,19 +68,17 @@ void ParallelRendering::Init(RenderingContext * _context){
 
     objectsCountBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, sizeof(int));
 
-    cameraBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, sizeof(Camera));
-
     verticesBufferSize = sizeof(Vector3) * context->mesh.vertices.size();
     verticesBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, verticesBufferSize);
 
     kernel = cl::Kernel(program, "RayTrace");
     kernel.setArg(0, pixelBuffer);
     kernel.setArg(1, objectBuffer);
-    kernel.setArg(2, objectsCountBuffer);
-    kernel.setArg(3, materialBuffer);
-    kernel.setArg(4, cameraBuffer);
-    kernel.setArg(5, frameCounter);
-    kernel.setArg(6, verticesBuffer);
+    kernel.setArg(2, materialBuffer);
+    kernel.setArg(3, verticesBuffer);
+    kernel.setArg(4, objectsCountBuffer);
+    kernel.setArg(5, sizeof(Camera), &context->camera);
+    kernel.setArg(6, sizeof(int), &context->frameCounter);
 
 
     antialiasingKernel = cl::Kernel(program, "AntiAlias");
@@ -136,11 +133,11 @@ void ParallelRendering::Render(Color * _pixels){
     int objCount = context->objects.size();
 
     queue.enqueueWriteBuffer(objectBuffer, CL_FALSE, 0, objectBufferSize, context->objects.data());
-    queue.enqueueWriteBuffer(objectsCountBuffer, CL_FALSE, 0, sizeof(int), &objCount);
     queue.enqueueWriteBuffer(materialBuffer, CL_FALSE, 0, materialBufferSize, context->materials.data());
-    queue.enqueueWriteBuffer(cameraBuffer, CL_FALSE, 0, sizeof(Camera), &context->camera);
-    queue.enqueueWriteBuffer(frameCounter, CL_FALSE, 0, sizeof(int), &context->frameCounter);
     queue.enqueueWriteBuffer(verticesBuffer, CL_FALSE, 0, verticesBufferSize, context->mesh.vertices.data());
+    queue.enqueueWriteBuffer(objectsCountBuffer, CL_FALSE, 0, sizeof(int), &objCount);
+    kernel.setArg(5, sizeof(Camera), &context->camera);
+    kernel.setArg(6, sizeof(int), &context->frameCounter);
 
     queue.enqueueNDRangeKernel(kernel, cl::NullRange, globalRange, localRange);
     queue.enqueueNDRangeKernel(antialiasingKernel, cl::NullRange, globalRange, localRange);
