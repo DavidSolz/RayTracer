@@ -180,14 +180,12 @@ int main(int argc, char* argv[]){
 
             s.materialID =  materialBuilder
                             .SetBaseColor(color)
-                            ->SetSpecularColor(color)
-                            ->SetEmissionColor((Color){1.0f, 1.0f, 1.0f, 1.0f} * isEmissive * (1-isGlass))
+                            ->SetEmissionColor(color * isEmissive * (1-isGlass))
                             ->SetRefractiveIndex((rand() / (float)RAND_MAX) + 1.0f)
-                            ->SetDiffusion((rand() / (float)RAND_MAX))
-                            ->SetSmoothness((rand() / (float)RAND_MAX) * isMetallic  * (1-isGlass))
-                            ->SetEmission(((rand() - RAND_MAX)/ (float)RAND_MAX) * isEmissive * (1 - isMetallic))
-                            ->SetRoughness( (rand() / (float)RAND_MAX) * (1-isMetallic) * (1-isGlass))
-                            ->SetTransparency(1.0f  * isGlass)
+                            ->SetSmoothness((rand() / (float)RAND_MAX) * isMetallic  * (1.0f-isGlass))
+                            ->SetEmission(((rand() - RAND_MAX)/ (float)RAND_MAX) * isEmissive)
+                            ->SetRoughness((rand() / (float)RAND_MAX))
+                            ->SetTransparency(isGlass * (1.0f - isMetallic))
                             ->Build();
 
             context.objects.emplace_back(s);
@@ -221,7 +219,7 @@ int main(int argc, char* argv[]){
 
     p.materialID = materialBuilder
                     .SetEmissionColor({1.0f, 1.0f, 1.0f, 1.0f})
-                    ->SetEmission(10.0f)
+                    ->SetEmission(3.0f)
                     ->Build();
 
     context.objects.emplace_back(p);
@@ -233,8 +231,11 @@ int main(int argc, char* argv[]){
     p.type = SPHERE;
 
     p.materialID = materialBuilder
-                    .SetEmissionColor((Color){1.0f, 0.0f, 0.0f, 1.0f})
-                    ->SetEmission(100.0f)
+                    .SetBaseColor((Color){1.0f, 0.0f, 0.0f, 1.0f})
+                    //->SetEmission(5.0f)
+                    ->SetSmoothness(0.5f)
+                    ->SetRoughness(0.3f)
+                    ->SetGloss(0.5f)
                     ->Build();
 
     context.objects.emplace_back(p);
@@ -244,8 +245,10 @@ int main(int argc, char* argv[]){
     p.type = SPHERE;
 
     p.materialID = materialBuilder
-                    .SetEmissionColor((Color){0.0f, 0.0f, 1.0f, 1.0f})
-                    ->SetEmission(100.0f)
+                    .SetBaseColor((Color){0.0f, 0.0f, 1.0f, 1.0f})
+                    ->SetSmoothness(0.8f)
+                    ->SetRoughness(0.3f)
+                    //->SetEmission(5.0f)
                     ->Build();
 
     context.objects.emplace_back(p);
@@ -259,9 +262,11 @@ int main(int argc, char* argv[]){
     temp.type = TRIANGLE;
     temp.materialID = materialBuilder
                         .SetBaseColor({1.0f, 1.0f, 1.0f, 1.0f})
-                        ->SetRefractiveIndex(2.25f)
+                        ->SetRefractiveIndex(1.49f)
                         ->SetTransparency(1.0f)
-                        ->SetRoughness(1.0f)
+                        //->SetSmoothness(1.0f)
+                        ->SetRoughness(0.0687f)
+                        //->SetRoughness(1.0f)
                         ->Build();
 
 
@@ -304,7 +309,7 @@ int main(int argc, char* argv[]){
     WindowManager manager(&context, VSync);
     PerformanceMonitor monitor;
 
-   // manager.BindRenderingServices(services.data(), services.size());
+    manager.BindRenderingServices(services.data(), services.size());
     manager.SetDefaultRendering(1);
 
     while (manager.ShouldClose()) {

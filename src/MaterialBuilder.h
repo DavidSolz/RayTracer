@@ -23,6 +23,8 @@ public:
 
     MaterialBuilder * SetSmoothness(const float & _factor);
 
+    MaterialBuilder * SetGloss(const float & _factor);
+
     MaterialBuilder * SetRoughness(const float & _factor);
 
     MaterialBuilder * SetTransparency(const float & _factor);

@@ -10,6 +10,7 @@ struct Material {
     struct Color emission;
     float metallic;
     float roughness;
+    float gloss;
     float emmissionScale;
     float diffusionScale;
     float transparency;
