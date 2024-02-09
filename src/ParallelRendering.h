@@ -38,7 +38,8 @@ class ParallelRendering : public IFrameRender {
 
     cl::CommandQueue queue;
     cl::Context deviceContext;
-    cl::Kernel kernel;
+    cl::Kernel raytracingKernel;
+    cl::Kernel transferKernel;
     cl::Kernel antialiasingKernel;
 
     cl::NDRange globalRange;
@@ -55,7 +56,9 @@ class ParallelRendering : public IFrameRender {
     cl::Buffer materialBuffer;
     cl::Buffer verticesBuffer;
 
-    void GetDefaultCLDevice();
+    void GetDefaultDevice();
+
+    void CreateDeviceContext();
     
     cl::Program FetchProgram();
 
@@ -63,9 +66,11 @@ class ParallelRendering : public IFrameRender {
 
 public:
 
-    void BindContext(RenderingContext * _context);
+    ParallelRendering(RenderingContext * _context);
 
     void Render(Color * _pixels);
+
+    ~ParallelRendering();
 
 };
 #endif

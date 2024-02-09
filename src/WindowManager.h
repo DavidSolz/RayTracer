@@ -15,14 +15,9 @@ class WindowManager {
 
 private:
 
-    enum {
-        CPU,
-        ACC
-    };
-
-    IFrameRender ** renderingServices;
-    uint32_t servicesSize;
-    uint32_t selectedService;
+    IFrameRender * renderingServices[10];
+    uint8_t selectedService;
+    uint8_t minIndex, maxIndex;
 
     char windowTitle[50]={0};
     GLFWwindow * window;
@@ -41,13 +36,11 @@ private:
     static void KeyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
 public:
-    WindowManager(RenderingContext * _context, const bool & _enableVSync = true);
+    WindowManager(RenderingContext * _context);
 
     bool ShouldClose();
 
-    void BindRenderingServices(IFrameRender * _services[], const uint32_t & _size);
-
-    void SetDefaultRendering(const uint32_t & _index);
+    void BindRenderingService(const uint8_t & _key, IFrameRender * _service);
 
     void Update();
     

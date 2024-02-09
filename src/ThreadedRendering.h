@@ -64,7 +64,7 @@ class ThreadedRendering : public IFrameRender{
 
 public:
 
-    void BindContext(RenderingContext * _context);
+    ThreadedRendering(RenderingContext * _context);
 
     void Render(Color * _pixels);
 

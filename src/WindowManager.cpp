@@ -3,14 +3,13 @@
 static RenderingContext * context;
 static Timer* timer;
 
-WindowManager::WindowManager(RenderingContext * _context, const bool & _enableVSync){
+WindowManager::WindowManager(RenderingContext * _context){
 
     context = _context;
 
     context->loggingService.Write(MessageType::INFO, "Configuring window...");
 
     memcpy(windowTitle, "ACC Mode", 9);
-    selectedService = ACC;
 
     if( glfwInit() == GLFW_FALSE ){
 
@@ -39,7 +38,7 @@ WindowManager::WindowManager(RenderingContext * _context, const bool & _enableVS
     }
 
     glfwMakeContextCurrent(window);
-    glfwSwapInterval(_enableVSync);
+    glfwSwapInterval( context->vSync );
 
     glfwSetKeyCallback(window, KeyboardCallback);
 
@@ -56,23 +55,28 @@ WindowManager::WindowManager(RenderingContext * _context, const bool & _enableVS
         return;
     }
 
-    glGenTextures(1, &textureID);
-    glBindTexture(GL_TEXTURE_2D, textureID);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, context->width, context->height, 0, GL_RGBA, GL_FLOAT, nullptr);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    
+    if ( context->memorySharing ){
 
-    context->loggingService.Write(MessageType::INFO, "Creating texture buffer");
+        context->loggingService.Write(MessageType::INFO, "Creating texture buffer...");
 
+        glGenTextures(1, &context->textureID);
+        glBindTexture(GL_TEXTURE_2D, context->textureID);
+
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, context->width, context->height, 0, GL_RGBA, GL_FLOAT, nullptr);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    }
+    
     char buffer[200] = {0};
-
 
     sprintf(buffer, "Current resolution : %d x %d", context->width, context->height);
 
     context->loggingService.Write(MessageType::INFO, buffer);
 
-    sprintf(buffer, "Checking for V-Sync : %s", _enableVSync?"enabled":"disabled");
+    sprintf(buffer, "Checking for V-Sync : %s", context->vSync?"enabled":"disabled");
 
     context->loggingService.Write(MessageType::INFO, buffer);
 
@@ -85,6 +89,9 @@ WindowManager::WindowManager(RenderingContext * _context, const bool & _enableVS
 
     glfwGetCursorPos(window, &lastMouseX, &lastMouseY);
 
+    minIndex = 10;
+    maxIndex = 0;
+    selectedService = 0;
 }
 
 void WindowManager::KeyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mods){
@@ -153,16 +160,12 @@ void WindowManager::ProcessInput(){
         context->frameCounter=0;
     }
 
-    if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS && selectedService != CPU){
-        memcpy(windowTitle, "CPU Mode", 9);
-        selectedService = CPU;
-        context->frameCounter=0;
-    }
-
-    if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS && selectedService != ACC){
-        memcpy(windowTitle, "ACC Mode", 9);
-        selectedService = ACC;
-        context->frameCounter=0;
+    for (int key = minIndex; key <= maxIndex; key++) {
+        if (glfwGetKey(window, '0'+key) == GLFW_PRESS && key!= selectedService) {
+            memcpy(windowTitle, "CPU Mode", 9);
+            selectedService = key;
+            context->frameCounter=0;
+        }
     }
 
     if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS){
@@ -176,52 +179,69 @@ bool WindowManager::ShouldClose(){
     return !glfwWindowShouldClose(window);
 }
 
-void WindowManager::SetDefaultRendering(const uint32_t & _index){
-    this->selectedService = _index;
-}
-
-void WindowManager::BindRenderingServices(IFrameRender * _services[], const uint32_t & _size){
-    this->renderingServices = _services;
-    this->servicesSize = _size;
+void WindowManager::BindRenderingService(const uint8_t & _key, IFrameRender * _service){
+    renderingServices[ _key ] = _service;
+    minIndex = std::min(minIndex, _key);
+    maxIndex = std::max(maxIndex, _key);
 }
 
 void  WindowManager::HandleErrors(){
 
     GLenum error = glGetError();
     if(error!=GL_NO_ERROR){
-
         context->loggingService.Write(MessageType::ISSUE, "OpenGL buffer error");
         glfwSetWindowShouldClose(window, GLFW_TRUE);
-        return;
-        
+
     }
 
-    if( renderingServices == nullptr || selectedService <0 || selectedService >=servicesSize){
+    if( renderingServices [selectedService] == nullptr || selectedService < 0 || selectedService > 9){
         context->loggingService.Write(MessageType::ISSUE, "Rendering service error");
         glfwSetWindowShouldClose(window, GLFW_TRUE);
-        return;
     }
 }
 
 void WindowManager::Update(){
 
-    HandleErrors();
-
     ProcessInput();
+    
+    HandleErrors();
 
     timer->TicTac();
 
     renderingServices[ selectedService ]->Render(pixels);
 
-    glDrawPixels(context->width, context->height, GL_RGBA, GL_FLOAT, pixels);
+    if( context->memorySharing){
+        glEnable(GL_TEXTURE_2D);
+        glBindTexture(GL_TEXTURE_2D, context->textureID);
+
+        glBegin(GL_QUADS);
+            glTexCoord2f(0.0f, 0.0f);
+            glVertex2f(0.0f, 0.0f);
+
+            glTexCoord2f(1.0f, 0.0f);
+            glVertex2f(context->width, 0.0f);
+
+            glTexCoord2f(1.0f, 1.0f);
+            glVertex2f(context->width, context->height);
+
+            glTexCoord2f(0.0f, 1.0f);
+            glVertex2f(0.0f, context->height);
+        glEnd();
+
+        glBindTexture(GL_TEXTURE_2D, 0);
+        glDisable(GL_TEXTURE_2D);
+    }else{
+        glDrawPixels(context->width, context->height, GL_RGBA, GL_FLOAT, pixels);
+    }
+   
 
     context->frameCounter++;
 
     uint32_t fps = timer->GetFrameCount();
 
     sprintf(windowTitle+8, " | FPS : %d | Frametime : %5.3f ms\0", fps, 1000.0f/fps);
-
     glfwSetWindowTitle(window, windowTitle);
+
     glfwSwapBuffers(window);
     glfwPollEvents();
 
@@ -253,15 +273,13 @@ void WindowManager::TakeScreenShot(){
         for (int x = 0; x < context->width; ++x) {
 
             const Color& pixel = pixels[( context->height - 1 - y) * context->width + x];
-            uint8_t rgba[4] = {pixel.B * 255, pixel.G * 255, pixel.R * 255, pixel.A * 255 };
-            outFile.write((char*)(rgba), 4);
+            uint8_t bgra[4] = {pixel.B * 255, pixel.G * 255, pixel.R * 255, pixel.A * 255 };
+            outFile.write((char*)(bgra), 4);
             
         }
     }
 
-
     outFile.close();
-
 }
 
 WindowManager::~WindowManager(){
@@ -269,7 +287,11 @@ WindowManager::~WindowManager(){
     if( pixels != NULL)
         delete[] pixels;
 
-    glDeleteTextures(1, &textureID);
+    context->loggingService.Write(MessageType::INFO, "Deleting texture buffer...");
+
+    glDeleteTextures(1, &context->textureID);
+
+    context->loggingService.Write(MessageType::INFO, "Destroying window...");
 
     glfwDestroyWindow(window);
     glfwTerminate();

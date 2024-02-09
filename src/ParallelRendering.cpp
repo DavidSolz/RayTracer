@@ -1,45 +1,14 @@
 #include "ParallelRendering.h"
 
-void ParallelRendering::BindContext(RenderingContext * _context){
+ParallelRendering::ParallelRendering(RenderingContext * _context){
 
     this->context = _context;
 
     context->loggingService.Write(MessageType::INFO, "Configuring accelerator...");
 
-    GetDefaultCLDevice();
+    GetDefaultDevice();
 
-#ifdef __APPLE__
-
-    CGLContextObj glContext = CGLGetCurrentContext();
-    CGLShareGroupObj shareGroup = CGLGetShareGroup(glContext);
-
-    cl_context_properties properties[] = {
-        CL_CONTEXT_PROPERTY_USE_CGL_SHAREGROUP_APPLE,
-        (cl_context_properties)shareGroup,
-        0
-    };
-
-#elif __WIN32__
-
-    cl_context_properties properties[] = {
-        CL_CONTEXT_PLATFORM, (cl_context_properties)defaultPlatform(),
-        CL_GL_CONTEXT_KHR, (cl_context_properties)wglGetCurrentContext(),
-        CL_WGL_HDC_KHR, (cl_context_properties)wglGetCurrentDC(),
-        0
-    };
-
-#else
-
-     cl_context_properties properties[] = {
-        CL_GL_CONTEXT_KHR, (cl_context_properties) glXGetCurrentContext(),
-        CL_GLX_DISPLAY_KHR, (cl_context_properties) glXGetCurrentDisplay(),
-        CL_CONTEXT_PLATFORM, (cl_context_properties) defaultPlatform(),
-        0
-    };
-
-#endif
-
-    deviceContext = cl::Context(defaultDevice);
+    CreateDeviceContext();
 
     queue = cl::CommandQueue(deviceContext, defaultDevice);
 
@@ -55,8 +24,13 @@ void ParallelRendering::BindContext(RenderingContext * _context){
         return ;
     }
 
-    dataSize = sizeof(Color) * context->width * context->height;
-    pixelBuffer = cl::Buffer(deviceContext, CL_MEM_READ_WRITE, dataSize);
+    if( context->memorySharing ){
+        pixelBuffer = cl::BufferGL(deviceContext, CL_MEM_READ_WRITE, context->textureID);
+        clEnqueueAcquireGLObjects(queue(), 1, &pixelBuffer(), 0, NULL, NULL);
+    }else{
+        dataSize = sizeof(Color) * context->width * context->height;
+        pixelBuffer = cl::Buffer(deviceContext, CL_MEM_READ_WRITE, dataSize);
+    }
 
     context->frameCounter = 0;
 
@@ -64,25 +38,12 @@ void ParallelRendering::BindContext(RenderingContext * _context){
     objectBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, objectBufferSize);
 
     materialBufferSize = sizeof(Material) * context->materials.size();
-    materialBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR, materialBufferSize, context->materials.data(), NULL);
+    materialBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, materialBufferSize);
 
     objectsCountBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, sizeof(int));
 
     verticesBufferSize = sizeof(Vector3) * context->mesh.vertices.size();
     verticesBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, verticesBufferSize);
-
-    kernel = cl::Kernel(program, "RayTrace");
-    kernel.setArg(0, pixelBuffer);
-    kernel.setArg(1, objectBuffer);
-    kernel.setArg(2, materialBuffer);
-    kernel.setArg(3, verticesBuffer);
-    kernel.setArg(4, objectsCountBuffer);
-    kernel.setArg(5, sizeof(Camera), &context->camera);
-    kernel.setArg(6, sizeof(int), &context->frameCounter);
-
-
-    antialiasingKernel = cl::Kernel(program, "AntiAlias");
-    antialiasingKernel.setArg(0, pixelBuffer);
 
     globalRange = cl::NDRange(context->width, context->height);
 
@@ -90,7 +51,36 @@ void ParallelRendering::BindContext(RenderingContext * _context){
 
     DetermineLocalSize(context->width, context->height);
 
+    
+    raytracingKernel = cl::Kernel(program, "RayTrace");
+    raytracingKernel.setArg(0, pixelBuffer);
+    raytracingKernel.setArg(1, objectBuffer);
+    raytracingKernel.setArg(2, materialBuffer);
+    raytracingKernel.setArg(3, verticesBuffer);
+    raytracingKernel.setArg(4, objectsCountBuffer);
+    raytracingKernel.setArg(5, sizeof(Camera), &context->camera);
+    raytracingKernel.setArg(6, sizeof(int), &context->frameCounter);
+
+    int objCount = context->objects.size();
+
+    queue.enqueueWriteBuffer(objectBuffer, CL_TRUE, 0, objectBufferSize, context->objects.data());
+    queue.enqueueWriteBuffer(materialBuffer, CL_TRUE, 0, materialBufferSize, context->materials.data());
+    queue.enqueueWriteBuffer(verticesBuffer, CL_TRUE, 0, verticesBufferSize, context->mesh.vertices.data());
+    queue.enqueueWriteBuffer(objectsCountBuffer, CL_TRUE, 0, sizeof(int), &objCount);
+
+    queue.enqueueNDRangeKernel(raytracingKernel, cl::NullRange, globalRange);
+    queue.finish();
+
+    antialiasingKernel = cl::Kernel(program, "AntiAlias");
+    antialiasingKernel.setArg(0, pixelBuffer);
+
     context->loggingService.Write(MessageType::INFO, "Accelerator configuration done");
+}
+
+ParallelRendering::~ParallelRendering(){
+    if( context->memorySharing )
+        clEnqueueReleaseGLObjects(queue(), 1, &pixelBuffer(), 0, NULL, NULL);
+
 }
 
 void ParallelRendering::DetermineLocalSize(const uint32_t & width, const uint32_t & height){
@@ -130,25 +120,62 @@ void ParallelRendering::DetermineLocalSize(const uint32_t & width, const uint32_
 
 void ParallelRendering::Render(Color * _pixels){
 
-    int objCount = context->objects.size();
+    raytracingKernel.setArg(5, sizeof(Camera), &context->camera);
+    raytracingKernel.setArg(6, sizeof(int), &context->frameCounter);
 
-    queue.enqueueWriteBuffer(objectBuffer, CL_FALSE, 0, objectBufferSize, context->objects.data());
-    queue.enqueueWriteBuffer(materialBuffer, CL_FALSE, 0, materialBufferSize, context->materials.data());
-    queue.enqueueWriteBuffer(verticesBuffer, CL_FALSE, 0, verticesBufferSize, context->mesh.vertices.data());
-    queue.enqueueWriteBuffer(objectsCountBuffer, CL_FALSE, 0, sizeof(int), &objCount);
-    kernel.setArg(5, sizeof(Camera), &context->camera);
-    kernel.setArg(6, sizeof(int), &context->frameCounter);
-
-    queue.enqueueNDRangeKernel(kernel, cl::NullRange, globalRange, localRange);
-    queue.enqueueNDRangeKernel(antialiasingKernel, cl::NullRange, globalRange, localRange);
+    queue.enqueueNDRangeKernel(raytracingKernel, cl::NullRange, globalRange, localRange);
+    //queue.enqueueNDRangeKernel(antialiasingKernel, cl::NullRange, globalRange, localRange);
 
     queue.finish();
 
-    queue.enqueueReadBuffer(pixelBuffer, CL_TRUE, 0, dataSize, _pixels);
+    queue.enqueueReadBuffer(pixelBuffer, CL_FALSE, 0, dataSize, _pixels);
 
 }
 
-void ParallelRendering::GetDefaultCLDevice(){
+void ParallelRendering::CreateDeviceContext(){
+
+    
+#ifdef __APPLE__
+
+    CGLContextObj glContext = CGLGetCurrentContext();
+    CGLShareGroupObj shareGroup = CGLGetShareGroup(glContext);
+
+    cl_context_properties properties[] = {
+        CL_CONTEXT_PROPERTY_USE_CGL_SHAREGROUP_APPLE,
+        (cl_context_properties)shareGroup,
+        0
+    };
+
+#elif __WIN32__
+
+    cl_context_properties properties[] = {
+        CL_CONTEXT_PLATFORM, (cl_context_properties)defaultPlatform(),
+        CL_GL_CONTEXT_KHR, (cl_context_properties)wglGetCurrentContext(),
+        CL_WGL_HDC_KHR, (cl_context_properties)wglGetCurrentDC(),
+        0
+    };
+
+#else
+
+     cl_context_properties properties[] = {
+        CL_GL_CONTEXT_KHR, (cl_context_properties) glXGetCurrentContext(),
+        CL_GLX_DISPLAY_KHR, (cl_context_properties) glXGetCurrentDisplay(),
+        CL_CONTEXT_PLATFORM, (cl_context_properties) defaultPlatform(),
+        0
+    };
+
+#endif
+
+    if( context->memorySharing ){
+        context->loggingService.Write(MessageType::INFO, "Enabling OpenCL-OpenGL interoperability...");
+        deviceContext = cl::Context(defaultDevice, properties);
+    }else{
+        deviceContext = cl::Context(defaultDevice);
+    }
+        
+}
+
+void ParallelRendering::GetDefaultDevice(){
     std::vector<cl::Platform> all_platforms;
 
     cl::Platform::get(&all_platforms);

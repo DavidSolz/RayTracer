@@ -9,14 +9,18 @@
 #include "Logger.h"
 #include "Camera.h"
 
-static GLuint textureID;
-
 struct RenderingContext {
 
     // Window settings
-    uint32_t width;
-    uint32_t height;
-    uint32_t depth;
+    uint32_t width = 640 ;
+    uint32_t height = 480;
+    uint32_t depth = 480;
+
+    GLuint textureID;
+    GLuint pbo;
+
+    bool vSync = false;
+    bool memorySharing = false;
 
     // Objects data
     std::vector<Object> objects;

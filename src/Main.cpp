@@ -6,14 +6,40 @@
 
 int main(int argc, char* argv[]){
 
-    int VSync = true;
-
-    if( argc > 1)
-        VSync = atoi(argv[1]);
-
 // Objects setup
 
-    RenderingContext context;
+RenderingContext context;
+
+// Argument parsing
+
+    const char* sceneFile = nullptr;
+
+    for (int i = 1; i < argc; ++i) {
+        const char* arg = argv[i];
+
+        if(arg[0] != '-'){
+            fprintf(stderr, "Unknown argument: %s\n", arg);
+            return EXIT_FAILURE;
+        }else if (arg[1] == 'V' && arg[2] == '\0') {
+            fprintf(stdout, "VSync enabled.\n");
+            context.vSync = true;
+        } else if (arg[1] == 'L' && arg[2] == '\0') {
+            if (i + 1 < argc && argv[i + 1][0] != '-') {
+                sceneFile = argv[i + 1];
+                i++;
+            } else {
+                fprintf(stderr, "Error: -L flag requires a scene file path\n");
+                return EXIT_FAILURE;
+            }
+        } else if (arg[1] == 'S' && arg[2] == '\0') {
+            fprintf(stdout, "Memory sharing enabled.\n");
+            context.memorySharing = true;
+        } else {
+            fprintf(stderr, "Unknown argument: %s\n", arg);
+            return EXIT_FAILURE;
+        }
+    }
+
 
 // Context setup
 
@@ -219,7 +245,7 @@ int main(int argc, char* argv[]){
 
     p.materialID = materialBuilder
                     .SetEmissionColor({1.0f, 1.0f, 1.0f, 1.0f})
-                    ->SetEmission(3.0f)
+                    ->SetEmission(4.0f)
                     ->Build();
 
     context.objects.emplace_back(p);
@@ -246,13 +272,14 @@ int main(int argc, char* argv[]){
 
     p.materialID = materialBuilder
                     .SetBaseColor((Color){0.0f, 0.0f, 1.0f, 1.0f})
-                    ->SetSmoothness(0.8f)
-                    ->SetRoughness(0.3f)
+                    //->SetSmoothness(0.8f)
+                    ->SetTransparency(1.0f)
+                    ->SetRefractiveIndex(1.49f)
+                    ->SetRoughness(0.0f)
                     //->SetEmission(5.0f)
                     ->Build();
 
     context.objects.emplace_back(p);
-
 
     MeshReader reader;
 
@@ -268,7 +295,6 @@ int main(int argc, char* argv[]){
                         ->SetRoughness(0.0687f)
                         //->SetRoughness(1.0f)
                         ->Build();
-
 
     float scale = 100;
     Vector3 offset(context.width/2.0f, context.height/2.0f, context.depth/4.0f);
@@ -294,23 +320,14 @@ int main(int argc, char* argv[]){
 
 //Main loop
 
-    
-    ThreadedRendering cpuRender;
-    cpuRender.BindContext(&context);
-    
-    ParallelRendering gpuRender;
-    gpuRender.BindContext(&context);
-
-    std::vector<IFrameRender*> services;
-
-    services.emplace_back(&cpuRender);
-    services.emplace_back(&gpuRender);
-
-    WindowManager manager(&context, VSync);
+    WindowManager manager(&context);
     PerformanceMonitor monitor;
 
-    manager.BindRenderingServices(services.data(), services.size());
-    manager.SetDefaultRendering(1);
+    ThreadedRendering processor(&context);
+    ParallelRendering accelerator(&context);
+
+    manager.BindRenderingService(0, &accelerator);
+    manager.BindRenderingService(1, &processor);
 
     while (manager.ShouldClose()) {
         manager.Update();

@@ -1,3 +1,8 @@
+// Defines
+
+#define ONE_OVER_PI 1.0f/M_PI_F
+#define ONE_OVER_2_PI 1.0f/M_PI_2_F
+
 // Structures
 
 struct Material {
@@ -61,28 +66,6 @@ struct Camera{
     float yaw;
 
 };
-
-#define MAX_STACK_SIZE 10
-
-struct Stack {
-    float4 elements[MAX_STACK_SIZE];
-    int top;
-};
-
-void Push(private struct Stack * stack, float4 element) {
-    if (stack->top < MAX_STACK_SIZE) {
-        stack->elements[stack->top++] = element;
-    }
-}
-
-float4 Pop(private struct Stack * stack) {
-    if (stack->top > 0) {
-        return stack->elements[--stack->top];
-    }
-    return (float4)(0.0f, 0.0f, 0.0f, 0.0f);
-}
-
-
 // Functions
 
 // PCG_Hash
@@ -103,11 +86,6 @@ float3 RandomDirection(uint *seed){
         cosLatitude * sin(longitude),
         sin(latitude)
     ));
-}
-
-float3 DiffuseReflection(float3 normal, uint *seed){
-    float3 direction = RandomDirection(seed);
-    return direction * sign( dot(normal, direction) );
 }
 
 float IntersectSphere(const struct Ray * ray, global const struct Object *object) {
@@ -329,28 +307,41 @@ float3 Reflect(const float3 incoming, const float3 normal) {
     return normalize(outgoing);
 }
 
-// Snells law refraction
-float3 Refract(const float3 incoming, const float3 normal, float n1, float n2){
+float3 DiffuseReflect(const float3 normal, uint * seed){
+    float3 direction = RandomDirection(seed);
+    return direction * sign( dot(normal, direction) );
+}
 
-    float cosI = dot(-incoming, normal);
-    float sinR2 = (1.0f - cosI * cosI);
+
+// Snells law refraction
+float3 Refract(const float3 incoming, float3 normal, float n1, float n2){
+
+    float temp = n1;
+
+    float cosI = dot(incoming, normal);
+
+    if(cosI < 0.0f){
+        cosI *= -1.0f;
+    }else{
+        normal *= -1.0f;
+        
+        n1 = n2;
+        n2 = temp;
+    }
 
     float eta = n1/n2;
+    float c = 1.0f - eta*eta * (1.0f - cosI*cosI);
 
-    if( eta * sinR2 > 1.0f)
-        return Reflect(incoming, -normal);
+    if ( c < 0.0f)
+        return 0.0f;
 
-    float cosR2 = sqrt(1.0f - sinR2 * sinR2);
-
-    float3 direction = incoming * eta + normal * (eta * cosI - cosR2);
+    float3 direction = eta * incoming + (eta*cosI - sqrt(c)) * normal;
 
     return normalize(direction);
-    
+
 }
 
-float SchlickApproximation(const float factor, const float cosAngle){
-    return factor + (1.0f - factor) * pow(1.0f - cosAngle, 5.0f);
-}
+
 
 float GGX(const float cosH, const float roughness){
 
@@ -359,112 +350,114 @@ float GGX(const float cosH, const float roughness){
     float sin2H = sqrt(1.0f - cos2H);
     float denominator = fmax(alpha*cos2H + sin2H, 1e-6f);
 
-    return cos2H/M_PI_F*denominator*denominator;
+    return cos2H/(denominator*denominator * M_PI_F);
 
 }
 
-float SmithShlickGGX(const float cosH, const float cosLight, const float cosReflect){
+float GGXDistribution(const float cosHalf, const float roughness){
     
-    float nominator = 2*cosH*cosReflect;
-    float denominator = cosLight + cosReflect;
+    float alpha = roughness * roughness;
+    float cos2Half = cosHalf*cosHalf;
+    float denominator = cos2Half * (alpha - 1.0f) + 1.0f; 
 
-    return nominator/denominator;
+    return alpha/(denominator * denominator * M_PI_F + 1e-6f);
 
 }
 
-float ModifiedFresnel(const float cosAngle, const float factor){
-    return 1.0f + (factor - 1.0f)*pow(1.0f-cosAngle, 5.0f);
+float GeometryFresnel(const float cosView, const float cosLight, const float roughness){
+    float alpha = roughness*roughness*0.5f;
+    float gLight = cosLight/(cosLight * (1.0f - alpha) + alpha);
+    float gView = cosView/(cosView * (1.0f - alpha) + alpha);
+    return gView * gLight;
 }
 
-/*
+float SchlickFresnel(const float cosTransmit, const float factor){
+    if(cosTransmit <= 0.0f)
+        return 1.0f;
+    return factor + (1.0f - factor) * pow(1.0f - sqrt(cosTransmit), 5.0f);
+}
+
+float ModifiedFresnel(const float cosine, const float factor){
+    return 1.0f + factor * pow(1.0f - cosine, 5.0f);
+}
+
+float BeckmannDistribution(const float cosHalf, const float roughness){
+    float alpha = roughness * roughness;
+    float cos2Half = cosHalf * cosHalf;
+    return exp(-(cos2Half-1.0f)/(alpha * cos2Half + 1e-6f));
+}
+
+float GeometricAttenuation(const float cosView, const float cosLight, const float roughness){
+    
+    float factorView  = 2.0f / (1.0f + sqrt(1.0f + roughness / (cosView * cosView + 1e-6f)));
+    float factorLight = 2.0f / (1.0f + sqrt(1.0f + roughness / (cosLight * cosLight + 1e-6f)));
+
+    return factorView * factorLight;
+}
 
 float GlassyBRDF(const float3 normal, const float3 halfVector, const float3 lightVector, const float3 direction, const float3 viewVector, struct Material * material){
 
-    float cosView = (dot(normal, viewVector)+1.0f) *0.5f + 1e-6f;
-    float cosLight =  fmax(dot(normal, lightVector), 1e-6f);
-    float cosHalfView = fmax(dot(halfVector, viewVector), 0.0f);
-    float cosH = fmax(dot(normal, halfVector), 0.0f);
-    float cosHO = fmax(dot(halfVector, direction),1e-6f);
-    float cosLH = fmax(dot(lightVector, halfVector),1e-6f);
+    float cosLight = fmax(dot(normal, lightVector), 0.0f);
+    float cosView = fmax(dot(normal, viewVector), 0.0f);
 
-    float D = GGX(cosH, material->roughness);
-    float F = SchlickApproximation(material->refractiveIndex, cosHalfView);
-    float G = SmithShlickGGX(cosH, cosLH, cosHO);
+    float factor = (1.0f - material->refractiveIndex)/(1.0f + material->refractiveIndex);
 
-    return (D * G * F) / (4.0 * cosView * cosView);
+    float cos2Transmit = 1.0f - (1.0f - cosLight * cosLight)/(material->roughness * material->roughness + 1e-6f);
 
-}
+    float cosHalf = dot(normal, halfVector);
 
-*/
+    float F = SchlickFresnel(cos2Transmit, factor * factor);
+    float D = GGXDistribution(cosHalf, material->roughness);
+    float G = GeometricAttenuation(cosView, cosLight, material->roughness);
 
-float GlassyBRDF(const float3 normal, const float3 halfVector, const float3 lightVector, const float3 direction, const float3 viewVector, struct Material * material){
+    float specular = ( F * D * G) / (4.0f * cosLight + 1e-6f);
+    float diffuse = (1.0f - F * cosView) * ONE_OVER_PI;
 
-    float cosView = (dot(normal, viewVector)+1.0f) *0.5f + 1e-6f;
-    float cosLight =  fmax(dot(normal, lightVector), 1e-6f);
-    float cosReflect = fmax(dot(normal, direction), 1e-6f);
-    float cosHalfView = fmax(dot(halfVector, viewVector), 0.0f);
-    float cosH = fmax(dot(normal, halfVector), 1e-6f);
-    float cosHO = fmax(dot(halfVector, direction),1e-6f);
-    float cosLH = fmax(dot(lightVector, halfVector),1e-6f);
-
-    float rS = (cosLight - material->refractiveIndex*cosReflect)/(cosLight + material->refractiveIndex*cosReflect);
-    float rP = (material->refractiveIndex*cosLight - cosReflect)/(material->refractiveIndex*cosLight + cosReflect);
-
-    float D = GGX(cosH, material->roughness);
-    float F = (rS*rS + rP*rP)*0.5f;
-    float G = SmithShlickGGX(cosH, cosLH, cosHO);
-
-    return (D * G * F) / (4.0 * cosView);
+    return specular + diffuse;
 
 }
 
-float DiffuseBRDF(const float3 normal, const float3 halfVector, const float3 lightVector, const float3 direction, const float3 viewVector, struct Material * material){
+float DiffuseBRDF(const float3 normal, const float3 lightVector, const float3 halfVector, const float3 viewVector, const float3 reflection, const struct Material * material){
 
-    float cosLight = dot(normal, lightVector);
-    float cosReflect = dot(normal, direction);
-    float cosHO = dot(halfVector, direction);
-    float cosView = fmax(dot(normal, viewVector), 1e-6f);
+    float cosLight = fmax(dot(normal, lightVector), 0.0f);
+    float cosView = fmax(dot(normal, viewVector), 0.0f);
+    float cosDirection = dot(normal, reflection);
+    float cosHalf = dot(normal, halfVector);
 
-    float factor = 0.5f + 2.0f * material->roughness * cosHO * cosHO;
-    float fresnelIn = ModifiedFresnel(cosLight, factor);
-    float fresnelOut = ModifiedFresnel(cosReflect, factor);
+    float reflectionAngle = acos(cosHalf);
 
-    return fresnelIn * fresnelOut * cosReflect * cosView/M_PI_F;
+    float power = tan(reflectionAngle)/material->roughness;
+    float roughness = (2.0f/ (material->roughness*material->roughness + 1e-6f)) * exp(-(power*power));
+    float specular = material->metallic + (1.0f - material->metallic) * pow(1.0f - cosHalf, 5.0f) * roughness;
+
+
+    float fL = pow(1.0f - cosLight, 5.0f);
+    float fV = pow(1.0f - cosView, 5.0f);
+    float factor = 2.0f*material->roughness*cosDirection * cosDirection;
+
+    return ONE_OVER_PI  * 2 * cosLight * ((1.0f -fL*0.5f)*(1.0f - fV*0.5f) + factor * (fL + fV + fL*fV *(factor - 1.0f)));
 }
 
-float SpecularBRDF(const float3 normal, const float3 halfVector, const float3 lightVector, const float3 direction, const float3 viewVector, struct Material * material){
+float SpecularBSDF(const float3 normal, const float3 incoming, const float3 outgoing, const struct Material * material){
 
-    float cosIH = (dot(halfVector, lightVector)+1.0f)*0.5f + 1e-6f;
-    float cosHO = (dot(halfVector, direction)+1.0f)*0.5f + 1e-6f;
+    float3 halfReflect = normalize(incoming+outgoing);
+    float3 halfTransmit = -normalize(incoming + material->refractiveIndex * outgoing);
 
-    float specularCoefficient = 1.0f - material->metallic;
+    float cosI = dot(normal, incoming);
+    float cosO = dot(normal, outgoing);
 
-    return material->gloss * pow(cosHO, specularCoefficient)/(cosIH*cosHO);
-}
+    if( cosI <=0.0f || cosO <= 0.0f)
+        return 0.0f;
 
+    float cosHR = dot(normal, halfReflect);
+    float cosHT = dot(-normal, halfTransmit);
 
-float ClearcoatBRDF(const float3 normal, const float3 halfVector, const float3 lightVector, const float3 direction, const float3 viewVector, struct Material * material){
+    float F = SchlickFresnel(cosHR, 0.04f);
+    float D = GGXDistribution(cosO, material->roughness);
+    float G = GeometricAttenuation(cosI, cosHR, material->roughness);
 
-    float cosView = (dot(normal, viewVector)+1.0f) *0.5f + 1e-6f;
-    float cosReflect = (dot(normal, direction)+1.0f)*0.5f;
-    float cosHO = (dot(halfVector, direction)+1.0f)*0.5f;
+    return F*D*G/(4*cosI * cosO + 1e-6f);
 
-    float r0 = 0.04f;
-    float alpha = (1.0f - material->gloss)*0.1f + material->gloss * 0.001f;
-    float sqrAlpha = alpha * alpha;
-
-    float D = sqrAlpha - 1.0f/( M_PI_F * log10(sqrAlpha)*(1.0f + ( sqrAlpha - 1.0f)*cosHO*cosHO));
-    float G = 1.0f;
-    float F = ModifiedFresnel(cosReflect, r0);
-
-    return (D * G * F) / (4.0 * cosView);
-}
-
-float4 GetSkyBoxColor(const float intensity, const struct Ray * ray){
-
-    const float4 skyColor = (float4)(0.2f, 0.2f, 0.25f, 1.0f);
-
-    return skyColor * intensity;
 }
 
 float4 ComputeColor(
@@ -478,15 +471,16 @@ float4 ComputeColor(
     ){
 
     float4 accumulatedColor = 0.0f;
-    float intensity = 1.0f;
     float4 lightColor = 1.0f;
+
     float lastRefractance = 1.0f;
+    const float4 skyColor = (float4)(0.2f, 0.2f, 0.25f, 1.0f);
 
     for(int i = 0; i < 8; ++i){
         struct Sample sample = FindClosestIntersection(objects, numObject, ray, vertices);
 
         if( isinf(sample.length) ){
-            //accumulatedColor += GetSkyBoxColor(intensity, ray);
+            //accumulatedColor += skyColor * intensity;
             break;
         }
 
@@ -495,29 +489,27 @@ float4 ComputeColor(
         struct Material material =  materials[ sample.materialID ];
 
         float3 viewVector = normalize(camera->position - sample.point);
-        float3 diffusionDirection = DiffuseReflection(sample.normal, seed);
+        float3 diffusionDirection = DiffuseReflect(sample.normal, seed);
         float3 reflectionDirection = Reflect(ray->direction, sample.normal);
         float3 refractionDirecton = Refract(ray->direction, sample.normal, lastRefractance, material.refractiveIndex);
 
         float3 lightVector = -ray->direction;
-        float3 halfVector = normalize((sample.normal + reflectionDirection)*0.5f);
+        float3 halfVector = normalize(sample.normal + reflectionDirection);
 
         float3 direction = mix(diffusionDirection, reflectionDirection, material.metallic);
         ray->direction = normalize(mix(direction, refractionDirecton, material.transparency ));
 
-        float cosLight = (dot(lightVector, sample.normal)+1.0f)*0.5f;
+        float cosLight = fmax(dot(sample.normal, lightVector), 0.0f);
         float cosView = fmax(dot(sample.normal, viewVector), 0.0f);
+        
+        float emissionComponent = 2.0f *  material.emissionScale * cosView;
+        float diffuseComponent = DiffuseBRDF(sample.normal, lightVector, halfVector, viewVector, ray->direction, &material) * (1.0f - material.metallic) * (1.0f - material.transparency);
+        float specularComponent = SpecularBSDF(sample.normal, -lightVector, ray->direction, &material) * material.metallic * (1.0f - material.transparency);
+        float glassyComponent = GlassyBRDF(sample.normal, halfVector, lightVector, ray->direction, viewVector, &material) * (1.0f - material.metallic) * material.transparency;
 
-        float4 emissionComponent = 2 * material.emission * material.emissionScale * intensity * cosView;
-        float4 diffusionComponent = material.albedo * DiffuseBRDF(sample.normal, halfVector, lightVector, ray->direction, viewVector, &material) * (1.0f - material.metallic) * (1.0f - material.transparency); 
-        float4 glassyComponent = material.albedo * GlassyBRDF(sample.normal, halfVector, lightVector, ray->direction, viewVector, &material) * (1.0f - material.metallic) * material.transparency;
-        //float4 clearcoatComponent = material.roughness * material.albedo * ClearcoatBRDF(sample.normal, halfVector, lightVector, ray->direction, viewVector, &material);
-        float4 specularComponent = material.albedo * SpecularBRDF(sample.normal, halfVector, lightVector, ray->direction, viewVector, &material);
 
-        accumulatedColor += diffusionComponent + glassyComponent + emissionComponent + specularComponent;
-        intensity *= cosLight;
-        lightColor *= diffusionComponent;
-        lastRefractance = material.refractiveIndex;
+        lightColor *=  (diffuseComponent + specularComponent + glassyComponent) * material.albedo + emissionComponent * material.emission;
+        accumulatedColor += lightColor * material.albedo;
     }
 
     return accumulatedColor;
@@ -542,7 +534,7 @@ float3 CalculatePixelPosition(
 // Main
 
 void kernel RayTrace(
-    global float4* pixels,
+    global float4 * pixels,
     global struct Object * objects,
     global struct Material * materials,
     global const float3 * vertices,
