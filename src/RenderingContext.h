@@ -17,7 +17,6 @@ struct RenderingContext {
     uint32_t depth = 480;
 
     GLuint textureID;
-    GLuint pbo;
 
     bool vSync = false;
     bool memorySharing = false;

@@ -534,7 +534,7 @@ float3 CalculatePixelPosition(
 // Main
 
 void kernel RayTrace(
-    global float4 * pixels,
+    read_write image2d_t image,
     global struct Object * objects,
     global struct Material * materials,
     global const float3 * vertices,
@@ -567,7 +567,11 @@ void kernel RayTrace(
 
     float scale = 1.0f / (numFrames + 1);
 
-    pixels[index] = mix(pixels[index], sample, scale);
+    float4 pixel = read_imagef(image, (int2)(x,y));
+
+    write_imagef(image, (int2)(x, y), mix(pixel, sample, scale));
+
+    //pixels[index] = mix(pixels[index], sample, scale);
 }
 
 void kernel AntiAlias(global float4 * input){
@@ -588,17 +592,17 @@ void kernel AntiAlias(global float4 * input){
             {-0.1f, 0.5f, -0.1f}
     };
 
-    // for (int i = -1; i <= 1; i++) {
-    //     for (int j = -1; j <= 1; j++) {
-    //         int neighborX = clamp(x + i, 0, width - 1);
-    //         int neighborY = clamp(y + j, 0, height - 1);
+    for (int i = -1; i <= 1; i++) {
+        for (int j = -1; j <= 1; j++) {
+            int neighborX = clamp(x + i, 0, width - 1);
+            int neighborY = clamp(y + j, 0, height - 1);
 
-    //         int idx = neighborY * width + neighborX;
+            int idx = neighborY * width + neighborX;
 
-    //         pixelValue = fmax(pixelValue, input[idx] * matrix[i+1][j+1]);
+            pixelValue = fmax(pixelValue, input[idx] * matrix[i+1][j+1]);
 
-    //     }
-    // }
+        }
+    }
 
     input[index] = pixelValue;
 

@@ -25,11 +25,10 @@ ParallelRendering::ParallelRendering(RenderingContext * _context){
     }
 
     if( context->memorySharing ){
-        pixelBuffer = cl::BufferGL(deviceContext, CL_MEM_READ_WRITE, context->textureID);
-        clEnqueueAcquireGLObjects(queue(), 1, &pixelBuffer(), 0, NULL, NULL);
+        textureBuffer = clCreateFromGLTexture2D(deviceContext(), CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, context->textureID, NULL);
+        clEnqueueAcquireGLObjects(queue(), 1, &textureBuffer, 0, NULL, NULL);
     }else{
-        dataSize = sizeof(Color) * context->width * context->height;
-        pixelBuffer = cl::Buffer(deviceContext, CL_MEM_READ_WRITE, dataSize);
+        textureBuffer = clCreateImage2D(deviceContext(), CL_MEM_WRITE_ONLY, &format, context->width, context->height, 0, NULL, NULL);
     }
 
     context->frameCounter = 0;
@@ -51,9 +50,8 @@ ParallelRendering::ParallelRendering(RenderingContext * _context){
 
     DetermineLocalSize(context->width, context->height);
 
-    
     raytracingKernel = cl::Kernel(program, "RayTrace");
-    raytracingKernel.setArg(0, pixelBuffer);
+    raytracingKernel.setArg(0, sizeof(cl_mem), &textureBuffer);
     raytracingKernel.setArg(1, objectBuffer);
     raytracingKernel.setArg(2, materialBuffer);
     raytracingKernel.setArg(3, verticesBuffer);
@@ -72,15 +70,16 @@ ParallelRendering::ParallelRendering(RenderingContext * _context){
     queue.finish();
 
     antialiasingKernel = cl::Kernel(program, "AntiAlias");
-    antialiasingKernel.setArg(0, pixelBuffer);
+    antialiasingKernel.setArg(0, sizeof(cl_mem), &textureBuffer);
 
     context->loggingService.Write(MessageType::INFO, "Accelerator configuration done");
 }
 
 ParallelRendering::~ParallelRendering(){
     if( context->memorySharing )
-        clEnqueueReleaseGLObjects(queue(), 1, &pixelBuffer(), 0, NULL, NULL);
-
+        clEnqueueReleaseGLObjects(queue(), 1, &textureBuffer, 0, NULL, NULL);
+    
+    clReleaseMemObject(textureBuffer);
 }
 
 void ParallelRendering::DetermineLocalSize(const uint32_t & width, const uint32_t & height){
@@ -124,11 +123,15 @@ void ParallelRendering::Render(Color * _pixels){
     raytracingKernel.setArg(6, sizeof(int), &context->frameCounter);
 
     queue.enqueueNDRangeKernel(raytracingKernel, cl::NullRange, globalRange, localRange);
-    //queue.enqueueNDRangeKernel(antialiasingKernel, cl::NullRange, globalRange, localRange);
+    queue.enqueueNDRangeKernel(antialiasingKernel, cl::NullRange, globalRange, localRange);
 
     queue.finish();
 
-    queue.enqueueReadBuffer(pixelBuffer, CL_FALSE, 0, dataSize, _pixels);
+    if( !context->memorySharing ){
+        size_t origin[3] = {0, 0, 0}; 
+        size_t region[3] = {context->width, context->height, 1};
+        clEnqueueReadImage(queue(), textureBuffer, CL_TRUE, origin, region, 0, 0, _pixels, 0, NULL, NULL);
+    }
 
 }
 
@@ -282,7 +285,6 @@ cl::Program ParallelRendering::FetchProgram(){
 
     if(!input){
 
-        
         context->loggingService.Write(MessageType::ISSUE, "Kernel can't be loaded");
 
         exit(-1);

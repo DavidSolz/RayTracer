@@ -1,7 +1,7 @@
 #include "WindowManager.h"
 
 static RenderingContext * context;
-static Timer* timer;
+static Timer * timer;
 
 WindowManager::WindowManager(RenderingContext * _context){
 
@@ -43,7 +43,7 @@ WindowManager::WindowManager(RenderingContext * _context){
     glfwSetKeyCallback(window, KeyboardCallback);
 
     glLoadIdentity();
-    glOrtho(0, context->width, 0, context->height, 0, context->depth);
+    glOrtho(0, context->width, 0, context->height, -1.0f, 1.0f);
 
     if (glewInit() != GLEW_OK) {
         glfwDestroyWindow(window);
@@ -56,20 +56,15 @@ WindowManager::WindowManager(RenderingContext * _context){
     }
 
     
-    if ( context->memorySharing ){
 
-        context->loggingService.Write(MessageType::INFO, "Creating texture buffer...");
+    context->loggingService.Write(MessageType::INFO, "Creating texture buffer...");
 
-        glGenTextures(1, &context->textureID);
-        glBindTexture(GL_TEXTURE_2D, context->textureID);
-
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, context->width, context->height, 0, GL_RGBA, GL_FLOAT, nullptr);
-
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    }
-    
+    glGenTextures(1, &context->textureID);
+    glBindTexture(GL_TEXTURE_2D, context->textureID);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, context->width, context->height, 0, GL_RGBA, GL_FLOAT, nullptr);
+ 
     char buffer[200] = {0};
 
     sprintf(buffer, "Current resolution : %d x %d", context->width, context->height);
@@ -200,42 +195,25 @@ void  WindowManager::HandleErrors(){
     }
 }
 
-void WindowManager::Update(){
-
-    ProcessInput();
-    
-    HandleErrors();
+void WindowManager::UpdateWindow(){
 
     timer->TicTac();
 
     renderingServices[ selectedService ]->Render(pixels);
 
-    if( context->memorySharing){
-        glEnable(GL_TEXTURE_2D);
-        glBindTexture(GL_TEXTURE_2D, context->textureID);
-
-        glBegin(GL_QUADS);
-            glTexCoord2f(0.0f, 0.0f);
-            glVertex2f(0.0f, 0.0f);
-
-            glTexCoord2f(1.0f, 0.0f);
-            glVertex2f(context->width, 0.0f);
-
-            glTexCoord2f(1.0f, 1.0f);
-            glVertex2f(context->width, context->height);
-
-            glTexCoord2f(0.0f, 1.0f);
-            glVertex2f(0.0f, context->height);
-        glEnd();
-
-        glBindTexture(GL_TEXTURE_2D, 0);
-        glDisable(GL_TEXTURE_2D);
-    }else{
-        glDrawPixels(context->width, context->height, GL_RGBA, GL_FLOAT, pixels);
-    }
-   
-
     context->frameCounter++;
+
+    if( !context->memorySharing )
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, context->width, context->height, GL_RGBA, GL_FLOAT, pixels);
+
+    glEnable(GL_TEXTURE_2D);
+    glBegin(GL_QUADS);
+        glTexCoord2f(0.0f, 0.0f); glVertex2f(0.0f, 0.0f);
+        glTexCoord2f(1.0f, 0.0f); glVertex2f(context->width, 0.0f);
+        glTexCoord2f(1.0f, 1.0f); glVertex2f(context->width, context->height);
+        glTexCoord2f(0.0f, 1.0f); glVertex2f(0.0f, context->height);
+    glEnd();
+    glDisable(GL_TEXTURE_2D);
 
     uint32_t fps = timer->GetFrameCount();
 
@@ -244,6 +222,15 @@ void WindowManager::Update(){
 
     glfwSwapBuffers(window);
     glfwPollEvents();
+}
+
+void WindowManager::Update(){
+
+    ProcessInput();
+    
+    HandleErrors();
+
+    UpdateWindow();
 
 }
 
@@ -273,7 +260,14 @@ void WindowManager::TakeScreenShot(){
         for (int x = 0; x < context->width; ++x) {
 
             const Color& pixel = pixels[( context->height - 1 - y) * context->width + x];
-            uint8_t bgra[4] = {pixel.B * 255, pixel.G * 255, pixel.R * 255, pixel.A * 255 };
+            
+            uint8_t bgra[4] = { 
+                uint8_t(pixel.B * 255), 
+                uint8_t(pixel.G * 255), 
+                uint8_t(pixel.R * 255), 
+                uint8_t(pixel.A * 255)
+                };
+                
             outFile.write((char*)(bgra), 4);
             
         }
@@ -290,7 +284,7 @@ WindowManager::~WindowManager(){
     context->loggingService.Write(MessageType::INFO, "Deleting texture buffer...");
 
     glDeleteTextures(1, &context->textureID);
-
+    
     context->loggingService.Write(MessageType::INFO, "Destroying window...");
 
     glfwDestroyWindow(window);

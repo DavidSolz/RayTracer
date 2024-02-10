@@ -40,7 +40,6 @@ RenderingContext context;
         }
     }
 
-
 // Context setup
 
     context.width = 1000;

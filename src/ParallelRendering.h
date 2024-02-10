@@ -45,12 +45,15 @@ class ParallelRendering : public IFrameRender {
     cl::NDRange globalRange;
     cl::NDRange localRange;
 
+
     size_t dataSize;
     size_t objectBufferSize;
     size_t materialBufferSize;
     size_t verticesBufferSize;
 
-    cl::Buffer pixelBuffer;
+    const cl_image_format format = {CL_RGBA, CL_FLOAT};
+
+    cl_mem textureBuffer;
     cl::Buffer objectBuffer;
     cl::Buffer objectsCountBuffer;
     cl::Buffer materialBuffer;

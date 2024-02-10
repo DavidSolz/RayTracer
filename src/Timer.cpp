@@ -7,12 +7,12 @@ static Timer* instance;
 Timer::Timer(){
     this->timeScale = 1.0f;
     this->lastTime = GetCurrentTime();
-    this->deltaTime = 1/60.0f;
+    this->deltaTime = 1.0f/60.0f;
     this->frameCount = 60;
 }
 
 std::chrono::high_resolution_clock::time_point Timer::GetCurrentTime() {
-        return std::chrono::high_resolution_clock::now();
+    return std::chrono::high_resolution_clock::now();
 }
 
 double Timer::GetDurationInSeconds(const std::chrono::high_resolution_clock::duration& duration) {
@@ -24,7 +24,7 @@ void Timer::TicTac(){
     frameCount++;
     double delta = GetDurationInSeconds(currentTime - lastTime);
     if(delta >= 1.0f){
-        deltaTime = timeScale/frameCount;
+        deltaTime = delta/frameCount;
         lastFrameCount = frameCount;
         frameCount = 0;
         lastTime = currentTime;
