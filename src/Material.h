@@ -5,16 +5,22 @@
 #include <stdint.h>
 
 struct Material {
-    struct Color baseColor;
+    struct Color albedo;
+    struct Color diffuse;
     struct Color specular;
-    struct Color emission;
-    float metallic;
-    float roughness;
-    float gloss;
-    float emmissionScale;
-    float diffusionScale;
+    struct Color transmissionFilter;
+    float specularIntensity;
     float transparency;
-    float refractiveIndex;
+    float indexOfRefraction;
+    float roughness;
+    float metallic;
+    float sheen;
+    float clearcoatThickness;
+    float clearcoatRoughness;
+    float emmissionIntensity;
+    float anisotropy;
+    float anisotropyRotation;
+    
 } __attribute__((aligned(128)));
 
 #endif

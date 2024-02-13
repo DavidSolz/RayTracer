@@ -11,7 +11,7 @@ struct Color {
     float B;
     float A;
 
-    Color operator+(const Color& color){
+    Color operator+(const Color& color) const{ 
         return {
             R + color.R,
             G + color.G,
@@ -28,7 +28,7 @@ struct Color {
         return *this;
     }
 
-    Color operator-(const Color& color){
+    Color operator-(const Color& color) const{
         return {
             R - color.R,
             G - color.G,
@@ -64,6 +64,11 @@ struct Color {
         this->A *= other.A;
 
         return *this;
+    }
+
+    static Color Lerp(const Color & a, const Color & b, const float & t){
+        float scale = std::fmax(0.0f, std::fmin(t, 1.0f));
+        return a + (b-a)*scale;
     }
 
     static float Similarity(const Color& colorA, const Color& colorB){

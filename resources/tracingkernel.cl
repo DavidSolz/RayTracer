@@ -7,15 +7,20 @@
 
 struct Material {
     float4 albedo;
+    float4 diffuse;
     float4 specular;
-    float4 emission;
-    float metallic;
-    float roughness;
-    float gloss;
-    float emissionScale;
-    float diffusionScale;
+    float4 transmissionFilter;
+    float specularIntensity;
     float transparency;
-    float refractiveIndex;
+    float indexOfRefraction;
+    float roughness;
+    float metallic;
+    float sheen;
+    float clearcoatThickness;
+    float clearcoatRoughness;
+    float emmissionIntensity;
+    float anisotropy;
+    float anisotropyRotation;
 } __attribute__((aligned(128)));
 
 enum SpatialType{
@@ -76,8 +81,8 @@ float Rand(uint * seed){
 }
 
 float3 RandomDirection(uint *seed){
-    float latitude = acos(2.0f * Rand(seed) - 1.0f) - M_PI/2.0f;
-    float longitude = Rand(seed) * 2 *  3.1415926535f;
+    float latitude = Rand(seed) * 2.0f * 3.1415926535f - 3.1415926535f;
+    float longitude = Rand(seed) * 2.0f *  3.1415926535f;
 
     float cosLatitude = cos(latitude);
 
@@ -247,6 +252,7 @@ struct Sample FindClosestIntersection(
     const struct Ray * ray,
     global const float3 * vertices){
 
+
     struct Sample sample = {0};
     sample.length = INFINITY;
 
@@ -292,9 +298,13 @@ struct Sample FindClosestIntersection(
                     break;
             }
 
+            
+
         }
 
     }
+
+    sample.normal = normalize(sample.normal);
 
     return sample;
 }
@@ -309,9 +319,8 @@ float3 Reflect(const float3 incoming, const float3 normal) {
 
 float3 DiffuseReflect(const float3 normal, uint * seed){
     float3 direction = RandomDirection(seed);
-    return direction * sign( dot(normal, direction) );
+    return normalize(direction * sign( dot(normal, direction) ) + normal);
 }
-
 
 // Snells law refraction
 float3 Refract(const float3 incoming, float3 normal, float n1, float n2){
@@ -329,7 +338,7 @@ float3 Refract(const float3 incoming, float3 normal, float n1, float n2){
         n2 = temp;
     }
 
-    float eta = n1/n2;
+    float eta = n1/(n2+1e-6f);
     float c = 1.0f - eta*eta * (1.0f - cosI*cosI);
 
     if ( c < 0.0f)
@@ -341,124 +350,64 @@ float3 Refract(const float3 incoming, float3 normal, float n1, float n2){
 
 }
 
+float4 SchlickFresnel(const float cosTransmit, const float4 F0){
+    return F0 + (1.0f - F0) * pow(1.0f - cosTransmit, 5.0f);
+}
 
+float4 ModifiedFresnel(const float cosTransmit, const float4 F0){
+    return 1.0f + (F0 - 1.0f) * pow(1.0f - cosTransmit, 5.0f);
+}
 
 float GGX(const float cosH, const float roughness){
 
     float alpha = roughness * roughness;
     float cos2H = cosH*cosH;
     float sin2H = sqrt(1.0f - cos2H);
-    float denominator = fmax(alpha*cos2H + sin2H, 1e-6f);
+    float denominator = (alpha*alpha - 1.0f)*cosH*cosH + 1.0f;
 
-    return cos2H/(denominator*denominator * M_PI_F);
+    return alpha/(M_PI_F*denominator*denominator + 1e-6f);
 
 }
 
-float GGXDistribution(const float cosHalf, const float roughness){
+float SmithShlickGGX(const float cosView, const float cosLight, const float roughness){
     
     float alpha = roughness * roughness;
-    float cos2Half = cosHalf*cosHalf;
-    float denominator = cos2Half * (alpha - 1.0f) + 1.0f; 
+    float alphaSqr = alpha * alpha;
+    float viewAngle = acos(cosView) * 0.5f;
+    float lightAngle = acos(cosLight) * 0.05f;
 
-    return alpha/(denominator * denominator * M_PI_F + 1e-6f);
+    float tan2View = tan(viewAngle) * tan(viewAngle);
+    float tan2Light = tan(lightAngle) * tan(lightAngle);
+
+    float factorA = 2.0f / ( 1.0f + sqrt( 1.0f + alphaSqr/tan2Light) );
+    float factorB = 2.0f / ( 1.0f + sqrt( 1.0f + alphaSqr/tan2Light) );
+
+    return factorA * factorB;
 
 }
 
-float GeometryFresnel(const float cosView, const float cosLight, const float roughness){
-    float alpha = roughness*roughness*0.5f;
-    float gLight = cosLight/(cosLight * (1.0f - alpha) + alpha);
-    float gView = cosView/(cosView * (1.0f - alpha) + alpha);
-    return gView * gLight;
-}
+float4 GlassyBRDF(const float3 normal, const float3 halfVector, const float3 lightVector, const float3 direction, const float3 viewVector, struct Material * material){
 
-float SchlickFresnel(const float cosTransmit, const float factor){
-    if(cosTransmit <= 0.0f)
-        return 1.0f;
-    return factor + (1.0f - factor) * pow(1.0f - sqrt(cosTransmit), 5.0f);
-}
-
-float ModifiedFresnel(const float cosine, const float factor){
-    return 1.0f + factor * pow(1.0f - cosine, 5.0f);
-}
-
-float BeckmannDistribution(const float cosHalf, const float roughness){
-    float alpha = roughness * roughness;
-    float cos2Half = cosHalf * cosHalf;
-    return exp(-(cos2Half-1.0f)/(alpha * cos2Half + 1e-6f));
-}
-
-float GeometricAttenuation(const float cosView, const float cosLight, const float roughness){
-    
-    float factorView  = 2.0f / (1.0f + sqrt(1.0f + roughness / (cosView * cosView + 1e-6f)));
-    float factorLight = 2.0f / (1.0f + sqrt(1.0f + roughness / (cosLight * cosLight + 1e-6f)));
-
-    return factorView * factorLight;
-}
-
-float GlassyBRDF(const float3 normal, const float3 halfVector, const float3 lightVector, const float3 direction, const float3 viewVector, struct Material * material){
-
-    float cosLight = fmax(dot(normal, lightVector), 0.0f);
-    float cosView = fmax(dot(normal, viewVector), 0.0f);
-
-    float factor = (1.0f - material->refractiveIndex)/(1.0f + material->refractiveIndex);
-
-    float cos2Transmit = 1.0f - (1.0f - cosLight * cosLight)/(material->roughness * material->roughness + 1e-6f);
+    float cosView = dot(normal, viewVector);
+    float cosLight =  dot(normal, lightVector);
 
     float cosHalf = dot(normal, halfVector);
 
-    float F = SchlickFresnel(cos2Transmit, factor * factor);
-    float D = GGXDistribution(cosHalf, material->roughness);
-    float G = GeometricAttenuation(cosView, cosLight, material->roughness);
+    float eta = material->indexOfRefraction;
 
-    float specular = ( F * D * G) / (4.0f * cosLight + 1e-6f);
-    float diffuse = (1.0f - F * cosView) * ONE_OVER_PI;
+    float rS = (cosLight - eta*cosView)/(cosLight + eta*cosView);
+    float rP = (eta*cosLight - cosView)/(eta*cosLight + cosView);
 
-    return specular + diffuse;
+    float4 R0 = (rS*rS + rP*rP)*0.5f;
 
-}
+    float D = GGX(cosHalf, material->roughness);
+    float4 F = SchlickFresnel(cosHalf, R0);
+    float G = SmithShlickGGX(cosView, cosLight, material->roughness);
 
-float DiffuseBRDF(const float3 normal, const float3 lightVector, const float3 halfVector, const float3 viewVector, const float3 reflection, const struct Material * material){
-
-    float cosLight = fmax(dot(normal, lightVector), 0.0f);
-    float cosView = fmax(dot(normal, viewVector), 0.0f);
-    float cosDirection = dot(normal, reflection);
-    float cosHalf = dot(normal, halfVector);
-
-    float reflectionAngle = acos(cosHalf);
-
-    float power = tan(reflectionAngle)/material->roughness;
-    float roughness = (2.0f/ (material->roughness*material->roughness + 1e-6f)) * exp(-(power*power));
-    float specular = material->metallic + (1.0f - material->metallic) * pow(1.0f - cosHalf, 5.0f) * roughness;
-
-
-    float fL = pow(1.0f - cosLight, 5.0f);
-    float fV = pow(1.0f - cosView, 5.0f);
-    float factor = 2.0f*material->roughness*cosDirection * cosDirection;
-
-    return ONE_OVER_PI  * 2 * cosLight * ((1.0f -fL*0.5f)*(1.0f - fV*0.5f) + factor * (fL + fV + fL*fV *(factor - 1.0f)));
-}
-
-float SpecularBSDF(const float3 normal, const float3 incoming, const float3 outgoing, const struct Material * material){
-
-    float3 halfReflect = normalize(incoming+outgoing);
-    float3 halfTransmit = -normalize(incoming + material->refractiveIndex * outgoing);
-
-    float cosI = dot(normal, incoming);
-    float cosO = dot(normal, outgoing);
-
-    if( cosI <=0.0f || cosO <= 0.0f)
-        return 0.0f;
-
-    float cosHR = dot(normal, halfReflect);
-    float cosHT = dot(-normal, halfTransmit);
-
-    float F = SchlickFresnel(cosHR, 0.04f);
-    float D = GGXDistribution(cosO, material->roughness);
-    float G = GeometricAttenuation(cosI, cosHR, material->roughness);
-
-    return F*D*G/(4*cosI * cosO + 1e-6f);
+    return clamp((D * F * G)/ (4.0f * cosView * cosLight), 0.0f ,1.0f);
 
 }
+
 
 float4 ComputeColor(
     struct Ray * ray,
@@ -473,14 +422,14 @@ float4 ComputeColor(
     float4 accumulatedColor = 0.0f;
     float4 lightColor = 1.0f;
 
-    float lastRefractance = 1.0f;
+    const float voidIndexOfRefraction = 1.0f;
     const float4 skyColor = (float4)(0.2f, 0.2f, 0.25f, 1.0f);
 
     for(int i = 0; i < 8; ++i){
         struct Sample sample = FindClosestIntersection(objects, numObject, ray, vertices);
 
         if( isinf(sample.length) ){
-            //accumulatedColor += skyColor * intensity;
+            
             break;
         }
 
@@ -491,25 +440,27 @@ float4 ComputeColor(
         float3 viewVector = normalize(camera->position - sample.point);
         float3 diffusionDirection = DiffuseReflect(sample.normal, seed);
         float3 reflectionDirection = Reflect(ray->direction, sample.normal);
-        float3 refractionDirecton = Refract(ray->direction, sample.normal, lastRefractance, material.refractiveIndex);
-
-        float3 lightVector = -ray->direction;
-        float3 halfVector = normalize(sample.normal + reflectionDirection);
-
-        float3 direction = mix(diffusionDirection, reflectionDirection, material.metallic);
-        ray->direction = normalize(mix(direction, refractionDirecton, material.transparency ));
-
-        float cosLight = fmax(dot(sample.normal, lightVector), 0.0f);
-        float cosView = fmax(dot(sample.normal, viewVector), 0.0f);
+        float3 refractionDirecton = Refract(ray->direction, sample.normal, voidIndexOfRefraction, material.indexOfRefraction);
         
-        float emissionComponent = 2.0f *  material.emissionScale * cosView;
-        float diffuseComponent = DiffuseBRDF(sample.normal, lightVector, halfVector, viewVector, ray->direction, &material) * (1.0f - material.metallic) * (1.0f - material.transparency);
-        float specularComponent = SpecularBSDF(sample.normal, -lightVector, ray->direction, &material) * material.metallic * (1.0f - material.transparency);
-        float glassyComponent = GlassyBRDF(sample.normal, halfVector, lightVector, ray->direction, viewVector, &material) * (1.0f - material.metallic) * material.transparency;
+        float isGlossy = Rand(seed) <= material.specularIntensity;
+        
+        float3 direction = mix(diffusionDirection, reflectionDirection, material.metallic * isGlossy);
 
+        float3 lightVector = normalize(-ray->direction);
+        float3 halfVector = normalize(sample.normal + reflectionDirection);
+        ray->direction = normalize(mix(direction, refractionDirecton, material.transparency));
 
-        lightColor *=  (diffuseComponent + specularComponent + glassyComponent) * material.albedo + emissionComponent * material.emission;
-        accumulatedColor += lightColor * material.albedo;
+        float cosLight = dot(sample.normal, lightVector);
+
+        float4 emissionComponent = material.albedo * material.emmissionIntensity * (cosLight > 0.0f);
+        float4 glassyComponent = GlassyBRDF(sample.normal, halfVector, lightVector, ray->direction, viewVector, &material) * (1.0f - material.metallic) *  material.transparency;
+
+        // accumulatedColor += diffuseComponent + glassyComponent + emissionComponent;
+        // intensity *= cosLight;
+        //lastRefractance = material.indexOfRefraction;
+
+        accumulatedColor += (emissionComponent + glassyComponent) * lightColor;
+        lightColor *= 2 * cosLight * material.albedo;
     }
 
     return accumulatedColor;
@@ -571,10 +522,9 @@ void kernel RayTrace(
 
     write_imagef(image, (int2)(x, y), mix(pixel, sample, scale));
 
-    //pixels[index] = mix(pixels[index], sample, scale);
 }
 
-void kernel AntiAlias(global float4 * input){
+void kernel AntiAlias(read_write image2d_t image){
 
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -584,26 +534,26 @@ void kernel AntiAlias(global float4 * input){
 
     int index = y * width + x;
 
-    float4 pixelValue = input[index];
+    float4 pixelValue = read_imagef(image, (int2)(x, y));
 
     const float matrix[3][3] = {
-            {-0.1f, 0.5f, -0.1f},
-            {0.5f, 1.0f, 0.5f},
-            {-0.1f, 0.5f, -0.1f}
+        {-0.1f, 0.5f, -0.1f},
+        {0.5f, 1.0f, 0.5f},
+        {-0.1f, 0.5f, -0.1f}
     };
 
-    for (int i = -1; i <= 1; i++) {
-        for (int j = -1; j <= 1; j++) {
-            int neighborX = clamp(x + i, 0, width - 1);
-            int neighborY = clamp(y + j, 0, height - 1);
+    // for (int i = -1; i <= 1; i++) {
+    //     for (int j = -1; j <= 1; j++) {
+    //         int neighborX = clamp(x + i, 0, width - 1);
+    //         int neighborY = clamp(y + j, 0, height - 1);
 
-            int idx = neighborY * width + neighborX;
+    //         float4 pixel = read_imagef(image, (int2)(neighborX, neighborY));
 
-            pixelValue = fmax(pixelValue, input[idx] * matrix[i+1][j+1]);
+    //         pixelValue = fmax(pixelValue, pixel * matrix[i+1][j+1]);
 
-        }
-    }
+    //     }
+    // }
 
-    input[index] = pixelValue;
+    write_imagef(image, (int2)(x,y), pixelValue);
 
 }

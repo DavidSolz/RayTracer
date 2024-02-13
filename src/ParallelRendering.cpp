@@ -10,8 +10,6 @@ ParallelRendering::ParallelRendering(RenderingContext * _context){
 
     CreateDeviceContext();
 
-    queue = cl::CommandQueue(deviceContext, defaultDevice);
-
     context->loggingService.Write(MessageType::INFO, "Building programs...");
 
     cl::Program program = FetchProgram();
@@ -176,6 +174,7 @@ void ParallelRendering::CreateDeviceContext(){
         deviceContext = cl::Context(defaultDevice);
     }
         
+    queue = cl::CommandQueue(deviceContext, defaultDevice);
 }
 
 void ParallelRendering::GetDefaultDevice(){
@@ -224,10 +223,11 @@ void ParallelRendering::GetDefaultDevice(){
 
     size_t found = platformExtensions.find(extensionName);
 
-    if (found == std::string::npos) {
-        fprintf(stdout, "Platform does not support %s\n", extensionName);
-    }else{
+    if (found != std::string::npos) {
         fprintf(stdout, "Platform supports %s\n", extensionName);
+    }else{
+        fprintf(stdout, "Platform does not support %s\nDisabling memory sharing\n", extensionName);
+        context->memorySharing = false;
     }
 
     if(all_devices.size()==0){

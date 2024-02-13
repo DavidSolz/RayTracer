@@ -55,8 +55,6 @@ WindowManager::WindowManager(RenderingContext * _context){
         return;
     }
 
-    
-
     context->loggingService.Write(MessageType::INFO, "Creating texture buffer...");
 
     glGenTextures(1, &context->textureID);
@@ -64,7 +62,7 @@ WindowManager::WindowManager(RenderingContext * _context){
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, context->width, context->height, 0, GL_RGBA, GL_FLOAT, nullptr);
- 
+
     char buffer[200] = {0};
 
     sprintf(buffer, "Current resolution : %d x %d", context->width, context->height);
@@ -165,7 +163,13 @@ void WindowManager::ProcessInput(){
 
     if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS){
         TakeScreenShot();
-        context->loggingService.Write(MessageType::INFO, "Taking screenshoot");
+        fprintf(stdout, "Taking screenshoot\n");
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS){
+        context->vSync ^= true;
+        glfwSwapInterval( context->vSync );
+        fprintf(stdout, "Toggling V-Sync...\n");
     }
 
 }
@@ -208,10 +212,10 @@ void WindowManager::UpdateWindow(){
 
     glEnable(GL_TEXTURE_2D);
     glBegin(GL_QUADS);
-        glTexCoord2f(0.0f, 0.0f); glVertex2f(0.0f, 0.0f);
-        glTexCoord2f(1.0f, 0.0f); glVertex2f(context->width, 0.0f);
-        glTexCoord2f(1.0f, 1.0f); glVertex2f(context->width, context->height);
-        glTexCoord2f(0.0f, 1.0f); glVertex2f(0.0f, context->height);
+         glTexCoord2f(0.0f, 0.0f); glVertex2f(0.0f, 0.0f);
+         glTexCoord2f(1.0f, 0.0f); glVertex2f(context->width, 0.0f);
+         glTexCoord2f(1.0f, 1.0f); glVertex2f(context->width, context->height);
+         glTexCoord2f(0.0f, 1.0f); glVertex2f(0.0f, context->height);
     glEnd();
     glDisable(GL_TEXTURE_2D);
 
@@ -236,10 +240,12 @@ void WindowManager::Update(){
 
 void WindowManager::TakeScreenShot(){
 
+    glReadPixels(0, 0, context->width, context->height, GL_RGBA, GL_FLOAT, pixels);
+
     std::ofstream outFile("ScreenShot.bmp", std::ios::binary);
 
     outFile << "BM"; 
-    uint32_t fileSize = 54 + 12 * context->width * context->height; 
+    uint32_t fileSize = 54 + sizeof(Color) * context->width * context->height; 
     outFile.write((char*)(&fileSize), 4);
     outFile.write("\0\0\0\0", 4); 
     outFile.write("\x36\0\0\0", 4); 
@@ -283,6 +289,7 @@ WindowManager::~WindowManager(){
 
     context->loggingService.Write(MessageType::INFO, "Deleting texture buffer...");
 
+    glBindTexture(GL_TEXTURE_2D, 0);
     glDeleteTextures(1, &context->textureID);
     
     context->loggingService.Write(MessageType::INFO, "Destroying window...");

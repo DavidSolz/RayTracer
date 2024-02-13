@@ -2,15 +2,29 @@
 
 MaterialBuilder::MaterialBuilder(const RenderingContext * _context){
     this->context = (RenderingContext *)_context;
-    this->temporaryMaterial = {0};
-    this->temporaryMaterial.refractiveIndex = 1.0f; 
-    this->temporaryMaterial.roughness = 0.5f;
-    this->temporaryMaterial.gloss = 0.0f;
-    this->temporaryMaterial.specular = {1.0f, 1.0f, 1.0f, 1.0f};
+    ClearMaterial();
 }       
 
+void MaterialBuilder::ClearMaterial(){
+    temporaryMaterial.albedo = {0};
+    temporaryMaterial.diffuse = {0};
+    temporaryMaterial.specular = {1.0f, 1.0f, 1.0f, 1.0f};
+    temporaryMaterial.transmissionFilter = {1.0f, 1.0f, 1.0f, 1.0f};
+    temporaryMaterial.specularIntensity = 1.0f;
+    temporaryMaterial.transparency = 0.0f;
+    temporaryMaterial.indexOfRefraction = 1.45f; 
+    temporaryMaterial.roughness = 0.5f;
+    temporaryMaterial.metallic = 0.0f;
+    temporaryMaterial.sheen = 0.0f;
+    temporaryMaterial.anisotropy = 0.0f;
+    temporaryMaterial.anisotropyRotation = 0.0f;
+    temporaryMaterial.emmissionIntensity = 0.0f;
+    temporaryMaterial.anisotropy = 0.0f;
+    temporaryMaterial.anisotropyRotation = 0.0f;
+}
+
 MaterialBuilder * MaterialBuilder::SetBaseColor(const Color & _color){
-    temporaryMaterial.baseColor = _color;
+    temporaryMaterial.albedo = _color;
     return this;
 }
 
@@ -20,14 +34,20 @@ MaterialBuilder * MaterialBuilder::SetSpecularColor(const Color & _color){
     return this;
 }
 
-MaterialBuilder * MaterialBuilder::SetGloss(const float & _factor){
-    temporaryMaterial.gloss = std::fmax(0.0f, std::fmin(_factor, 1.0f));
+MaterialBuilder * MaterialBuilder::SetTransmissionFilter(const Color & _color){
+    temporaryMaterial.transmissionFilter = _color;
+    return this;
+}
+
+
+MaterialBuilder * MaterialBuilder::SetSheen(const float & _factor){
+    temporaryMaterial.sheen = std::fmax(0.0f, std::fmin(_factor, 1.0f));
     return this;
 }
 
 
 MaterialBuilder * MaterialBuilder::SetRefractiveIndex(const float & _factor){
-    temporaryMaterial.refractiveIndex = std::fmax(1.0f, _factor);
+    temporaryMaterial.indexOfRefraction = std::fmax(1e-6f, _factor);
     return this;
 }
 
@@ -37,14 +57,14 @@ MaterialBuilder * MaterialBuilder::SetTransparency(const float & _factor){
 }
 
 
-MaterialBuilder * MaterialBuilder::SetEmissionColor(const Color & _color){
-    temporaryMaterial.emission = _color;
+MaterialBuilder * MaterialBuilder::SetDiffusionColor(const Color & _color){
+    temporaryMaterial.diffuse = _color;
     return this;
 }
 
 MaterialBuilder * MaterialBuilder::SetBaseColor(const uint8_t & _R, const uint8_t & _G, const uint8_t & _B){
     Color color = {_R/255.0f, _G/255.0f, _B/255.0f};
-    temporaryMaterial.baseColor = color;
+    temporaryMaterial.albedo = color;
     return this;
 }
 
@@ -55,9 +75,15 @@ MaterialBuilder * MaterialBuilder::SetSpecularColor(const uint8_t & _R, const ui
     return this;
 }
 
-MaterialBuilder * MaterialBuilder::SetEmissionColor(const uint8_t & _R, const uint8_t & _G, const uint8_t & _B){
+MaterialBuilder * MaterialBuilder::SetDiffusionColor(const uint8_t & _R, const uint8_t & _G, const uint8_t & _B){
     Color color = {_R/255.0f, _G/255.0f, _B/255.0f};
-    temporaryMaterial.emission = color;
+    temporaryMaterial.diffuse = color;
+    return this;
+}
+
+MaterialBuilder * MaterialBuilder::SetTransmissionFilter(const uint8_t & _R, const uint8_t & _G, const uint8_t & _B){
+    Color color = {_R/255.0f, _G/255.0f, _B/255.0f};
+    temporaryMaterial.transmissionFilter = color;
     return this;
 }
 
@@ -72,25 +98,20 @@ MaterialBuilder * MaterialBuilder::SetRoughness(const float & _factor){
 }
 
 MaterialBuilder * MaterialBuilder::SetEmission(const float & _factor){
-    temporaryMaterial.emmissionScale = std::fmax(_factor, 0.0f);
+    temporaryMaterial.emmissionIntensity = std::fmax(_factor, 0.0f);
     return this;
 }
 
-MaterialBuilder * MaterialBuilder::SetDiffusion(const float & _factor){
-    temporaryMaterial.diffusionScale = std::fmax(0.0f, std::fmin(_factor, 1.0f));
+MaterialBuilder * MaterialBuilder::SetSpecularIntensity(const float & _factor){
+    temporaryMaterial.specularIntensity = std::fmax(0.0f, std::fmin(_factor, 1.0f));
     return this;
 }
 
 uint32_t MaterialBuilder::Build(){
 
     context->materials.push_back(temporaryMaterial);
-    temporaryMaterial = {0};
-    this->temporaryMaterial.refractiveIndex = 1.0f; 
-    this->temporaryMaterial.roughness = 0.5f;
-    this->temporaryMaterial.gloss = 0.0f;
-    this->temporaryMaterial.specular = {1.0f, 1.0f, 1.0f, 1.0f};
+    ClearMaterial();
     return context->materials.size()-1;
-
 }
 
 

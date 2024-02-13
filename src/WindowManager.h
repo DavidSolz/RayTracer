@@ -22,8 +22,8 @@ private:
     char windowTitle[50]={0};
     GLFWwindow * window;
 
-    Color* pixels;
-
+    Color * pixels;
+    
     double lastMouseX;
     double lastMouseY;
 

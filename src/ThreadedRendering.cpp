@@ -248,7 +248,7 @@ Color ThreadedRendering::ComputeColor(struct Ray& ray, unsigned int& seed) {
     Color colorMask = {1.0f, 1.0f, 1.0f, 1.0f};
     float intensity = 1.0f;
 
-    for(int i = 0; i < 8; ++i){
+    for(int i = 0; i < 2; ++i){
         Sample sample = FindClosestIntersection(ray);
 
         if(sample.distance == INFINITY){
@@ -267,11 +267,11 @@ Color ThreadedRendering::ComputeColor(struct Ray& ray, unsigned int& seed) {
             float lightIntensity = Vector3::DotProduct(ray.direction, sample.normal);
             lightIntensity = fmax(0.0f, fmin(lightIntensity, 1.0f));
 
-            Color emmisionComponent = material->emission * material->emmissionScale;
-            Color diffuseComponent = material->baseColor *  material->diffusionScale * 2 * lightIntensity;
+            Color emmisionComponent = material->albedo * material->emmissionIntensity;
+            Color diffuseComponent = material->albedo * 2 * lightIntensity;
 
             accumulatedColor += (diffuseComponent + emmisionComponent) * colorMask;
-            colorMask *= material->baseColor;
+            colorMask *= material->albedo;
             intensity *= lightIntensity * 0.1f;
     }
 
