@@ -54,7 +54,7 @@ RenderingContext context;
     context.loggingService.BindOutput("RayTracer_log.txt");
 
     MaterialBuilder materialBuilder(&context);
-    
+
 
 
 // {
@@ -201,7 +201,7 @@ RenderingContext context;
 
     p.materialID = materialBuilder
                     .SetBaseColor({1.0f, 1.0f, 1.0f, 1.0f})
-                    ->SetEmission(1.0f)
+                    ->SetEmission(5.0f)
                     ->Build();
 
     context.objects.emplace_back(p);
@@ -241,7 +241,7 @@ RenderingContext context;
                             ->SetRefractiveIndex((rand() / (float)RAND_MAX) + 1.0f)
                             ->SetSpecularIntensity((rand() / (float)RAND_MAX))
                             ->SetSmoothness((rand() / (float)RAND_MAX) * isMetallic  * (1.0f-isGlass))
-                            ->SetEmission(((rand() - RAND_MAX)/ (float)RAND_MAX) * isEmissive)
+                            ->SetEmission((rand()/ (float)RAND_MAX) * isEmissive * (1.0f - isMetallic) * (1.0f - isGlass))
                             ->SetRoughness((rand() / (float)RAND_MAX))
                             ->SetTransparency((rand() / (float)RAND_MAX) * isGlass * (1.0f - isMetallic))
                             ->Build();
@@ -299,7 +299,7 @@ RenderingContext context;
     context.objects.emplace_back(p);
 
 
-    
+
 
     p.position = Vector3(3*context.width/2.0f, context.height/2.0f, context.depth);
     p.radius = 100.0f;

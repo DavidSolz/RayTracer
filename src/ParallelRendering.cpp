@@ -17,7 +17,7 @@ ParallelRendering::ParallelRendering(RenderingContext * _context){
     if(!program()){
 
         context->loggingService.Write(MessageType::ISSUE, "Unable to compile kernel!");
-        context->loggingService.Write(MessageType::INFO, "Accelerator configuration done");      
+        context->loggingService.Write(MessageType::INFO, "Accelerator configuration done");
 
         return ;
     }
@@ -40,8 +40,6 @@ ParallelRendering::ParallelRendering(RenderingContext * _context){
     materialBufferSize = sizeof(Material) * context->materials.size();
     materialBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, materialBufferSize);
 
-    objectsCountBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, sizeof(int));
-
     verticesBufferSize = sizeof(Vector3) * context->mesh.vertices.size();
     verticesBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, verticesBufferSize);
 
@@ -51,22 +49,21 @@ ParallelRendering::ParallelRendering(RenderingContext * _context){
 
     DetermineLocalSize(context->width, context->height);
 
+    int objCount = context->objects.size();
+
     raytracingKernel = cl::Kernel(program, "RayTrace");
     raytracingKernel.setArg(0, sizeof(cl_mem), &textureBuffer);
     raytracingKernel.setArg(1, objectBuffer);
     raytracingKernel.setArg(2, materialBuffer);
     raytracingKernel.setArg(3, verticesBuffer);
-    raytracingKernel.setArg(4, objectsCountBuffer);
+    raytracingKernel.setArg(4, objCount);
     raytracingKernel.setArg(5, sizeof(Camera), &context->camera);
     raytracingKernel.setArg(6, sizeof(int), &context->frameCounter);
     raytracingKernel.setArg(7, scratchBuffer);
 
-    int objCount = context->objects.size();
-
     queue.enqueueWriteBuffer(objectBuffer, CL_TRUE, 0, objectBufferSize, context->objects.data());
     queue.enqueueWriteBuffer(materialBuffer, CL_TRUE, 0, materialBufferSize, context->materials.data());
     queue.enqueueWriteBuffer(verticesBuffer, CL_TRUE, 0, verticesBufferSize, context->mesh.vertices.data());
-    queue.enqueueWriteBuffer(objectsCountBuffer, CL_TRUE, 0, sizeof(int), &objCount);
 
     queue.enqueueNDRangeKernel(raytracingKernel, cl::NullRange, globalRange);
     queue.finish();
@@ -81,7 +78,7 @@ ParallelRendering::ParallelRendering(RenderingContext * _context){
 ParallelRendering::~ParallelRendering(){
     if( context->memorySharing )
         clEnqueueReleaseGLObjects(queue(), 1, &textureBuffer, 0, NULL, NULL);
-    
+
     clReleaseMemObject(textureBuffer);
 }
 
@@ -125,13 +122,13 @@ void ParallelRendering::Render(Color * _pixels){
     raytracingKernel.setArg(5, sizeof(Camera), &context->camera);
     raytracingKernel.setArg(6, sizeof(int), &context->frameCounter);
 
-    queue.enqueueNDRangeKernel(raytracingKernel, cl::NullRange, globalRange, localRange);
-    queue.enqueueNDRangeKernel(antialiasingKernel, cl::NullRange, globalRange, localRange);
+    queue.enqueueNDRangeKernel(raytracingKernel, cl::NullRange, globalRange);
+    //queue.enqueueNDRangeKernel(antialiasingKernel, cl::NullRange, globalRange);
 
     queue.finish();
 
     if( !context->memorySharing ){
-        size_t origin[3] = {0, 0, 0}; 
+        size_t origin[3] = {0, 0, 0};
         size_t region[3] = {context->width, context->height, 1};
         clEnqueueReadImage(queue(), textureBuffer, CL_TRUE, origin, region, 0, 0, _pixels, 0, NULL, NULL);
     }
@@ -140,7 +137,7 @@ void ParallelRendering::Render(Color * _pixels){
 
 void ParallelRendering::CreateDeviceContext(){
 
-    
+
 #ifdef __APPLE__
 
     CGLContextObj glContext = CGLGetCurrentContext();
@@ -178,7 +175,7 @@ void ParallelRendering::CreateDeviceContext(){
     }else{
         deviceContext = cl::Context(defaultDevice);
     }
-        
+
     queue = cl::CommandQueue(deviceContext, defaultDevice);
 }
 
@@ -264,20 +261,20 @@ void ParallelRendering::GetDefaultDevice(){
 
     sprintf(buffer, "Discovered platform : %s", defaultPlatform.getInfo<CL_PLATFORM_NAME>().c_str());
 
-    context->loggingService.Write(MessageType::INFO, buffer);   
+    context->loggingService.Write(MessageType::INFO, buffer);
 
     sprintf(buffer, "Selected device : %s", defaultDevice.getInfo<CL_DEVICE_NAME>().c_str());
 
     context->loggingService.Write(MessageType::INFO, buffer);
 
     sprintf(buffer, "Using : %s", defaultDevice.getInfo<CL_DEVICE_OPENCL_C_VERSION>().c_str());
-    
+
     context->loggingService.Write(MessageType::INFO, buffer);
-          
+
     sprintf(buffer, "Discovered max work group size : %ld", defaultDevice.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>());
-    
+
     context->loggingService.Write(MessageType::INFO, buffer);
-      
+
 }
 
 cl::Program ParallelRendering::FetchProgram(){

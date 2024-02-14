@@ -8,6 +8,7 @@
 #include <GL/glew.h>
 
 #include <OpenCL/opencl.h>
+#include <OpenGL/OpenGL.h>
 #include <OpenCL/cl_gl.h>
 #include "../OpenCL/include/CL/cl.hpp"
 
@@ -56,7 +57,6 @@ class ParallelRendering : public IFrameRender {
 
     cl_mem textureBuffer;
     cl::Buffer objectBuffer;
-    cl::Buffer objectsCountBuffer;
     cl::Buffer materialBuffer;
     cl::Buffer verticesBuffer;
     cl::Buffer scratchBuffer;
@@ -64,7 +64,7 @@ class ParallelRendering : public IFrameRender {
     void GetDefaultDevice();
 
     void CreateDeviceContext();
-    
+
     cl::Program FetchProgram();
 
     void DetermineLocalSize(const uint32_t & width, const uint32_t & height);
