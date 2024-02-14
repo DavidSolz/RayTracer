@@ -73,6 +73,7 @@ ParallelRendering::ParallelRendering(RenderingContext * _context){
 
     antialiasingKernel = cl::Kernel(program, "AntiAlias");
     antialiasingKernel.setArg(0, sizeof(cl_mem), &textureBuffer);
+    antialiasingKernel.setArg(1, scratchBuffer);
 
     context->loggingService.Write(MessageType::INFO, "Accelerator configuration done");
 }

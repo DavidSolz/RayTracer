@@ -42,6 +42,8 @@ RenderingContext context;
 
 // Context setup
 
+    srand(time(NULL));
+
     context.width = 1000;
     context.height = 640;
     context.depth = 480;

@@ -525,7 +525,10 @@ void kernel RayTrace(
     scratch[index] = pixel;
 }
 
-void kernel AntiAlias(read_write image2d_t image){
+void kernel AntiAlias(
+    write_only image2d_t image,
+    global float4 * scratch
+    ){
 
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -534,8 +537,10 @@ void kernel AntiAlias(read_write image2d_t image){
     int height = get_global_size(1);
 
     int index = y * width + x;
+ 
 
-    float4 pixelValue = read_imagef(image, (int2)(x, y));
+    float4 pixelValue = scratch[ index ];
+    float4 maximalValue = 0.0f;
 
     const float matrix[3][3] = {
         {-0.1f, 0.5f, -0.1f},
@@ -543,18 +548,16 @@ void kernel AntiAlias(read_write image2d_t image){
         {-0.1f, 0.5f, -0.1f}
     };
 
-    // for (int i = -1; i <= 1; i++) {
-    //     for (int j = -1; j <= 1; j++) {
-    //         int neighborX = clamp(x + i, 0, width - 1);
-    //         int neighborY = clamp(y + j, 0, height - 1);
+    for (int i = -1; i <= 1; i++) {
+        for (int j = -1; j <= 1; j++) {
+            int neighborX = clamp(x + i, 0, width - 1);
+            int neighborY = clamp(y + j, 0, height - 1);
 
-    //         float4 pixel = read_imagef(image, (int2)(neighborX, neighborY));
+            maximalValue = fmax(maximalValue, pixelValue * matrix[i+1][j+1]);
 
-    //         pixelValue = fmax(pixelValue, pixel * matrix[i+1][j+1]);
+        }
+    }
 
-    //     }
-    // }
-
-    write_imagef(image, (int2)(x,y), pixelValue);
+    write_imagef(image, (int2)(x,y), maximalValue);
 
 }
