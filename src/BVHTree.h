@@ -12,6 +12,8 @@ private:
     uint32_t size;
     std::vector<BoundingBox> boxes;
 
+    BoundingBox CombineBoxes(const BoundingBox & a, const BoundingBox & b);
+
     void InsertBox(const BoundingBox & box);
 
 public:

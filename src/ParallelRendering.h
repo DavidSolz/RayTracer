@@ -50,6 +50,7 @@ class ParallelRendering : public IFrameRender {
     size_t objectBufferSize;
     size_t materialBufferSize;
     size_t verticesBufferSize;
+    size_t scratchBufferSize;
 
     const cl_image_format format = {CL_RGBA, CL_FLOAT};
 
@@ -58,6 +59,7 @@ class ParallelRendering : public IFrameRender {
     cl::Buffer objectsCountBuffer;
     cl::Buffer materialBuffer;
     cl::Buffer verticesBuffer;
+    cl::Buffer scratchBuffer;
 
     void GetDefaultDevice();
 

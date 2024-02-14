@@ -19,7 +19,6 @@ void BVHTree::Insert(const Object & _object, const uint32_t & _objectID, const M
 
     if( _object.type == SPHERE ){
         Vector3 radiusVector = Vector3(_object.radius, _object.radius, _object.radius);
-            
         box.minimalPosition = Vector3::Minimal(_object.position-radiusVector, _object.position+radiusVector);
         box.maximalPosition = Vector3::Maximal(_object.position-radiusVector, _object.position+radiusVector);
 
@@ -57,6 +56,21 @@ void BVHTree::Insert(const Object & _object, const uint32_t & _objectID, const M
 
     InsertBox(box);
 }
+
+BoundingBox BVHTree::CombineBoxes(const BoundingBox & a, const BoundingBox & b){
+
+    BoundingBox result;
+
+    result.objectID = -1;
+    result.leftID = -1;
+    result.rightID = -1;
+
+    result.minimalPosition = Vector3::Minimal(a.minimalPosition, b.minimalPosition);
+    result.maximalPosition = Vector3::Maximal(a.maximalPosition, b.maximalPosition);
+    return result;
+
+}
+
 
 void BVHTree::Insert(const std::vector<Object> & _objects, const Mesh * mesh){
 

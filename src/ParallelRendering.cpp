@@ -34,6 +34,9 @@ ParallelRendering::ParallelRendering(RenderingContext * _context){
     objectBufferSize = sizeof(Object)*context->objects.size();
     objectBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, objectBufferSize);
 
+    scratchBufferSize = sizeof(Color) * context->width * context->height;
+    scratchBuffer = cl::Buffer(deviceContext, CL_MEM_READ_WRITE, scratchBufferSize);
+
     materialBufferSize = sizeof(Material) * context->materials.size();
     materialBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, materialBufferSize);
 
@@ -56,6 +59,7 @@ ParallelRendering::ParallelRendering(RenderingContext * _context){
     raytracingKernel.setArg(4, objectsCountBuffer);
     raytracingKernel.setArg(5, sizeof(Camera), &context->camera);
     raytracingKernel.setArg(6, sizeof(int), &context->frameCounter);
+    raytracingKernel.setArg(7, scratchBuffer);
 
     int objCount = context->objects.size();
 

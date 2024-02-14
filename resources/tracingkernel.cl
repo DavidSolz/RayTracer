@@ -319,7 +319,7 @@ float3 Reflect(const float3 incoming, const float3 normal) {
 
 float3 DiffuseReflect(const float3 normal, uint * seed){
     float3 direction = RandomDirection(seed);
-    return normalize(direction * sign( dot(normal, direction) ) + normal);
+    return normalize(direction * sign( dot(normal, direction) ));
 }
 
 // Snells law refraction
@@ -485,13 +485,14 @@ float3 CalculatePixelPosition(
 // Main
 
 void kernel RayTrace(
-    read_write image2d_t image,
+    write_only image2d_t image,
     global struct Object * objects,
     global struct Material * materials,
     global const float3 * vertices,
     global const int * numObject,
     struct Camera camera,
-    int numFrames
+    int numFrames,
+    global float4 * scratch
     ){
 
     uint x = get_global_id(0);
@@ -518,10 +519,10 @@ void kernel RayTrace(
 
     float scale = 1.0f / (numFrames + 1);
 
-    float4 pixel = read_imagef(image, (int2)(x,y));
+    float4 pixel = mix(scratch[index], sample, scale);
 
-    write_imagef(image, (int2)(x, y), mix(pixel, sample, scale));
-
+    write_imagef(image, (int2)(x, y), pixel);
+    scratch[index] = pixel;
 }
 
 void kernel AntiAlias(read_write image2d_t image){
