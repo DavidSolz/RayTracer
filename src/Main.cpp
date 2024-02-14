@@ -44,8 +44,8 @@ RenderingContext context;
 
     srand(time(NULL));
 
-    context.width = 1000;
-    context.height = 640;
+    context.width = 1680;
+    context.height = 1050;
     context.depth = 480;
 
     context.camera.position = Vector3(context.width/2.0f, context.height/2.0f, -900.0f);
@@ -218,21 +218,24 @@ RenderingContext context;
             //s.position = Vector3(context.width/2.0f, context.height/2.0f, context.depth/4.0f);
             s.position.x = i * spacing;
             s.position.z = context.height/2.0f;
-            s.position.y = j * spacing;
+            s.position.y = context.height/2.0f + j * spacing;
             s.radius = spacing/2.0f;
             s.type = SPHERE;
 
-            float t = (i+j)/(float)(rows);
+            float ti = (i)/(float)(rows);
+            float tj = (j)/(float)(cols);
 
             float isEmissive = (rand() / (float)RAND_MAX)>0.4f;
             float isMetallic = (rand() / (float)RAND_MAX)>0.8f;
             float isGlass = (rand() / (float)RAND_MAX)>0.8f;
 
-            // const Color colorA = (Color){1.0f, 0.0f, 0.0f, 1.0f};
-            // const Color colorB = (Color){0.0f, 0.0f, 1.0f, 1.0f};
-            // Color color = Color::Lerp(colorA, colorB, t);
+            const Color colorA = (Color){1.0f, 0.0f, 0.0f, 1.0f};
+            const Color colorB = (Color){0.0f, 1.0f, 0.0f, 1.0f};
+            const Color colorC = (Color){0.0f, 0.0f, 1.0f, 1.0f};
+            Color color = Color::Lerp(colorA, colorB, ti);
+            color = Color::Lerp(color, colorC, tj);
 
-            Color color = (Color){(rand() / (float)RAND_MAX),(rand() / (float)RAND_MAX),(rand() / (float)RAND_MAX), 1.0f};
+            //Color color = (Color){(rand() / (float)RAND_MAX),(rand() / (float)RAND_MAX),(rand() / (float)RAND_MAX), 1.0f};
 
             s.materialID =  materialBuilder
                             .SetBaseColor(color)
@@ -240,10 +243,10 @@ RenderingContext context;
                             ->SetSpecularColor(color)
                             ->SetRefractiveIndex((rand() / (float)RAND_MAX) + 1.0f)
                             ->SetSpecularIntensity((rand() / (float)RAND_MAX))
-                            ->SetSmoothness((rand() / (float)RAND_MAX) * isMetallic  * (1.0f-isGlass))
-                            ->SetEmission((rand()/ (float)RAND_MAX) * isEmissive * (1.0f - isMetallic) * (1.0f - isGlass))
+                            ->SetSmoothness((rand() / (float)RAND_MAX) * isMetallic  * (1.0f - isGlass) * (1.0f - isEmissive))
+                            ->SetEmission( ( 5.0f*(rand()/ (float)RAND_MAX) ) * isEmissive * (1.0f - isMetallic) * (1.0f - isGlass))
                             ->SetRoughness((rand() / (float)RAND_MAX))
-                            ->SetTransparency((rand() / (float)RAND_MAX) * isGlass * (1.0f - isMetallic))
+                            ->SetTransparency((rand() / (float)RAND_MAX) * isGlass * (1.0f - isMetallic) * (1.0f - isEmissive))
                             ->Build();
 
             context.objects.emplace_back(s);

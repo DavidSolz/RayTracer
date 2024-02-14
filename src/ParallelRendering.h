@@ -39,6 +39,7 @@ class ParallelRendering : public IFrameRender {
 
     cl::CommandQueue queue;
     cl::Context deviceContext;
+    
     cl::Kernel raytracingKernel;
     cl::Kernel transferKernel;
     cl::Kernel antialiasingKernel;

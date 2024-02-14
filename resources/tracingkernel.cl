@@ -71,6 +71,16 @@ struct Camera{
     float yaw;
 
 };
+
+struct {
+    global struct Object * objects;
+    int numObject;
+    global struct Material * materials;
+    int numMaterials;
+    global const float3 * vertices;
+    global float4 * scratch;
+} resources;
+
 // Functions
 
 // PCG_Hash
@@ -246,17 +256,15 @@ float3 ComputeBoxNormal(
 }
 
 
-struct Sample FindClosestIntersection(
-    global const struct Object * objects,
-    const int numObject,
-    const struct Ray * ray,
-    global const float3 * vertices){
+struct Sample FindClosestIntersection(const struct Ray * ray){
 
+    global const struct Object * objects = resources.objects;
+    global const float3 * vertices = resources.vertices;
 
     struct Sample sample = {0};
     sample.length = INFINITY;
 
-    for (int i = 0; i < numObject; ++i) {
+    for (int i = 0; i < resources.numObject; ++i) {
 
         float length = -1.0f;
 
@@ -409,15 +417,7 @@ float4 GlassyBRDF(const float3 normal, const float3 halfVector, const float3 lig
 }
 
 
-float4 ComputeColor(
-    struct Ray * ray,
-    const struct Camera * camera,
-    global const struct Object * objects,
-    const int numObject,
-    global const struct Material * materials,
-    global const float3 * vertices,
-    uint * seed
-    ){
+float4 ComputeColor(struct Ray * ray, const struct Camera * camera, uint * seed){
 
     float4 accumulatedColor = 0.0f;
     float4 lightColor = 1.0f;
@@ -426,7 +426,7 @@ float4 ComputeColor(
     const float4 skyColor = (float4)(0.2f, 0.2f, 0.25f, 1.0f);
 
     for(int i = 0; i < 8; ++i){
-        struct Sample sample = FindClosestIntersection(objects, numObject, ray, vertices);
+        struct Sample sample = FindClosestIntersection(ray);
 
         if( isinf(sample.length) ){
 
@@ -435,7 +435,7 @@ float4 ComputeColor(
 
         ray->origin = sample.point;
 
-        struct Material material =  materials[ sample.materialID ];
+        struct Material material =  resources.materials[ sample.materialID ];
 
         float3 viewVector = normalize(camera->position - sample.point);
         float3 diffusionDirection = DiffuseReflect(sample.normal, seed);
@@ -482,18 +482,10 @@ float3 CalculatePixelPosition(
 }
 
 
+
 // Main
 
-void kernel RayTrace(
-    write_only image2d_t image,
-    global struct Object * objects,
-    global struct Material * materials,
-    global const float3 * vertices,
-    const int numObject,
-    struct Camera camera,
-    int numFrames,
-    global float4 * scratch
-    ){
+void kernel RayTrace(write_only image2d_t image, const struct Camera camera, const int numFrames ){
 
     uint x = get_global_id(0);
     uint y = get_global_id(1);
@@ -515,20 +507,36 @@ void kernel RayTrace(
     // Monte - Carlo path tracing have issue with glaring (dark and light spots on consistent color)
 
     // Supersampling approach results in no noise but very low amount of fps
-    float4 sample = ComputeColor(&ray, &camera, objects, numObject, materials, vertices, &seed);
+
+    float4 sample = ComputeColor(&ray, &camera, &seed);
 
     float scale = 1.0f / (numFrames + 1);
 
-    float4 pixel = mix(scratch[index], sample, scale);
+    float4 pixel = mix(resources.scratch[index], sample, scale);
 
     write_imagef(image, (int2)(x, y), pixel);
-    scratch[index] = pixel;
+    resources.scratch[index] = pixel;
 }
 
-void kernel AntiAlias(
-    write_only image2d_t image,
-    global float4 * scratch
+void kernel Transfer(
+    global struct Object * objects,
+    global struct Material * materials,
+    global const float3 * vertices,
+    global float4 * scratch,
+    const int numObject,
+    const int numMaterials
     ){
+
+    resources.objects = objects;
+    resources.numObject = numObject;
+    resources.materials = materials;
+    resources.numMaterials = numMaterials;
+    resources.vertices = vertices;
+    resources.scratch = scratch;
+
+}
+
+void kernel AntiAlias(write_only image2d_t image){
 
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -551,7 +559,7 @@ void kernel AntiAlias(
 
             int index = neighborY * width + neighborX;
 
-            maximalValue += scratch[index] * matrix[i+1][j+1];
+            maximalValue += resources.scratch[index] * matrix[i+1][j+1];
 
         }
     }
