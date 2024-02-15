@@ -57,6 +57,7 @@ class ParallelRendering : public IFrameRender {
     const cl_image_format format = {CL_RGBA, CL_FLOAT};
 
     cl_mem textureBuffer;
+    cl::Buffer resourcesBuffer;
     cl::Buffer objectBuffer;
     cl::Buffer materialBuffer;
     cl::Buffer verticesBuffer;

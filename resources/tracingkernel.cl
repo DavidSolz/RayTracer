@@ -72,14 +72,15 @@ struct Camera{
 
 };
 
-struct {
-    global struct Object * objects;
+typedef struct {
+    global const struct Object * objects;
     int numObject;
-    global struct Material * materials;
+    global const struct Material * materials;
     int numMaterials;
     global const float3 * vertices;
     global float4 * scratch;
-} resources;
+} Resources;
+
 
 // Functions
 
@@ -103,7 +104,7 @@ float3 RandomDirection(uint *seed){
     ));
 }
 
-float IntersectSphere(const struct Ray * ray, global const struct Object *object) {
+float IntersectSphere(const struct Ray * ray, global const struct Object * object) {
     float3 originToSphereCenter = ray->origin - object->position;
 
     float b = dot(originToSphereCenter, ray->direction);
@@ -117,7 +118,7 @@ float IntersectSphere(const struct Ray * ray, global const struct Object *object
     return fmin(t1, t2);
 }
 
-float IntersectPlane(const struct Ray * ray, global const struct Object *object) {
+float IntersectPlane(const struct Ray * ray, global const struct Object * object) {
 
     float d = dot(object->position, object->normal);
     float rayToPlane = dot(ray->origin, object->normal);
@@ -125,7 +126,7 @@ float IntersectPlane(const struct Ray * ray, global const struct Object *object)
     return (rayToPlane - d) / dot(-ray->direction, object->normal);
 }
 
-float IntersectDisk(const struct Ray * ray, global const struct Object *object) {
+float IntersectDisk(const struct Ray * ray, global const struct Object * object) {
 
     float t = IntersectPlane(ray, object);
 
@@ -143,7 +144,7 @@ float IntersectDisk(const struct Ray * ray, global const struct Object *object) 
 
 }
 
-float IntersectCube(const struct Ray * ray, global const struct Object *object) {
+float IntersectCube(const struct Ray * ray, global const struct Object * object) {
 
     float3 dirs = sign(ray->direction);
     float3 values = fabs(ray->direction);
@@ -204,7 +205,7 @@ float IntersectCube(const struct Ray * ray, global const struct Object *object) 
 
 float IntersectTriangle(
     const struct Ray * ray,
-    global const struct Object *object,
+    global const struct Object * object,
     global const float3 * vertices
     ) {
 
@@ -256,15 +257,16 @@ float3 ComputeBoxNormal(
 }
 
 
-struct Sample FindClosestIntersection(const struct Ray * ray){
+struct Sample FindClosestIntersection(global const Resources * resources, const struct Ray * ray){
 
-    global const struct Object * objects = resources.objects;
-    global const float3 * vertices = resources.vertices;
+    global const struct Object * objects = resources->objects;
+    global const float3 * vertices = resources->vertices;
+    int numObject = resources->numObject;
 
     struct Sample sample = {0};
     sample.length = INFINITY;
 
-    for (int i = 0; i < resources.numObject; ++i) {
+    for (int i = 0; i < numObject; ++i) {
 
         float length = -1.0f;
 
@@ -289,7 +291,6 @@ struct Sample FindClosestIntersection(const struct Ray * ray){
             sample.length = length ;
             sample.point = ray->origin + ray->direction * length;
             sample.materialID = objects[i].materialID;
-
 
             switch(objects[i].type){
 
@@ -327,7 +328,8 @@ float3 Reflect(const float3 incoming, const float3 normal) {
 
 float3 DiffuseReflect(const float3 normal, uint * seed){
     float3 direction = RandomDirection(seed);
-    return normalize(direction * sign( dot(normal, direction) ));
+    float hSign = sign( dot(normal, direction) );
+    return normalize(direction * hSign + normal);
 }
 
 // Snells law refraction
@@ -335,24 +337,22 @@ float3 Refract(const float3 incoming, float3 normal, float n1, float n2){
 
     float temp = n1;
 
-    float cosI = dot(incoming, normal);
+    float cosI = -dot(incoming, normal);
+    float eta;
 
     if(cosI < 0.0f){
-        cosI *= -1.0f;
+        eta = n1/n2;
     }else{
-        normal *= -1.0f;
-
-        n1 = n2;
-        n2 = temp;
+        eta = n2/n1;
+        normal = -normal;
     }
 
-    float eta = n1/(n2+1e-6f);
-    float c = 1.0f - eta*eta * (1.0f - cosI*cosI);
+    float coeff = 1.0f - eta*eta*(1.0f - cosI*cosI);
 
-    if ( c < 0.0f)
-        return 0.0f;
+    if ( coeff < 0.0f)
+        return Reflect(incoming, normal);
 
-    float3 direction = eta * incoming + (eta*cosI - sqrt(c)) * normal;
+    float3 direction = eta * incoming + (eta*cosI - sqrt(coeff)) * normal;
 
     return normalize(direction);
 
@@ -369,12 +369,20 @@ float4 ModifiedFresnel(const float cosTransmit, const float4 F0){
 float GGX(const float cosH, const float roughness){
 
     float alpha = roughness * roughness;
+    float alpha2 = alpha * alpha;
     float cos2H = cosH*cosH;
-    float sin2H = sqrt(1.0f - cos2H);
-    float denominator = (alpha*alpha - 1.0f)*cosH*cosH + 1.0f;
 
-    return alpha/(M_PI_F*denominator*denominator + 1e-6f);
+    float denominator = (cos2H * (alpha2 - 1.0f) + 1.0f);
 
+    return alpha2/(M_PI_F*denominator*denominator + 1e-6f);
+
+}
+
+float SchlickGGX(const float cosView, const float roughness){
+    float localRoughness = roughness + 1.0f;
+    float coeff = localRoughness * localRoughness * 0.125f;
+
+    return cosView/( cosView *(1.0f - coeff) + coeff + 1e-6f);
 }
 
 float SmithShlickGGX(const float cosView, const float cosLight, const float roughness){
@@ -394,12 +402,20 @@ float SmithShlickGGX(const float cosView, const float cosLight, const float roug
 
 }
 
-float4 GlassyBRDF(const float3 normal, const float3 halfVector, const float3 lightVector, const float3 direction, const float3 viewVector, struct Material * material){
+float GeometricSmithShlickGGX(const float cosView, const float cosLight, const float roughness){
+    float ggx1 = SchlickGGX(cosView, roughness);
+    float ggx2 = SchlickGGX(cosLight, roughness);
+
+    return ggx1*ggx2;
+}
+
+float4 GlassyBRDF(const float3 normal, const float3 halfVector, const float3 lightVector, const float3 outgoing, const float3 viewVector, struct Material * material){
 
     float cosView = dot(normal, viewVector);
     float cosLight =  dot(normal, lightVector);
+    float cosHalfOutgoing = dot(halfVector, outgoing);
 
-    float cosHalf = dot(normal, halfVector);
+    float cosHalf = fmax(dot(normal, halfVector), 0.0f);
 
     float eta = material->indexOfRefraction;
 
@@ -412,55 +428,75 @@ float4 GlassyBRDF(const float3 normal, const float3 halfVector, const float3 lig
     float4 F = SchlickFresnel(cosHalf, R0);
     float G = SmithShlickGGX(cosView, cosLight, material->roughness);
 
-    return clamp((D * F * G)/ (4.0f * cosView * cosLight), 0.0f ,1.0f);
+    return clamp((D * F * G)/ (4.0f * cosView * cosLight), 0.0f, 1.0f);
 
 }
 
+float4 CookTorranceBRDF(const float3 normal, const float3 halfVector, const float3 lightVector, const float3 outgoing, const float3 viewVector, const struct Material * material) {
+    
+    const float4 baseMetallicColor = (float4)(0.04f, 0.04f, 0.04f, 1.0f);
 
-float4 ComputeColor(struct Ray * ray, const struct Camera * camera, uint * seed){
+    float4 F0 = mix(baseMetallicColor, material->albedo, material->metallic);
+
+    float cosHalf = fmax(dot(normal, halfVector), 0.0f);
+    float cosView = dot(normal, viewVector);
+    float cosLight =  dot(normal, lightVector);
+    float cosOutgoing = dot(normal, outgoing);
+    float cosHalfOutgoing = dot(halfVector, outgoing);
+
+    float D = GGX(cosHalf, material->roughness);
+    float G = GeometricSmithShlickGGX(cosView, cosLight, material->roughness);
+    float4 F = SchlickFresnel(cosHalfOutgoing, F0);
+
+    float denominator = 4.0f * fmax(cosOutgoing * cosOutgoing, 0.0f) + 1e-6f; 
+
+    return clamp((D * G * F) / denominator, 0.0f, 1.0f);
+}
+
+
+float4 ComputeColor(global const Resources * resources, struct Ray * ray, const struct Camera * camera, uint * seed){
 
     float4 accumulatedColor = 0.0f;
     float4 lightColor = 1.0f;
+    float lastIOR = 1.0f;
 
-    const float voidIndexOfRefraction = 1.0f;
     const float4 skyColor = (float4)(0.2f, 0.2f, 0.25f, 1.0f);
+    global const struct Material * materials = resources->materials;
 
     for(int i = 0; i < 8; ++i){
-        struct Sample sample = FindClosestIntersection(ray);
+        struct Sample sample = FindClosestIntersection(resources, ray);
 
         if( isinf(sample.length) ){
-
+            accumulatedColor += skyColor * lightColor;
             break;
         }
 
         ray->origin = sample.point;
 
-        struct Material material =  resources.materials[ sample.materialID ];
+        struct Material material =  materials[ sample.materialID ];
 
-        float3 viewVector = normalize(camera->position - sample.point);
-        float3 diffusionDirection = DiffuseReflect(sample.normal, seed);
-        float3 reflectionDirection = Reflect(ray->direction, sample.normal);
-        float3 refractionDirecton = Refract(ray->direction, sample.normal, voidIndexOfRefraction, material.indexOfRefraction);
-
-        float isGlossy = Rand(seed) <= material.specularIntensity;
-
-        float3 direction = mix(diffusionDirection, reflectionDirection, material.metallic * isGlossy);
+        float3 normal = sample.normal;
 
         float3 lightVector = normalize(-ray->direction);
-        float3 halfVector = normalize(sample.normal + reflectionDirection);
+        float3 viewVector = normalize(camera->position - sample.point);
+        float3 diffusionDirection = DiffuseReflect(normal, seed);
+        float3 reflectionDirection = Reflect(ray->direction, normal);
+        float3 refractionDirecton = Refract(ray->direction, normal, lastIOR, material.indexOfRefraction);
+
+        float isGlossy = Rand(seed) <= material.specularIntensity;
+        float cosLight = dot(normal, lightVector);
+
+        float3 direction = mix(diffusionDirection, reflectionDirection, material.metallic * isGlossy);
+        
+        float3 halfVector = normalize(normal + reflectionDirection);
         ray->direction = normalize(mix(direction, refractionDirecton, material.transparency));
 
-        float cosLight = dot(sample.normal, lightVector);
-
         float4 emissionComponent = material.albedo * material.emmissionIntensity * (cosLight > 0.0f);
-        float4 glassyComponent = GlassyBRDF(sample.normal, halfVector, lightVector, ray->direction, viewVector, &material) * (1.0f - material.metallic) *  material.transparency;
+        float4 glassyComponent = GlassyBRDF(normal, halfVector, lightVector, ray->direction, viewVector, &material) * (1.0f - material.metallic) *  material.transparency;
+        float4 metallicComponent = CookTorranceBRDF(normal, halfVector, lightVector, ray->direction, viewVector, &material) * material.metallic *  (1.0f - material.transparency);
 
-        // accumulatedColor += diffuseComponent + glassyComponent + emissionComponent;
-        // intensity *= cosLight;
-        //lastRefractance = material.indexOfRefraction;
-
-        accumulatedColor += (emissionComponent + glassyComponent) * lightColor;
-        lightColor *= 2 * cosLight * material.albedo;
+        accumulatedColor += (emissionComponent + glassyComponent + metallicComponent) * lightColor;
+        lightColor *= material.albedo;
     }
 
     return accumulatedColor;
@@ -485,7 +521,7 @@ float3 CalculatePixelPosition(
 
 // Main
 
-void kernel RayTrace(write_only image2d_t image, const struct Camera camera, const int numFrames ){
+void kernel RayTrace(write_only image2d_t image, global Resources * resources, const struct Camera camera, const int numFrames ){
 
     uint x = get_global_id(0);
     uint y = get_global_id(1);
@@ -496,9 +532,11 @@ void kernel RayTrace(write_only image2d_t image, const struct Camera camera, con
     uint index = y * width + x;
     uint seed = (numFrames<<16) ^ (numFrames >>13) + index;
 
+    global float4 * scratch = resources->scratch;
+
     // Simple anti-aliasing techinque
     float3 offset = RandomDirection(&seed);
-    float3 pixelPosition = CalculatePixelPosition(x + offset.x - 0.5f, y + offset.y - 0.5f, width, height, &camera);
+    float3 pixelPosition = CalculatePixelPosition(x + offset.x + 0.5f, y + offset.y + 0.5f, width, height, &camera);
 
     private struct Ray ray;
     ray.origin = camera.position;
@@ -508,17 +546,19 @@ void kernel RayTrace(write_only image2d_t image, const struct Camera camera, con
 
     // Supersampling approach results in no noise but very low amount of fps
 
-    float4 sample = ComputeColor(&ray, &camera, &seed);
+    float4 sample = ComputeColor(resources, &ray, &camera, &seed);
 
     float scale = 1.0f / (numFrames + 1);
 
-    float4 pixel = mix(resources.scratch[index], sample, scale);
+    float4 pixel = mix(scratch[index], sample, scale);
 
     write_imagef(image, (int2)(x, y), pixel);
-    resources.scratch[index] = pixel;
+
+    scratch[index] = pixel;
 }
 
 void kernel Transfer(
+    global Resources * resources,
     global struct Object * objects,
     global struct Material * materials,
     global const float3 * vertices,
@@ -527,16 +567,15 @@ void kernel Transfer(
     const int numMaterials
     ){
 
-    resources.objects = objects;
-    resources.numObject = numObject;
-    resources.materials = materials;
-    resources.numMaterials = numMaterials;
-    resources.vertices = vertices;
-    resources.scratch = scratch;
-
+    resources->objects = objects;
+    resources->numObject = numObject;
+    resources->materials = materials;
+    resources->numMaterials = numMaterials;
+    resources->vertices = vertices;
+    resources->scratch = scratch;
 }
 
-void kernel AntiAlias(write_only image2d_t image){
+void kernel AntiAlias(write_only image2d_t image, global Resources * resources){
 
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -544,26 +583,22 @@ void kernel AntiAlias(write_only image2d_t image){
     int width = get_global_size(0);
     int height = get_global_size(1);
 
-    float4 maximalValue = 0.0f;
-
-    const float matrix[3][3] = {
-        {-0.1f, 0.5f, -0.1f},
-        {0.5f, 1.0f, 0.5f},
-        {-0.1f, 0.5f, -0.1f}
-    };
+    float4 pixelValue = 0.0f;
 
     for (int i = -1; i <= 1; i++) {
         for (int j = -1; j <= 1; j++) {
+
             int neighborX = clamp(x + i, 0, width - 1);
             int neighborY = clamp(y + j, 0, height - 1);
 
             int index = neighborY * width + neighborX;
 
-            maximalValue += resources.scratch[index] * matrix[i+1][j+1];
+            pixelValue += resources->scratch[index] ;
 
         }
     }
 
-    write_imagef(image, (int2)(x,y), maximalValue/8.0f);
+
+    write_imagef(image, (int2)(x,y), pixelValue/4.0f);
 
 }

@@ -43,6 +43,8 @@ ParallelRendering::ParallelRendering(RenderingContext * _context){
     verticesBufferSize = sizeof(Vector3) * context->mesh.vertices.size();
     verticesBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, verticesBufferSize);
 
+    resourcesBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, 48); // 48 Bytes in kernel file
+
     globalRange = cl::NDRange(context->width, context->height);
 
     context->loggingService.Write(MessageType::INFO, "Determining local size...");
@@ -53,17 +55,19 @@ ParallelRendering::ParallelRendering(RenderingContext * _context){
     int numMaterials = context->materials.size();
 
     transferKernel = cl::Kernel(program, "Transfer");
-    transferKernel.setArg(0, objectBuffer);
-    transferKernel.setArg(1, materialBuffer);
-    transferKernel.setArg(2, verticesBuffer);
-    transferKernel.setArg(3, scratchBuffer);
-    transferKernel.setArg(4, numObjects);
-    transferKernel.setArg(5, numMaterials);
+    transferKernel.setArg(0, resourcesBuffer);
+    transferKernel.setArg(1, objectBuffer);
+    transferKernel.setArg(2, materialBuffer);
+    transferKernel.setArg(3, verticesBuffer);
+    transferKernel.setArg(4, scratchBuffer);
+    transferKernel.setArg(5, numObjects);
+    transferKernel.setArg(6, numMaterials);
 
     raytracingKernel = cl::Kernel(program, "RayTrace");
     raytracingKernel.setArg(0, sizeof(cl_mem), &textureBuffer);
-    raytracingKernel.setArg(1, sizeof(Camera), &context->camera);
-    raytracingKernel.setArg(2, sizeof(int), &context->frameCounter);
+    raytracingKernel.setArg(1, resourcesBuffer);
+    raytracingKernel.setArg(2, sizeof(Camera), &context->camera);
+    raytracingKernel.setArg(3, sizeof(int), &context->frameCounter);
 
     queue.enqueueWriteBuffer(objectBuffer, CL_TRUE, 0, objectBufferSize, context->objects.data());
     queue.enqueueWriteBuffer(materialBuffer, CL_TRUE, 0, materialBufferSize, context->materials.data());
@@ -75,6 +79,14 @@ ParallelRendering::ParallelRendering(RenderingContext * _context){
 
     antialiasingKernel = cl::Kernel(program, "AntiAlias");
     antialiasingKernel.setArg(0, sizeof(cl_mem), &textureBuffer);
+    antialiasingKernel.setArg(1, resourcesBuffer);
+
+    /*
+    TODO :
+    - Resources buffer
+    
+    
+    */
 
     context->loggingService.Write(MessageType::INFO, "Accelerator configuration done");
 }
@@ -123,8 +135,8 @@ void ParallelRendering::DetermineLocalSize(const uint32_t & width, const uint32_
 
 void ParallelRendering::Render(Color * _pixels){
 
-    raytracingKernel.setArg(1, sizeof(Camera), &context->camera);
-    raytracingKernel.setArg(2, sizeof(int), &context->frameCounter);
+    raytracingKernel.setArg(2, sizeof(Camera), &context->camera);
+    raytracingKernel.setArg(3, sizeof(int), &context->frameCounter);
 
     queue.enqueueNDRangeKernel(raytracingKernel, cl::NullRange, globalRange);
     //queue.enqueueNDRangeKernel(antialiasingKernel, cl::NullRange, globalRange);
