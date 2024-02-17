@@ -262,7 +262,8 @@ RenderingContext context;
 
     p.position = Vector3(context.width/2.0f, context.height/4.0f, context.depth/4.0f);
     p.normal = Vector3(0.0f, 1.0f ,0.0f);
-    p.type = PLANE;
+    p.radius = 1000.0f;
+    p.type = DISK;
 
     p.materialID = materialBuilder
                     .SetBaseColor({0.5f, 0.5f, 0.5f, 1.0f})
@@ -324,13 +325,18 @@ RenderingContext context;
 
     context.objects.emplace_back(p);
 
-    MeshReader reader;
+// Transfer mesh into context
 
-    Mesh mesh = reader.LoadObject("resources/mesh.obj");
+    MeshReader reader(&context);
 
-    Object temp;
-    temp.type = TRIANGLE;
-    temp.materialID = materialBuilder
+    Mesh * mesh = reader.LoadObject("resources/mesh.obj");
+
+    float scale = 100;
+    Vector3 offset(context.width/2.0f, context.height/2.0f, context.depth/4.0f);
+
+    mesh->Translate(offset, scale, -45.0f);
+
+    uint32_t materialID = materialBuilder
                         .SetBaseColor({0.0f, 0.5f, 0.2f, 1.0f})
                         ->SetTransparency(1.0f)
                         ->SetRoughness(0.5f)
@@ -338,25 +344,6 @@ RenderingContext context;
                         //->SetSheen(1.0f)
                         ->Build();
 
-    float scale = 100;
-    Vector3 offset(context.width/2.0f, context.height/2.0f, context.depth/4.0f);
-
-    mesh.Translate(offset, scale);
-
-    for(uint32_t i=0; i < mesh.numIndices; ++i){
-
-        uint32_t t = 3*i;
-
-        temp.indicesID.x = mesh.indices[t];
-        temp.indicesID.y = mesh.indices[t+1];
-        temp.indicesID.z = mesh.indices[t+2];
-        temp.normal = mesh.normals[i];
-
-        context.objects.emplace_back(temp);
-
-    }
-
-    context.mesh = mesh;
 }
 
 

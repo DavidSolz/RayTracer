@@ -9,7 +9,7 @@ private:
     uint32_t FindSimilarMaterial();
 
     // This constant describes maximal material similarity difference
-    const float EPSILON = 0.001f;
+    const float EPSILON = 0.1f;
 
     Material temporaryMaterial;
     RenderingContext * context;
@@ -53,6 +53,8 @@ public:
     MaterialBuilder * SetEmission(const float & _factor);
 
     MaterialBuilder * SetSpecularIntensity(const float & _factor);
+
+    uint32_t EmplaceMaterial(const Material & material);
 
     uint32_t Build();
 

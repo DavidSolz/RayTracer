@@ -72,11 +72,11 @@ struct Color {
     }
 
     static float Similarity(const Color& colorA, const Color& colorB){
-        float dR = colorA.R - colorB.R;
-        float dG = colorA.G - colorB.G;
-        float dB = colorA.B - colorB.B;
-        float dA = colorA.A - colorB.A;
-        return sqrt( dR*dR + dG*dG + dB*dB + dA*dA );
+        float dR = fabs(colorA.R - colorB.R);
+        float dG = fabs(colorA.G - colorB.G);
+        float dB = fabs(colorA.B - colorB.B);
+        float dA = fabs(colorA.A - colorB.A);
+        return 1.0f - (dR+dG+dB+dA)/4.0f;
     }
 
 } __attribute__((aligned(16)));

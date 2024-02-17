@@ -91,7 +91,7 @@ float Rand(uint * seed){
     return ((word>>22u) ^ word)/(float)UINT_MAX;
 }
 
-float3 RandomDirection(uint *seed){
+float3 RandomDirection(uint * seed){
     float latitude = Rand(seed) * 2.0f * 3.1415926535f - 3.1415926535f;
     float longitude = Rand(seed) * 2.0f *  3.1415926535f;
 
@@ -104,7 +104,7 @@ float3 RandomDirection(uint *seed){
     ));
 }
 
-float IntersectSphere(const struct Ray * ray, global const struct Object * object) {
+float IntersectSphere(const struct Ray * ray, const struct Object * object) {
     float3 originToSphereCenter = ray->origin - object->position;
 
     float b = dot(originToSphereCenter, ray->direction);
@@ -118,7 +118,7 @@ float IntersectSphere(const struct Ray * ray, global const struct Object * objec
     return fmin(t1, t2);
 }
 
-float IntersectPlane(const struct Ray * ray, global const struct Object * object) {
+float IntersectPlane(const struct Ray * ray, const struct Object * object) {
 
     float d = dot(object->position, object->normal);
     float rayToPlane = dot(ray->origin, object->normal);
@@ -126,7 +126,7 @@ float IntersectPlane(const struct Ray * ray, global const struct Object * object
     return (rayToPlane - d) / dot(-ray->direction, object->normal);
 }
 
-float IntersectDisk(const struct Ray * ray, global const struct Object * object) {
+float IntersectDisk(const struct Ray * ray, const struct Object * object) {
 
     float t = IntersectPlane(ray, object);
 
@@ -144,7 +144,7 @@ float IntersectDisk(const struct Ray * ray, global const struct Object * object)
 
 }
 
-float IntersectCube(const struct Ray * ray, global const struct Object * object) {
+float IntersectCube(const struct Ray * ray, const struct Object * object) {
 
     float3 dirs = sign(ray->direction);
     float3 values = fabs(ray->direction);
@@ -205,7 +205,7 @@ float IntersectCube(const struct Ray * ray, global const struct Object * object)
 
 float IntersectTriangle(
     const struct Ray * ray,
-    global const struct Object * object,
+    const struct Object * object,
     global const float3 * vertices
     ) {
 
@@ -240,22 +240,21 @@ float IntersectTriangle(
 }
 
 float3 ComputeBoxNormal(
-    global const float3 * nearVertice,
-    global const float3 * farVertice,
-    const float3 * intersectionPoint
+    const float3 nearVertice,
+    const float3 farVertice,
+    const float3 intersectionPoint
     ){
 
     const float epsilon = 1.000001f;
 
-    float3 boxCenter = (*farVertice + *nearVertice)*0.5f;
-    float3 radius = (*farVertice - *nearVertice)*0.5f;
-    float3 pointToCenter = *intersectionPoint - boxCenter;
+    float3 boxCenter = (farVertice + nearVertice)*0.5f;
+    float3 radius = (farVertice - nearVertice)*0.5f;
+    float3 pointToCenter = intersectionPoint - boxCenter;
 
     float3 normal = sign(pointToCenter) * step(fabs(fabs(pointToCenter) - radius), epsilon);
 
     return normalize(normal);
 }
-
 
 struct Sample FindClosestIntersection(global const Resources * resources, const struct Ray * ray){
 
@@ -266,59 +265,56 @@ struct Sample FindClosestIntersection(global const Resources * resources, const 
     struct Sample sample = {0};
     sample.length = INFINITY;
 
-    for (int i = 0; i < numObject; ++i) {
+    for (int id = 0; id < numObject; ++id) {
+
+        struct Object object = objects[id];
 
         float length = -1.0f;
 
-        switch(objects[i].type){
+        switch(object.type){
             case CUBE:
-                length = IntersectCube(ray, objects + i);
+                length = IntersectCube(ray, &object);
                 break;
             case PLANE:
-                length = IntersectPlane(ray, objects + i);
+                length = IntersectPlane(ray, &object);
                 break;
             case DISK:
-                length = IntersectDisk(ray, objects + i);
+                length = IntersectDisk(ray, &object);
                 break;
             case TRIANGLE:
-                length = IntersectTriangle(ray, objects + i, vertices);
+                length = IntersectTriangle(ray, &object, vertices);
                 break;
             default:
-                length = IntersectSphere(ray, objects + i);
+                length = IntersectSphere(ray, &object);
         }
 
-        if( (length < sample.length) && (length > 0.1f) ){
+        if( (length < sample.length) && (length > 0.01f) ){
             sample.length = length ;
             sample.point = ray->origin + ray->direction * length;
-            sample.materialID = objects[i].materialID;
+            sample.materialID = object.materialID;
 
-            switch(objects[i].type){
+            switch(object.type){
 
                 case CUBE:
-                    sample.normal = ComputeBoxNormal(&objects[i].position, &objects[i].maxPos, &sample.point);
+                    sample.normal = ComputeBoxNormal(object.position, object.maxPos, sample.point);
                     break;
 
                 case SPHERE:
-                    sample.normal = normalize(sample.point - objects[i].position);
+                    sample.normal = normalize(sample.point - object.position);
                     break;
 
                 default:
-                    sample.normal = objects[i].normal;
+                    sample.normal = normalize(object.normal);
                     break;
             }
-
-
 
         }
 
     }
 
-    sample.normal = normalize(sample.normal);
-
     return sample;
 }
 
-// Negation of Phong illumination reflection formula
 float3 Reflect(const float3 incoming, const float3 normal) {
 
     float cosIncoming = dot(incoming, normal);
@@ -332,23 +328,23 @@ float3 DiffuseReflect(const float3 normal, uint * seed){
     return normalize(direction * dot(normal, direction) + normal);
 }
 
-// Snells law refraction
-float3 Refract(const float3 incoming, float3 normal, float n1, float n2){
+float3 Refract(const float3 incoming, float3 normal, const float n1, const float n2){
 
     float cosI = dot(incoming, normal);
     float eta;
 
     if(cosI < 0.0f){
         eta = n1/n2;
-        //normal = -normal;
+        normal = -normal;
     }else{
         eta = n2/n1;
     }
 
-    float coeff = 1.0f - eta * eta * (1.0f - cosI*cosI);
+    float coeff =  1.0f - eta * eta *(1.0f - cosI*cosI);
 
     if ( coeff < 0.0f)
         return Reflect(incoming, normal);
+
 
     float3 direction = eta * incoming - (eta * cosI + sqrt(coeff) ) * normal;
 
@@ -376,10 +372,8 @@ float GGX(const float cosH, const float roughness){
 }
 
 float SchlickGGX(const float cosView, const float roughness){
-    float localRoughness = roughness + 1.0f;
-    float coeff = localRoughness * localRoughness * 0.125f;
-
-    return cosView /( cosView *(1.0f - coeff) + coeff + 1e-6f);
+    float coeff = roughness * roughness / 8.0f;
+    return fmax(cosView / ( cosView * (1.0f - coeff) + coeff), 0.0f);
 }
 
 float GeometricSmithShlickGGX(const float cosView, const float cosLight, const float roughness){
@@ -394,7 +388,6 @@ float4 physicalBRDF(const float3 normal, const float3 halfVector, const float3 l
     float cosHalf = dot(normal, halfVector);
     float cosView = dot(normal, viewVector);
     float cosLight =  dot(normal, lightVector);
-    float cosOutgoing = dot(normal, outgoing);
 
     float eta = material->indexOfRefraction;
 
@@ -407,9 +400,9 @@ float4 physicalBRDF(const float3 normal, const float3 halfVector, const float3 l
     float G = GeometricSmithShlickGGX(cosView, cosLight, material->roughness);
     float4 F = SchlickFresnel(cosHalf, R0);
 
-    float denominator = 4.0f * cosOutgoing * cosOutgoing + 1e-6f; 
+    float denominator = 4.0f * fmin(cosView * cosLight, 1.0f) + 1e-6f; 
 
-    return clamp((D * F * G) / denominator, 0.0f , 1.0f);
+    return clamp((D * F * G) / denominator, 0.0f , 1.0f) * material->albedo;
 
 }
 
@@ -463,6 +456,7 @@ float4 ComputeColor(
 
         accumulatedColor += (emissionComponent + pbrComponent + absorptionComponent) * lightColor ;
         lightColor *=  2.0f * cosLight  * material.albedo;
+        lastIOR = material.indexOfRefraction;
     }
 
     return accumulatedColor;

@@ -16,11 +16,12 @@ struct RenderingContext {
     uint32_t height = 480;
     uint32_t depth = 480;
 
-    GLuint textureID;
-
     bool vSync = false;
     bool memorySharing = false;
 
+    // Texture transfer object
+    GLuint textureID;
+    
     // Objects data
     std::vector<Object> objects;
     std::vector<Material> materials;

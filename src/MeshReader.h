@@ -8,17 +8,23 @@
 
 #define BUFFER_SIZE 100
 
-#include "Mesh.h"
+#include "RenderingContext.h"
 
 class MeshReader{
 private:
 
+    RenderingContext * context;
+
     Vector3 ParseVertice(const std::string & line);
     Vector3 ParseFace(const std::string & line);
 
+    void BuildTriangles();
+
 public:
 
-    Mesh LoadObject(const std::string & filename);
+    MeshReader(RenderingContext * _context);
+
+    Mesh * LoadObject(const std::string & filename);
 
 };
 

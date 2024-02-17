@@ -29,7 +29,6 @@ MaterialBuilder * MaterialBuilder::SetBaseColor(const Color & _color){
     return this;
 }
 
-
 MaterialBuilder * MaterialBuilder::SetSpecularColor(const Color & _color){
     temporaryMaterial.specular = _color;
     return this;
@@ -40,12 +39,10 @@ MaterialBuilder * MaterialBuilder::SetTransmissionFilter(const Color & _color){
     return this;
 }
 
-
 MaterialBuilder * MaterialBuilder::SetSheen(const float & _factor){
     temporaryMaterial.sheen = std::fmax(0.0f, std::fmin(_factor, 1.0f));
     return this;
 }
-
 
 MaterialBuilder * MaterialBuilder::SetRefractiveIndex(const float & _factor){
     temporaryMaterial.indexOfRefraction = std::fmax(1e-6f, _factor);
@@ -57,7 +54,6 @@ MaterialBuilder * MaterialBuilder::SetTransparency(const float & _factor){
     return this;
 }
 
-
 MaterialBuilder * MaterialBuilder::SetTintColor(const Color & _color){
     temporaryMaterial.tint = _color;
     return this;
@@ -68,7 +64,6 @@ MaterialBuilder * MaterialBuilder::SetBaseColor(const uint8_t & _R, const uint8_
     temporaryMaterial.albedo = color;
     return this;
 }
-
 
 MaterialBuilder * MaterialBuilder::SetSpecularColor(const uint8_t & _R, const uint8_t & _G, const uint8_t & _B){
     Color color = {_R/255.0f, _G/255.0f, _B/255.0f};
@@ -118,17 +113,67 @@ MaterialBuilder * MaterialBuilder::SetSpecularIntensity(const float & _factor){
     return this;
 }
 
-uint32_t MaterialBuilder::Build(){
+uint32_t MaterialBuilder::EmplaceMaterial(const Material & material){
+    uint32_t idx = FindSimilarMaterial();
 
-    context->materials.push_back(temporaryMaterial);
-    ClearMaterial();
-    return context->materials.size()-1;
+    if ( idx == UINT32_MAX){
+        context->materials.push_back(material);
+        return context->materials.size()-1;
+    }
+    return idx;
+}
+
+uint32_t MaterialBuilder::Build(){
+    uint32_t idx = FindSimilarMaterial();
+
+    if ( idx == UINT32_MAX){
+        context->materials.push_back(temporaryMaterial);
+        ClearMaterial();
+        return context->materials.size()-1;
+    }
+
+    return idx;
 }
 
 
 uint32_t MaterialBuilder::FindSimilarMaterial(){
 
-    //TODO
+    float highestSimilarity = 0.0f;
+    uint32_t mostSimilarIndex = UINT32_MAX;
 
-    return UINT32_MAX;
+    for( uint32_t id = 0; id < context->materials.size(); ++id ){
+
+        Material * present = &context->materials[id];
+
+        float dAlbedo = Color::Similarity(temporaryMaterial.albedo, present->albedo);
+        float dTint = Color::Similarity(temporaryMaterial.tint, present->tint);
+        float dSpecular = Color::Similarity(temporaryMaterial.specular, present->specular);
+        float dFilter = Color::Similarity(temporaryMaterial.transmissionFilter, present->transmissionFilter);
+        float dSpecularIntensit = fabs(temporaryMaterial.specularIntensity - present->specularIntensity);
+        float dTransparency = fabs(temporaryMaterial.transparency - present->transparency);
+        float dIOR = fabs(temporaryMaterial.indexOfRefraction - present->indexOfRefraction);
+        float dRoughness = fabs(temporaryMaterial.roughness - present->roughness);
+        float dMetallic = fabs(temporaryMaterial.metallic - present->metallic);
+        float dSheen = fabs(temporaryMaterial.sheen - present->sheen);
+        float dTintRoughness = fabs(temporaryMaterial.tintRoughness - present->tintRoughness);
+        float dClearcoatThickness = fabs(temporaryMaterial.clearcoatThickness - present->clearcoatThickness);
+        float dClearcoatRoughness = fabs(temporaryMaterial.clearcoatRoughness - present->clearcoatRoughness);
+        float dEmission = fabs(temporaryMaterial.emmissionIntensity - present->emmissionIntensity);
+        float dAnisotropy = fabs(temporaryMaterial.anisotropy - present->anisotropy);
+        float dAnisotropyRotation = fabs(temporaryMaterial.anisotropyRotation - present->anisotropyRotation);
+
+        float similarity = 1.0f - (dAlbedo + dTint + dSpecular + 
+        dSpecularIntensit + dTransparency + dFilter + 
+        dIOR + dRoughness + dTintRoughness + dEmission + 
+        dMetallic + dSheen + dClearcoatThickness + 
+        dClearcoatRoughness + dAnisotropy + dAnisotropyRotation)/16.0f;
+
+        if (similarity > highestSimilarity && similarity < EPSILON) {
+            highestSimilarity = similarity;
+            mostSimilarIndex = id;
+        }
+
+    }
+
+    return mostSimilarIndex;
 }
