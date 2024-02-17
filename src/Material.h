@@ -6,7 +6,7 @@
 
 struct Material {
     struct Color albedo;
-    struct Color diffuse;
+    struct Color tint;
     struct Color specular;
     struct Color transmissionFilter;
     float specularIntensity;
@@ -15,6 +15,7 @@ struct Material {
     float roughness;
     float metallic;
     float sheen;
+    float tintRoughness;
     float clearcoatThickness;
     float clearcoatRoughness;
     float emmissionIntensity;

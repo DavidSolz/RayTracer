@@ -7,7 +7,7 @@
 
 struct Material {
     float4 albedo;
-    float4 diffuse;
+    float4 tint;
     float4 specular;
     float4 transmissionFilter;
     float specularIntensity;
@@ -16,6 +16,7 @@ struct Material {
     float roughness;
     float metallic;
     float sheen;
+    float tintRoughness;
     float clearcoatThickness;
     float clearcoatRoughness;
     float emmissionIntensity;
@@ -321,85 +322,65 @@ struct Sample FindClosestIntersection(global const Resources * resources, const 
 // Negation of Phong illumination reflection formula
 float3 Reflect(const float3 incoming, const float3 normal) {
 
-    float3 outgoing = incoming - normal * 2.0f * dot(incoming, normal);
+    float cosIncoming = dot(incoming, normal);
+    float3 outgoing = incoming - normal * 2.0f * cosIncoming;
 
     return normalize(outgoing);
 }
 
 float3 DiffuseReflect(const float3 normal, uint * seed){
     float3 direction = RandomDirection(seed);
-    float hSign = sign( dot(normal, direction) );
-    return normalize(direction * hSign + normal);
+    return normalize(direction * dot(normal, direction) + normal);
 }
 
 // Snells law refraction
 float3 Refract(const float3 incoming, float3 normal, float n1, float n2){
 
-    float temp = n1;
-
-    float cosI = -dot(incoming, normal);
+    float cosI = dot(incoming, normal);
     float eta;
 
     if(cosI < 0.0f){
         eta = n1/n2;
+        //normal = -normal;
     }else{
         eta = n2/n1;
-        normal = -normal;
     }
 
-    float coeff = 1.0f - eta*eta*(1.0f - cosI*cosI);
+    float coeff = 1.0f - eta * eta * (1.0f - cosI*cosI);
 
     if ( coeff < 0.0f)
         return Reflect(incoming, normal);
 
-    float3 direction = eta * incoming + (eta*cosI - sqrt(coeff)) * normal;
+    float3 direction = eta * incoming - (eta * cosI + sqrt(coeff) ) * normal;
 
-    return normalize(direction);
+    return direction;
 
+}
+
+float3 ReflectAnisotropic(float3 incident, float3 normal, float anisotropy) {
+    float3 reflection = Reflect(incident, normal);
+    float3 tangent = normalize(cross(normal, (float3)(0.0f, 1.0f, 0.0f)));
+    float3 bitangent = cross(normal, tangent);
+    float3 anisotropicReflection = normalize(reflection + anisotropy * (tangent + bitangent));
+
+    return anisotropicReflection;
 }
 
 float4 SchlickFresnel(const float cosTransmit, const float4 F0){
     return F0 + (1.0f - F0) * pow(1.0f - cosTransmit, 5.0f);
 }
 
-float4 ModifiedFresnel(const float cosTransmit, const float4 F0){
-    return 1.0f + (F0 - 1.0f) * pow(1.0f - cosTransmit, 5.0f);
-}
-
 float GGX(const float cosH, const float roughness){
-
     float alpha = roughness * roughness;
-    float alpha2 = alpha * alpha;
-    float cos2H = cosH*cosH;
-
-    float denominator = (cos2H * (alpha2 - 1.0f) + 1.0f);
-
-    return alpha2/(M_PI_F*denominator*denominator + 1e-6f);
-
+    float denominator = (cosH * cosH * (alpha - 1.0f) + 1.0f);
+    return alpha/(M_PI_F*denominator*denominator + 1e-6f);
 }
 
 float SchlickGGX(const float cosView, const float roughness){
     float localRoughness = roughness + 1.0f;
     float coeff = localRoughness * localRoughness * 0.125f;
 
-    return cosView/( cosView *(1.0f - coeff) + coeff + 1e-6f);
-}
-
-float SmithShlickGGX(const float cosView, const float cosLight, const float roughness){
-
-    float alpha = roughness * roughness;
-    float alphaSqr = alpha * alpha;
-    float viewAngle = acos(cosView) * 0.5f;
-    float lightAngle = acos(cosLight) * 0.05f;
-
-    float tan2View = tan(viewAngle) * tan(viewAngle);
-    float tan2Light = tan(lightAngle) * tan(lightAngle);
-
-    float factorA = 2.0f / ( 1.0f + sqrt( 1.0f + alphaSqr/tan2Light) );
-    float factorB = 2.0f / ( 1.0f + sqrt( 1.0f + alphaSqr/tan2Light) );
-
-    return factorA * factorB;
-
+    return cosView /( cosView *(1.0f - coeff) + coeff + 1e-6f);
 }
 
 float GeometricSmithShlickGGX(const float cosView, const float cosLight, const float roughness){
@@ -409,13 +390,12 @@ float GeometricSmithShlickGGX(const float cosView, const float cosLight, const f
     return ggx1*ggx2;
 }
 
-float4 GlassyBRDF(const float3 normal, const float3 halfVector, const float3 lightVector, const float3 outgoing, const float3 viewVector, struct Material * material){
+float4 physicalBRDF(const float3 normal, const float3 halfVector, const float3 lightVector, const float3 outgoing, const float3 viewVector, struct Material * material){
 
+    float cosHalf = dot(normal, halfVector);
     float cosView = dot(normal, viewVector);
     float cosLight =  dot(normal, lightVector);
-    float cosHalfOutgoing = dot(halfVector, outgoing);
-
-    float cosHalf = fmax(dot(normal, halfVector), 0.0f);
+    float cosOutgoing = dot(normal, outgoing);
 
     float eta = material->indexOfRefraction;
 
@@ -425,36 +405,26 @@ float4 GlassyBRDF(const float3 normal, const float3 halfVector, const float3 lig
     float4 R0 = (rS*rS + rP*rP)*0.5f;
 
     float D = GGX(cosHalf, material->roughness);
-    float4 F = SchlickFresnel(cosHalf, R0);
-    float G = SmithShlickGGX(cosView, cosLight, material->roughness);
-
-    return clamp((D * F * G)/ (4.0f * cosView * cosLight), 0.0f, 1.0f);
-
-}
-
-float4 CookTorranceBRDF(const float3 normal, const float3 halfVector, const float3 lightVector, const float3 outgoing, const float3 viewVector, const struct Material * material) {
-    
-    const float4 baseMetallicColor = (float4)(0.04f, 0.04f, 0.04f, 1.0f);
-
-    float4 F0 = mix(baseMetallicColor, material->albedo, material->metallic);
-
-    float cosHalf = fmax(dot(normal, halfVector), 0.0f);
-    float cosView = dot(normal, viewVector);
-    float cosLight =  dot(normal, lightVector);
-    float cosOutgoing = dot(normal, outgoing);
-    float cosHalfOutgoing = dot(halfVector, outgoing);
-
-    float D = GGX(cosHalf, material->roughness);
     float G = GeometricSmithShlickGGX(cosView, cosLight, material->roughness);
-    float4 F = SchlickFresnel(cosHalfOutgoing, F0);
+    float4 F = SchlickFresnel(cosHalf, R0) * material->albedo;
 
-    float denominator = 4.0f * fmax(cosOutgoing * cosOutgoing, 0.0f) + 1e-6f; 
+    float denominator = 4.0f * cosView * cosLight + 1e-6f; 
 
-    return clamp((D * G * F) / denominator, 0.0f, 1.0f);
+    return clamp((D * F * G )/ denominator, 0.0f , 1.0f)  ;
+
 }
 
+float perlin(const float2 * P){
+    return clamp(sin(dot(*P, (float2)(12.9898f, 78.233f))) * 43758.5453f, 1e-6f, 1.0f);
+}
 
-float4 ComputeColor(global const Resources * resources, struct Ray * ray, const struct Camera * camera, uint * seed){
+float4 ComputeColor(
+    global const Resources * resources, 
+    struct Ray * ray, 
+    const struct Camera * camera, 
+    uint * seed,
+    const float2 * noiseUV
+    ){
 
     float4 accumulatedColor = 0.0f;
     float4 lightColor = 1.0f;
@@ -462,6 +432,9 @@ float4 ComputeColor(global const Resources * resources, struct Ray * ray, const 
 
     const float4 skyColor = (float4)(0.2f, 0.2f, 0.25f, 1.0f);
     global const struct Material * materials = resources->materials;
+
+    float3 noisePoint = perlin(noiseUV);
+
 
     for(int i = 0; i < 8; ++i){
         struct Sample sample = FindClosestIntersection(resources, ray);
@@ -482,21 +455,25 @@ float4 ComputeColor(global const Resources * resources, struct Ray * ray, const 
         float3 diffusionDirection = DiffuseReflect(normal, seed);
         float3 reflectionDirection = Reflect(ray->direction, normal);
         float3 refractionDirecton = Refract(ray->direction, normal, lastIOR, material.indexOfRefraction);
+        float3 anisotropicReflection = ReflectAnisotropic(ray->direction, normal, material.anisotropyRotation);
 
-        float isGlossy = Rand(seed) <= material.specularIntensity;
-        float cosLight = dot(normal, lightVector);
-
-        float3 direction = mix(diffusionDirection, reflectionDirection, material.metallic * isGlossy);
-        
         float3 halfVector = normalize(normal + reflectionDirection);
+
+        float cosLight = dot(normal, lightVector);
+        float cosView = dot(normal, viewVector);
+
+        float3 direction = mix(diffusionDirection, reflectionDirection, material.metallic);
+        direction = mix(direction, anisotropicReflection, material.anisotropy);
         ray->direction = normalize(mix(direction, refractionDirecton, material.transparency));
 
+        float4 F0 = mix(0.04f, material.tint, material.sheen);
+        float4 sheenComponent = mix(material.albedo, F0, material.tintRoughness) * F0;
         float4 emissionComponent = material.albedo * material.emmissionIntensity * (cosLight > 0.0f);
-        float4 glassyComponent = GlassyBRDF(normal, halfVector, lightVector, ray->direction, viewVector, &material) * (1.0f - material.metallic) *  material.transparency;
-        float4 metallicComponent = CookTorranceBRDF(normal, halfVector, lightVector, ray->direction, viewVector, &material) * material.metallic *  (1.0f - material.transparency);
+        float4 pbrComponent = physicalBRDF(normal, halfVector, lightVector, ray->direction, viewVector, &material);
+        float4 absorptionComponent = material.transmissionFilter * exp(-material.albedo * sample.length); 
 
-        accumulatedColor += (emissionComponent + glassyComponent + metallicComponent) * lightColor;
-        lightColor *= material.albedo;
+        accumulatedColor += (emissionComponent + pbrComponent + absorptionComponent) * lightColor ;
+        lightColor *=  2.0f * cosLight  * (material.albedo + sheenComponent);
     }
 
     return accumulatedColor;
@@ -544,9 +521,11 @@ void kernel RayTrace(write_only image2d_t image, global Resources * resources, c
 
     // Monte - Carlo path tracing have issue with glaring (dark and light spots on consistent color)
 
+    float2 noise = (float2)(x/(float)width, y/(float)height);
+
     // Supersampling approach results in no noise but very low amount of fps
 
-    float4 sample = ComputeColor(resources, &ray, &camera, &seed);
+    float4 sample = ComputeColor(resources, &ray, &camera, &seed, &noise);
 
     float scale = 1.0f / (numFrames + 1);
 

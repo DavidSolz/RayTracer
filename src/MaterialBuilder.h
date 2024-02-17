@@ -22,7 +22,7 @@ public:
 
     MaterialBuilder * SetBaseColor(const Color & _color);
 
-    MaterialBuilder * SetDiffusionColor(const Color & _color);
+    MaterialBuilder * SetTintColor(const Color & _color);
 
     MaterialBuilder * SetSpecularColor(const Color & _color);
 
@@ -32,7 +32,7 @@ public:
 
     MaterialBuilder * SetSpecularColor(const uint8_t & _R, const uint8_t & _G, const uint8_t & _B);
 
-    MaterialBuilder * SetDiffusionColor(const uint8_t & _R, const uint8_t & _G, const uint8_t & _B);
+    MaterialBuilder * SetTintColor(const uint8_t & _R, const uint8_t & _G, const uint8_t & _B);
 
     MaterialBuilder * SetTransmissionFilter(const uint8_t & _R, const uint8_t & _G, const uint8_t & _B);
 
@@ -40,7 +40,11 @@ public:
 
     MaterialBuilder * SetSheen(const float & _factor);
 
+    MaterialBuilder * SetTintRoughness(const float & _factor);
+
     MaterialBuilder * SetRoughness(const float & _factor);
+
+    MaterialBuilder * SetAnisotropy(const float & _factor);
 
     MaterialBuilder * SetTransparency(const float & _factor);
 

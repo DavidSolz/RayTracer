@@ -278,7 +278,7 @@ RenderingContext context;
 
     p.materialID = materialBuilder
                     .SetBaseColor({1.0f, 1.0f, 1.0f, 1.0f})
-                    ->SetEmission(10.0f)
+                    ->SetEmission(2.0f)
                     ->Build();
 
     context.objects.emplace_back(p);
@@ -303,7 +303,7 @@ RenderingContext context;
     p.materialID = materialBuilder
                 .SetBaseColor((Color){0.3f, 0.4f, 0.35f, 1.0f})
                 ->SetSmoothness(1.0f)
-                ->SetRoughness(0.0f)
+                ->SetRoughness(0.5f)
                 ->Build();
 
     context.objects.emplace_back(p);
@@ -315,7 +315,11 @@ RenderingContext context;
     p.materialID = materialBuilder
                     .SetBaseColor((Color){0.0f, 0.0f, 1.0f, 1.0f})
                     ->SetTransparency(1.0f)
+                    ->SetTintColor((Color){1.0f, 0.0f, 1.0f, 1.0f})
+                    ->SetTintRoughness(1.0f)
                     ->SetRoughness(0.5f)
+                    ->SetRefractiveIndex(1.45f)
+                    ->SetSheen(0.6f)
                     ->Build();
 
     context.objects.emplace_back(p);
@@ -330,8 +334,8 @@ RenderingContext context;
                         .SetBaseColor({0.0f, 0.5f, 0.2f, 1.0f})
                         ->SetTransparency(1.0f)
                         ->SetRoughness(0.5f)
-                        ->SetRefractiveIndex(2.54f)
-                        //->SetSmoothness(1.0f)
+                        ->SetRefractiveIndex(1.45f)
+                        //->SetSheen(1.0f)
                         ->Build();
 
     float scale = 100;
