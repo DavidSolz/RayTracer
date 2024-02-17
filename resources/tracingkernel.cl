@@ -15,7 +15,7 @@ struct Material {
     float indexOfRefraction;
     float roughness;
     float metallic;
-    float sheen;
+    float tintWeight;
     float tintRoughness;
     float clearcoatThickness;
     float clearcoatRoughness;
@@ -365,8 +365,8 @@ float3 ReflectAnisotropic(float3 incident, float3 normal, float anisotropy) {
     return anisotropicReflection;
 }
 
-float4 SchlickFresnel(const float cosTransmit, const float4 F0){
-    return F0 + (1.0f - F0) * pow(1.0f - cosTransmit, 5.0f);
+float4 SchlickFresnel(const float cosHalf, const float4 F0){
+    return F0 + (1.0f - F0) * pow(1.0f - cosHalf, 5.0f);
 }
 
 float GGX(const float cosH, const float roughness){
@@ -398,35 +398,26 @@ float4 physicalBRDF(const float3 normal, const float3 halfVector, const float3 l
 
     float eta = material->indexOfRefraction;
 
-    float rS = (cosLight - eta*cosView)/(cosLight + eta*cosView);
-    float rP = (eta*cosLight - cosView)/(eta*cosLight + cosView);
+    float rS = (cosLight - eta * cosView)/(cosLight + eta * cosView);
+    float rP = (eta * cosLight - cosView)/(eta * cosLight + cosView);
 
     float4 R0 = (rS*rS + rP*rP)*0.5f;
 
     float D = GGX(cosHalf, material->roughness);
     float G = GeometricSmithShlickGGX(cosView, cosLight, material->roughness);
-    float4 F = SchlickFresnel(cosHalf, R0) * material->albedo;
+    float4 F = SchlickFresnel(cosHalf, R0);
 
-    float denominator = 4.0f * cosView * cosLight + 1e-6f; 
+    float denominator = 4.0f * cosOutgoing * cosOutgoing + 1e-6f; 
 
-    float4 F0 = mix(material->tint, material->albedo, material->sheen);
-    float4 sheen = mix(material->albedo, F0, material->tintRoughness) * (1.0f - F0);
-    sheen *= (1.0f - G)*(1.0f-G);
+    return clamp((D * F * G) / denominator, 0.0f , 1.0f);
 
-    return clamp((D * F * G + sheen)/ denominator, 0.0f , 1.0f)  ;
-
-}
-
-float perlin(const float2 * P){
-    return clamp(sin(dot(*P, (float2)(12.9898f, 78.233f))) * 43758.5453f, 1e-6f, 1.0f);
 }
 
 float4 ComputeColor(
     global const Resources * resources, 
     struct Ray * ray, 
     const struct Camera * camera, 
-    uint * seed,
-    const float2 * noiseUV
+    uint * seed
     ){
 
     float4 accumulatedColor = 0.0f;
@@ -435,9 +426,6 @@ float4 ComputeColor(
 
     const float4 skyColor = (float4)(0.2f, 0.2f, 0.25f, 1.0f);
     global const struct Material * materials = resources->materials;
-
-    float3 noisePoint = perlin(noiseUV);
-
 
     for(int i = 0; i < 8; ++i){
         struct Sample sample = FindClosestIntersection(resources, ray);
@@ -526,11 +514,9 @@ void kernel RayTrace(
 
     // Monte - Carlo path tracing have issue with glaring (dark and light spots on consistent color)
 
-    float2 noise = (float2)(x/(float)width, y/(float)height);
-
     // Supersampling approach results in no noise but very low amount of fps
 
-    float4 sample = ComputeColor(resources, &ray, &camera, &seed, &noise);
+    float4 sample = ComputeColor(resources, &ray, &camera, &seed);
 
     float scale = 1.0f / (numFrames + 1);
 
@@ -552,10 +538,10 @@ void kernel Transfer(
     ){
 
     resources->objects = objects;
-    resources->numObject = numObject;
     resources->materials = materials;
-    resources->numMaterials = numMaterials;
     resources->vertices = vertices;
+    resources->numObject = numObject;
+    resources->numMaterials = numMaterials;
 }
 
 void kernel AntiAlias(

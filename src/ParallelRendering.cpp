@@ -34,16 +34,16 @@ ParallelRendering::ParallelRendering(RenderingContext * _context){
     objectBufferSize = sizeof(Object)*context->objects.size();
     objectBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, objectBufferSize);
 
-    scratchBufferSize = sizeof(Color) * context->width * context->height;
-    scratchBuffer = cl::Buffer(deviceContext, CL_MEM_READ_WRITE, scratchBufferSize);
-
     materialBufferSize = sizeof(Material) * context->materials.size();
     materialBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, materialBufferSize);
 
     verticesBufferSize = sizeof(Vector3) * context->mesh.vertices.size();
     verticesBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, verticesBufferSize);
 
-    resourcesBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, 48); // 48 Bytes in kernel file
+    resourcesBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, 32);
+
+    scratchBufferSize = sizeof(Color) * context->width * context->height;
+    scratchBuffer = cl::Buffer(deviceContext, CL_MEM_READ_WRITE, scratchBufferSize);
 
     globalRange = cl::NDRange(context->width, context->height);
 
@@ -80,14 +80,6 @@ ParallelRendering::ParallelRendering(RenderingContext * _context){
     antialiasingKernel = cl::Kernel(program, "AntiAlias");
     antialiasingKernel.setArg(0, sizeof(cl_mem), &textureBuffer);
     antialiasingKernel.setArg(1, scratchBuffer);
-    antialiasingKernel.setArg(1, scratchBuffer);
-
-    /*
-    TODO :
-    - Resources buffer
-
-
-    */
 
     context->loggingService.Write(MessageType::INFO, "Accelerator configuration done");
 }
@@ -136,10 +128,10 @@ void ParallelRendering::DetermineLocalSize(const uint32_t & width, const uint32_
 
 void ParallelRendering::Render(Color * _pixels){
 
-    raytracingKernel.setArg(3, sizeof(Camera), &context->camera);
-    raytracingKernel.setArg(4, sizeof(int), &context->frameCounter);
+    raytracingKernel.setArg(2, sizeof(Camera), &context->camera);
+    raytracingKernel.setArg(3, sizeof(int), &context->frameCounter);
 
-    queue.enqueueNDRangeKernel(raytracingKernel, cl::NullRange, globalRange, localRange);
+    queue.enqueueNDRangeKernel(raytracingKernel, cl::NullRange, globalRange);
     //queue.enqueueNDRangeKernel(antialiasingKernel, cl::NullRange, globalRange);
 
     queue.finish();

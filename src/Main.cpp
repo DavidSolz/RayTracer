@@ -317,9 +317,9 @@ RenderingContext context;
                     ->SetTransparency(1.0f)
                     ->SetTintColor((Color){1.0f, 0.0f, 1.0f, 1.0f})
                     ->SetTintRoughness(1.0f)
-                    ->SetRoughness(0.5f)
+                    ->SetRoughness(0.1f)
                     ->SetRefractiveIndex(1.45f)
-                    ->SetSheen(0.6f)
+                    ->SetSheen(0.1f)
                     ->Build();
 
     context.objects.emplace_back(p);
