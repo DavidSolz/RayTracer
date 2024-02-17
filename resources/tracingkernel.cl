@@ -74,11 +74,10 @@ struct Camera{
 
 typedef struct {
     global const struct Object * objects;
-    int numObject;
     global const struct Material * materials;
-    int numMaterials;
     global const float3 * vertices;
-    global float4 * scratch;
+    int numObject;
+    int numMaterials;
 } Resources;
 
 
@@ -433,7 +432,7 @@ float4 GlassyBRDF(const float3 normal, const float3 halfVector, const float3 lig
 }
 
 float4 CookTorranceBRDF(const float3 normal, const float3 halfVector, const float3 lightVector, const float3 outgoing, const float3 viewVector, const struct Material * material) {
-    
+
     const float4 baseMetallicColor = (float4)(0.04f, 0.04f, 0.04f, 1.0f);
 
     float4 F0 = mix(baseMetallicColor, material->albedo, material->metallic);
@@ -448,7 +447,7 @@ float4 CookTorranceBRDF(const float3 normal, const float3 halfVector, const floa
     float G = GeometricSmithShlickGGX(cosView, cosLight, material->roughness);
     float4 F = SchlickFresnel(cosHalfOutgoing, F0);
 
-    float denominator = 4.0f * fmax(cosOutgoing * cosOutgoing, 0.0f) + 1e-6f; 
+    float denominator = 4.0f * fmax(cosOutgoing * cosOutgoing, 0.0f) + 1e-6f;
 
     return clamp((D * G * F) / denominator, 0.0f, 1.0f);
 }
@@ -487,7 +486,7 @@ float4 ComputeColor(global const Resources * resources, struct Ray * ray, const 
         float cosLight = dot(normal, lightVector);
 
         float3 direction = mix(diffusionDirection, reflectionDirection, material.metallic * isGlossy);
-        
+
         float3 halfVector = normalize(normal + reflectionDirection);
         ray->direction = normalize(mix(direction, refractionDirecton, material.transparency));
 
@@ -521,7 +520,13 @@ float3 CalculatePixelPosition(
 
 // Main
 
-void kernel RayTrace(write_only image2d_t image, global Resources * resources, const struct Camera camera, const int numFrames ){
+void kernel RayTrace(
+    write_only image2d_t image,
+    global Resources * resources,
+    global float4 * scratch,
+    const struct Camera camera,
+    const int numFrames
+    ){
 
     uint x = get_global_id(0);
     uint y = get_global_id(1);
@@ -532,7 +537,6 @@ void kernel RayTrace(write_only image2d_t image, global Resources * resources, c
     uint index = y * width + x;
     uint seed = (numFrames<<16) ^ (numFrames >>13) + index;
 
-    global float4 * scratch = resources->scratch;
 
     // Simple anti-aliasing techinque
     float3 offset = RandomDirection(&seed);
@@ -540,7 +544,7 @@ void kernel RayTrace(write_only image2d_t image, global Resources * resources, c
 
     private struct Ray ray;
     ray.origin = camera.position;
-    ray.direction = normalize(pixelPosition - ray.origin );
+    ray.direction = normalize(pixelPosition - ray.origin);
 
     // Monte - Carlo path tracing have issue with glaring (dark and light spots on consistent color)
 
@@ -554,7 +558,8 @@ void kernel RayTrace(write_only image2d_t image, global Resources * resources, c
 
     write_imagef(image, (int2)(x, y), pixel);
 
-    scratch[index] = pixel;
+    scratch[ index ] = pixel;
+
 }
 
 void kernel Transfer(
@@ -562,7 +567,6 @@ void kernel Transfer(
     global struct Object * objects,
     global struct Material * materials,
     global const float3 * vertices,
-    global float4 * scratch,
     const int numObject,
     const int numMaterials
     ){
@@ -572,10 +576,13 @@ void kernel Transfer(
     resources->materials = materials;
     resources->numMaterials = numMaterials;
     resources->vertices = vertices;
-    resources->scratch = scratch;
+
 }
 
-void kernel AntiAlias(write_only image2d_t image, global Resources * resources){
+void kernel AntiAlias(
+    write_only image2d_t image,
+    global float4 * scratch
+    ){
 
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -593,7 +600,7 @@ void kernel AntiAlias(write_only image2d_t image, global Resources * resources){
 
             int index = neighborY * width + neighborX;
 
-            pixelValue += resources->scratch[index] ;
+            pixelValue += scratch[index] ;
 
         }
     }
