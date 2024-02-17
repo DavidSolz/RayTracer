@@ -409,7 +409,11 @@ float4 physicalBRDF(const float3 normal, const float3 halfVector, const float3 l
 
     float denominator = 4.0f * cosView * cosLight + 1e-6f; 
 
-    return clamp((D * F * G )/ denominator, 0.0f , 1.0f)  ;
+    float4 F0 = mix(material->tint, material->albedo, material->sheen);
+    float4 sheen = mix(material->albedo, F0, material->tintRoughness) * (1.0f - F0);
+    sheen *= (1.0f - G)*(1.0f-G);
+
+    return clamp((D * F * G + sheen)/ denominator, 0.0f , 1.0f)  ;
 
 }
 
@@ -465,14 +469,12 @@ float4 ComputeColor(
         direction = mix(direction, anisotropicReflection, material.anisotropy);
         ray->direction = normalize(mix(direction, refractionDirecton, material.transparency));
 
-        float4 F0 = mix(0.04f, material.tint, material.sheen);
-        float4 sheenComponent = mix(material.albedo, F0, material.tintRoughness) * F0;
         float4 emissionComponent = material.albedo * material.emmissionIntensity * (cosLight > 0.0f);
         float4 pbrComponent = physicalBRDF(normal, halfVector, lightVector, ray->direction, viewVector, &material);
         float4 absorptionComponent = material.transmissionFilter * exp(-material.albedo * sample.length); 
 
         accumulatedColor += (emissionComponent + pbrComponent + absorptionComponent) * lightColor ;
-        lightColor *=  2.0f * cosLight  * (material.albedo + sheenComponent);
+        lightColor *=  2.0f * cosLight  * material.albedo;
     }
 
     return accumulatedColor;
@@ -498,11 +500,11 @@ float3 CalculatePixelPosition(
 // Main
 
 void kernel RayTrace(
-    write_only image2d_t image,
-    global Resources * resources,
-    global float4 * scratch,
-    const struct Camera camera,
-    const int numFrames
+    write_only image2d_t image, 
+    global Resources * resources, 
+    const struct Camera camera, 
+    const int numFrames,
+    global float4 * scratch 
     ){
 
     uint x = get_global_id(0);
@@ -513,7 +515,6 @@ void kernel RayTrace(
 
     uint index = y * width + x;
     uint seed = (numFrames<<16) ^ (numFrames >>13) + index;
-
 
     // Simple anti-aliasing techinque
     float3 offset = RandomDirection(&seed);
@@ -555,12 +556,11 @@ void kernel Transfer(
     resources->materials = materials;
     resources->numMaterials = numMaterials;
     resources->vertices = vertices;
-
 }
 
 void kernel AntiAlias(
-    write_only image2d_t image,
-    global float4 * scratch
+    write_only image2d_t image, 
+    global float4 * scratch 
     ){
 
     int x = get_global_id(0);

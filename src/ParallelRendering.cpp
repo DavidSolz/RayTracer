@@ -43,7 +43,7 @@ ParallelRendering::ParallelRendering(RenderingContext * _context){
     verticesBufferSize = sizeof(Vector3) * context->mesh.vertices.size();
     verticesBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, verticesBufferSize);
 
-    resourcesBuffer = cl::Buffer(deviceContext, CL_MEM_READ_WRITE, 32);
+    resourcesBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, 48); // 48 Bytes in kernel file
 
     globalRange = cl::NDRange(context->width, context->height);
 
@@ -65,9 +65,9 @@ ParallelRendering::ParallelRendering(RenderingContext * _context){
     raytracingKernel = cl::Kernel(program, "RayTrace");
     raytracingKernel.setArg(0, sizeof(cl_mem), &textureBuffer);
     raytracingKernel.setArg(1, resourcesBuffer);
-    raytracingKernel.setArg(2, scratchBuffer);
-    raytracingKernel.setArg(3, sizeof(Camera), &context->camera);
-    raytracingKernel.setArg(4, sizeof(int), &context->frameCounter);
+    raytracingKernel.setArg(2, sizeof(Camera), &context->camera);
+    raytracingKernel.setArg(3, sizeof(int), &context->frameCounter);
+    raytracingKernel.setArg(4, scratchBuffer);
 
     queue.enqueueWriteBuffer(objectBuffer, CL_TRUE, 0, objectBufferSize, context->objects.data());
     queue.enqueueWriteBuffer(materialBuffer, CL_TRUE, 0, materialBufferSize, context->materials.data());
@@ -79,6 +79,7 @@ ParallelRendering::ParallelRendering(RenderingContext * _context){
 
     antialiasingKernel = cl::Kernel(program, "AntiAlias");
     antialiasingKernel.setArg(0, sizeof(cl_mem), &textureBuffer);
+    antialiasingKernel.setArg(1, scratchBuffer);
     antialiasingKernel.setArg(1, scratchBuffer);
 
     /*
