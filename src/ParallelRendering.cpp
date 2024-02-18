@@ -1,5 +1,54 @@
 #include "ParallelRendering.h"
 
+
+ParallelRendering::LocalBuffer * ParallelRendering::CreateBuffer(const size_t & _size, const cl_mem_flags & flag){
+    cl_int status;
+    LocalBuffer * localBuffer = new LocalBuffer{};
+
+    context->loggingService.Write(MessageType::INFO, "Allocating new memory buffer...");
+
+    if( _size > 0){
+        localBuffer->size = _size;
+        localBuffer->buffer = cl::Buffer(deviceContext, flag, _size, nullptr, &status);
+    }else{
+        localBuffer->size = 1;
+        localBuffer->buffer = cl::Buffer(deviceContext, CL_MEM_READ_WRITE, 1, nullptr, &status);
+    }
+
+    if(status != 0){
+        context->loggingService.Write(MessageType::ISSUE,"Error during buffer allocation");
+        delete localBuffer;
+        return NULL;
+    }
+
+    buffers.emplace_back(localBuffer);
+    return localBuffer;
+}
+
+ParallelRendering::LocalBuffer * ParallelRendering::CreateBuffer(const size_t & _size, const void * data){
+    cl_int status;
+    LocalBuffer * localBuffer = new LocalBuffer{};
+
+    context->loggingService.Write(MessageType::INFO, "Allocating new read-only buffer...");
+
+    if( _size > 0){
+        localBuffer->size = _size;
+        localBuffer->buffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, _size, (void*)data, &status);
+    }else{
+        localBuffer->size = 1;
+        localBuffer->buffer = cl::Buffer(deviceContext, CL_MEM_READ_WRITE, 1, nullptr, &status);
+    }
+
+    if(status != 0){
+        context->loggingService.Write(MessageType::ISSUE,"Error during buffer allocation");
+        delete localBuffer;
+        return NULL;
+    }
+
+    buffers.emplace_back(localBuffer);
+    return localBuffer;
+}
+
 ParallelRendering::ParallelRendering(RenderingContext * _context){
 
     this->context = _context;
@@ -12,16 +61,6 @@ ParallelRendering::ParallelRendering(RenderingContext * _context){
 
     context->loggingService.Write(MessageType::INFO, "Building programs...");
 
-    cl::Program program = FetchProgram();
-
-    if(!program()){
-
-        context->loggingService.Write(MessageType::ISSUE, "Unable to compile kernel!");
-        context->loggingService.Write(MessageType::INFO, "Accelerator configuration done");
-
-        return ;
-    }
-
     if( context->memorySharing ){
         textureBuffer = clCreateFromGLTexture2D(deviceContext(), CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, context->textureID, NULL);
         clEnqueueAcquireGLObjects(queue(), 1, &textureBuffer, 0, NULL, NULL);
@@ -31,99 +70,66 @@ ParallelRendering::ParallelRendering(RenderingContext * _context){
 
     context->frameCounter = 0;
 
-    objectBufferSize = sizeof(Object)*context->objects.size();
-    objectBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, objectBufferSize);
+    size_t tempSize = sizeof(Object)*context->objects.size();
+    LocalBuffer * objects = CreateBuffer(tempSize, context->objects.data());
 
-    materialBufferSize = sizeof(Material) * context->materials.size();
-    materialBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, materialBufferSize);
+    tempSize = sizeof(Material) * context->materials.size();
+    LocalBuffer * materials = CreateBuffer(tempSize, context->materials.data());
 
-    verticesBufferSize = sizeof(Vector3) * context->mesh.vertices.size();
-    verticesBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, verticesBufferSize);
+    tempSize = sizeof(Vector3) * context->mesh.vertices.size();
+    LocalBuffer * vertices = CreateBuffer(tempSize, context->mesh.vertices.data());
 
-    resourcesBuffer = cl::Buffer(deviceContext, CL_MEM_READ_ONLY, 32);
+    LocalBuffer * resources = CreateBuffer(64, CL_MEM_READ_WRITE);
 
-    scratchBufferSize = sizeof(Color) * context->width * context->height;
-    scratchBuffer = cl::Buffer(deviceContext, CL_MEM_READ_WRITE, scratchBufferSize);
+    tempSize = sizeof(Color) * context->width * context->height;
+    LocalBuffer * scratch = CreateBuffer(tempSize, CL_MEM_READ_WRITE);
+
+    tempSize = sizeof(Texture) * context->textureInfo.size();
+    LocalBuffer * textureInfo = CreateBuffer(tempSize, context->textureInfo.data());
 
     globalRange = cl::NDRange(context->width, context->height);
-
-    context->loggingService.Write(MessageType::INFO, "Determining local size...");
-
-    DetermineLocalSize(context->width, context->height);
 
     int numObjects = context->objects.size();
     int numMaterials = context->materials.size();
 
-    transferKernel = cl::Kernel(program, "Transfer");
-    transferKernel.setArg(0, resourcesBuffer);
-    transferKernel.setArg(1, objectBuffer);
-    transferKernel.setArg(2, materialBuffer);
-    transferKernel.setArg(3, verticesBuffer);
-    transferKernel.setArg(4, numObjects);
-    transferKernel.setArg(5, numMaterials);
+    transferKernel = CreateKernel("resources/transferkernel.cl", "Transfer");
+    transferKernel.setArg(0, resources->buffer);
+    transferKernel.setArg(1, objects->buffer);
+    transferKernel.setArg(2, materials->buffer);
+    transferKernel.setArg(3, vertices->buffer);
+    transferKernel.setArg(4, textureInfo->buffer);
+    transferKernel.setArg(5, numObjects);
+    transferKernel.setArg(6, numMaterials);
 
-    raytracingKernel = cl::Kernel(program, "RayTrace");
+    raytracingKernel = CreateKernel("resources/tracingkernel.cl", "RayTrace");
     raytracingKernel.setArg(0, sizeof(cl_mem), &textureBuffer);
-    raytracingKernel.setArg(1, resourcesBuffer);
+    raytracingKernel.setArg(1, resources->buffer);
     raytracingKernel.setArg(2, sizeof(Camera), &context->camera);
     raytracingKernel.setArg(3, sizeof(int), &context->frameCounter);
-    raytracingKernel.setArg(4, scratchBuffer);
+    raytracingKernel.setArg(4, scratch->buffer);
 
-    queue.enqueueWriteBuffer(objectBuffer, CL_TRUE, 0, objectBufferSize, context->objects.data());
-    queue.enqueueWriteBuffer(materialBuffer, CL_TRUE, 0, materialBufferSize, context->materials.data());
-    queue.enqueueWriteBuffer(verticesBuffer, CL_TRUE, 0, verticesBufferSize, context->mesh.vertices.data());
-
+    context->loggingService.Write(MessageType::INFO, "Transfering data to accelerator...");
     queue.enqueueNDRangeKernel(transferKernel, cl::NullRange, cl::NDRange(1), cl::NDRange(1));
     queue.enqueueNDRangeKernel(raytracingKernel, cl::NullRange, globalRange);
     queue.finish();
 
-    antialiasingKernel = cl::Kernel(program, "AntiAlias");
+    antialiasingKernel = CreateKernel("resources/antialiasingkernel.cl", "AntiAlias");
     antialiasingKernel.setArg(0, sizeof(cl_mem), &textureBuffer);
-    antialiasingKernel.setArg(1, scratchBuffer);
+    antialiasingKernel.setArg(1, scratch->buffer);
 
     context->loggingService.Write(MessageType::INFO, "Accelerator configuration done");
 }
 
 ParallelRendering::~ParallelRendering(){
+
     if( context->memorySharing )
         clEnqueueReleaseGLObjects(queue(), 1, &textureBuffer, 0, NULL, NULL);
 
+    for( size_t id = 0; id < buffers.size(); ++id){
+        delete buffers[id];
+    }
+
     clReleaseMemObject(textureBuffer);
-}
-
-void ParallelRendering::DetermineLocalSize(const uint32_t & width, const uint32_t & height){
-
-    std::vector<size_t> maxWorkItemSizes = defaultDevice.getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>();
-    size_t maxGroupSize = defaultDevice.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>();
-
-    uint32_t rangeX, rangeY;
-
-    rangeX = static_cast<uint32_t>(maxWorkItemSizes[0]);
-    rangeY = static_cast<uint32_t>(maxWorkItemSizes[1]);
-
-    for (uint32_t x = rangeX; x > 0; --x) {
-        if (width % x == 0) {
-            rangeX = x;
-            break;
-        }
-    }
-
-    for (uint32_t y = rangeY; y > 0; --y) {
-        if (height % y == 0 && rangeX * y <= maxGroupSize) {
-            rangeY = y;
-            break;
-        }
-    }
-
-    // This should be redone to support 1D groups
-    if(maxWorkItemSizes[1]==1)
-        rangeX = 100;
-
-
-    rangeX = std::max(rangeX, (uint32_t)1);
-    rangeY = std::max(rangeY, (uint32_t)1);
-
-    localRange = cl::NDRange(rangeX, rangeY);
 }
 
 void ParallelRendering::Render(Color * _pixels){
@@ -265,39 +271,23 @@ void ParallelRendering::GetDefaultDevice(){
 
     defaultDevice = all_devices[selectedDevice];
 
-
-    char buffer[250] = {0};
-
-    sprintf(buffer, "Discovered platform : %s", defaultPlatform.getInfo<CL_PLATFORM_NAME>().c_str());
-
-    context->loggingService.Write(MessageType::INFO, buffer);
-
-    sprintf(buffer, "Selected device : %s", defaultDevice.getInfo<CL_DEVICE_NAME>().c_str());
-
-    context->loggingService.Write(MessageType::INFO, buffer);
-
-    sprintf(buffer, "Using : %s", defaultDevice.getInfo<CL_DEVICE_OPENCL_C_VERSION>().c_str());
-
-    context->loggingService.Write(MessageType::INFO, buffer);
-
-    sprintf(buffer, "Discovered max work group size : %ld", defaultDevice.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>());
-
-    context->loggingService.Write(MessageType::INFO, buffer);
+    context->loggingService.Write(MessageType::INFO, "Discovered platform : %s", defaultPlatform.getInfo<CL_PLATFORM_NAME>().c_str());
+    context->loggingService.Write(MessageType::INFO, "Selected device : %s", defaultDevice.getInfo<CL_DEVICE_NAME>().c_str());
+    context->loggingService.Write(MessageType::INFO, "Using : %s", defaultDevice.getInfo<CL_DEVICE_OPENCL_C_VERSION>().c_str());
+    context->loggingService.Write(MessageType::INFO, "Discovered max work group size : %ld", defaultDevice.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>());
 
 }
 
-cl::Program ParallelRendering::FetchProgram(){
+cl::Kernel ParallelRendering::CreateKernel(const char * filepath, const char * kernelName){
 
     cl::Program::Sources sources;
 
     std::string kernel_code;
 
-    std::fstream input("resources/tracingkernel.cl");
+    std::fstream input(filepath, std::ios::in);
 
-    if(!input){
-
-        context->loggingService.Write(MessageType::ISSUE, "Kernel can't be loaded");
-
+    if( !input.is_open() ){
+        context->loggingService.Write(MessageType::ISSUE, "File %s can't be opened", filepath);
         exit(-1);
     }
 
@@ -305,25 +295,30 @@ cl::Program ParallelRendering::FetchProgram(){
 
     input.close();
 
+    const char * namePointer = std::strstr(kernel_code.c_str(), kernelName);
+
+    if( namePointer == NULL ){
+        context->loggingService.Write(MessageType::ISSUE, "Program file does not contain %s kernel", kernelName);
+        exit(-1);
+    }
+
     sources.push_back({kernel_code.c_str(), kernel_code.length()});
 
     cl::Program program(deviceContext, sources);
 
-    char buffer[250] = {0};
-
     if(program.build() != CL_SUCCESS){
         std::string buildLog = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(defaultDevice);
+        context->loggingService.Write(MessageType::ISSUE, "Program build log : %s", buildLog.c_str());
+        exit(-1);
+    }
+        
+    context->loggingService.Write(MessageType::INFO, "Discovered programs : %s", program.getInfo<CL_PROGRAM_KERNEL_NAMES>().c_str());
 
-        sprintf(buffer, "Error during building program. Build log:\n%s\n", buildLog.c_str());
-
-        context->loggingService.Write(MessageType::ISSUE, buffer);
-        context->loggingService.Write(MessageType::INFO, "Accelerator configuration done");
+    if(!program()){
+        context->loggingService.Write(MessageType::ISSUE, "Unable to compile kernel!");
         exit(-1);
     }
 
-    sprintf(buffer, "Discovered programs : %s", program.getInfo<CL_PROGRAM_KERNEL_NAMES>().c_str());
-    context->loggingService.Write(MessageType::INFO, buffer);
-
-    return program;
+    return cl::Kernel(program, kernelName);
 
 }

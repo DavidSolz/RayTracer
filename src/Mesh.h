@@ -25,12 +25,15 @@ struct Mesh{
 
             vertices[i] = vertices[i] * scale + offset;
         }
+        CalculateNormals();
     }
 
     void CalculateNormals(){
 
         if(normals.size()>0)
             return;
+
+        normals.clear();
 
         for(uint32_t i=0; i < numIndices; ++i){
 

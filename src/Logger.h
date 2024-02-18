@@ -1,14 +1,19 @@
 #ifndef LOGGER_H
 #define LOGGER_H
 
-#include "ILog.h"
-
 #include <stdint.h>
 #include <iostream>
 #include <fstream>
+#include <cstdarg>
 #include <ctime>
 
-class Logger : public ILog{
+enum MessageType{
+    INFO,
+    ISSUE,
+    WARNING
+};
+
+class Logger{
 private:
 
     bool isSystemStream;
@@ -24,7 +29,7 @@ public:
 
     void BindOutput(const char * _filename);
 
-    void Write(MessageType _type, const char * _data);
+    void Write(MessageType _type, const char * _format, ...);
 
     void Write(const char * _data);
 

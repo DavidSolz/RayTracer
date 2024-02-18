@@ -1,5 +1,11 @@
 #include "Logger.h"
 
+static const char *types[]= {
+    "INFO",
+    "WARNING",
+    "ERROR"
+};
+
 Logger::Logger(const char * _filename){
 
     uint32_t len = 0;
@@ -38,22 +44,25 @@ void Logger::BindOutput(const char * _filename){
 
 }
 
-void Logger::Write(MessageType _type, const char * _data){
-
-    static const char *types[]= {
-        "INFO",
-        "WARNING",
-        "ERROR"
-    };
+void Logger::Write(MessageType _type, const char * _format, ...){
 
     std::time_t now = std::time(nullptr);
     std::tm* localTime = std::localtime(&now);
 
-    std::fprintf(output, "[%04d-%02d-%02d %02d:%02d:%02d] [%s] : %s\n",
+    std::fprintf(output, "[%04d-%02d-%02d %02d:%02d:%02d] [%s] : ",
                 localTime->tm_year + 1900, localTime->tm_mon + 1, localTime->tm_mday,
                 localTime->tm_hour, localTime->tm_min, localTime->tm_sec,
-                types[ _type ],
-                _data);
+                types[ _type ]);
+
+    va_list args;
+    va_start(args, _format);
+
+    vfprintf(output, _format, args);
+
+    va_end(args);
+
+    fprintf(output, "\n");
+
     fflush(output);
     
 }

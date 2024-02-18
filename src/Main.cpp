@@ -2,59 +2,22 @@
 #include "WindowManager.h"
 #include "MaterialBuilder.h"
 #include "PerformanceMonitor.h"
+#include "Configurator.h"
 #include "MeshReader.h"
 
-int main(int argc, char* argv[]){
-
-// Objects setup
-
-RenderingContext context;
-
-// Argument parsing
-
-    const char* sceneFile = nullptr;
-
-    for (int i = 1; i < argc; ++i) {
-        const char* arg = argv[i];
-
-        if(arg[0] != '-'){
-            fprintf(stderr, "Unknown argument: %s\n", arg);
-            return EXIT_FAILURE;
-        }else if (arg[1] == 'V' && arg[2] == '\0') {
-            fprintf(stdout, "VSync enabled.\n");
-            context.vSync = true;
-        } else if (arg[1] == 'L' && arg[2] == '\0') {
-            if (i + 1 < argc && argv[i + 1][0] != '-') {
-                sceneFile = argv[i + 1];
-                i++;
-            } else {
-                fprintf(stderr, "Error: -L flag requires a scene file path\n");
-                return EXIT_FAILURE;
-            }
-        } else if (arg[1] == 'S' && arg[2] == '\0') {
-            fprintf(stdout, "Memory sharing enabled.\n");
-            context.memorySharing = true;
-        } else {
-            fprintf(stderr, "Unknown argument: %s\n", arg);
-            return EXIT_FAILURE;
-        }
-    }
-
-// Context setup
+int main(int argc, char **argv){
 
     srand(time(NULL));
 
-    context.width = 1000;
-    context.height = 1000;
-    context.depth = 480;
+    // Objects setup
 
-    context.camera.position = Vector3(context.width/2.0f, context.height/2.0f, -900.0f);
-    context.camera.aspectRatio = context.width/(float)context.height;
+    RenderingContext context;
 
-    context.loggingService.BindOutput("RayTracer_log.txt");
+    Configurator configurator(&context);
+
+    configurator.ParseArgs(argc, argv);
 
     MaterialBuilder materialBuilder(&context);
-
 
 
 // {
@@ -309,7 +272,7 @@ RenderingContext context;
 
     context.objects.emplace_back(p);
 
-    p.position = Vector3(4.5*context.width/5.0f, context.height/4.0f, 0.0f);
+    p.position = Vector3(4.5*context.width/5.0f, context.height/2.0f, 0.0f);
     p.maxPos = p.position + Vector3(200.0f, 200.0f, 200.0f);
     p.type = CUBE;
 
@@ -319,7 +282,7 @@ RenderingContext context;
                     ->SetTintColor((Color){1.0f, 0.0f, 1.0f, 1.0f})
                     ->SetTintRoughness(1.0f)
                     ->SetRoughness(0.1f)
-                    ->SetRefractiveIndex(1.45f)
+                    ->SetRefractiveIndex(1.2f)
                     ->SetSheen(0.1f)
                     ->Build();
 
@@ -327,22 +290,22 @@ RenderingContext context;
 
 // Transfer mesh into context
 
-    MeshReader reader(&context);
+    // MeshReader reader(&context);
 
-    Mesh * mesh = reader.LoadObject("resources/mesh.obj");
+    // Mesh * mesh = reader.LoadObject("resources/mesh.obj");
 
-    float scale = 100;
-    Vector3 offset(context.width/2.0f, context.height/2.0f, context.depth/4.0f);
+    // float scale = 100;
+    // Vector3 offset(context.width/2.0f, context.height/2.0f, context.depth/4.0f);
 
-    mesh->Translate(offset, scale, -45.0f);
+    // mesh->Translate(offset, scale, -45.0f);
 
-    uint32_t materialID = materialBuilder
-                        .SetBaseColor({0.0f, 0.5f, 0.2f, 1.0f})
-                        ->SetTransparency(1.0f)
-                        ->SetRoughness(0.5f)
-                        ->SetRefractiveIndex(1.45f)
-                        //->SetSheen(1.0f)
-                        ->Build();
+    // uint32_t materialID = materialBuilder
+    //                     .SetBaseColor({0.0f, 0.5f, 0.2f, 1.0f})
+    //                     ->SetTransparency(1.0f)
+    //                     ->SetRoughness(0.5f)
+    //                     ->SetRefractiveIndex(1.45f)
+    //                     //->SetSheen(1.0f)
+    //                     ->Build();
 
 }
 

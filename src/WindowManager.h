@@ -5,7 +5,6 @@
 #include <unordered_map>
 
 #include "IFrameRender.h"
-#include "ILog.h"
 #include "Timer.h"
 
 #include "ThreadedRendering.h"

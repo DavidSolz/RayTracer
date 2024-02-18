@@ -2,6 +2,7 @@
 #define PARALLELRENDERING_H
 
 #define CL_HPP_TARGET_OPENCL_VERSION 200
+#define CL_HPP_ENABLE_EXCEPTIONS
 
 #ifdef __APPLE__
 
@@ -26,11 +27,19 @@
 
 #endif
 
-#include <fstream>
-
 #include "IFrameRender.h"
 
+#include <fstream>
+#include <string>
+#include <vector>
+
+
 class ParallelRendering : public IFrameRender {
+
+    struct LocalBuffer{
+        size_t size;
+        cl::Buffer buffer;
+    };
 
     RenderingContext * context;
 
@@ -47,29 +56,33 @@ class ParallelRendering : public IFrameRender {
     cl::NDRange globalRange;
     cl::NDRange localRange;
 
-
-    size_t dataSize;
-    size_t objectBufferSize;
-    size_t materialBufferSize;
-    size_t verticesBufferSize;
-    size_t scratchBufferSize;
-
     const cl_image_format format = {CL_RGBA, CL_FLOAT};
 
     cl_mem textureBuffer;
-    cl::Buffer resourcesBuffer;
-    cl::Buffer objectBuffer;
-    cl::Buffer materialBuffer;
-    cl::Buffer verticesBuffer;
-    cl::Buffer scratchBuffer;
+
+    std::vector< LocalBuffer * > buffers;
 
     void GetDefaultDevice();
 
     void CreateDeviceContext();
 
-    cl::Program FetchProgram();
+    /// @brief Creates buffer of specified type and size
+    /// @param size 
+    /// @param flag 
+    /// @return buffer
+    LocalBuffer * CreateBuffer(const size_t & _size, const cl_mem_flags & flag);
 
-    void DetermineLocalSize(const uint32_t & width, const uint32_t & height);
+    /// @brief Creates read only buffer  of specified size
+    /// @param size 
+    /// @param data 
+    /// @return read only buffer filled with data
+    LocalBuffer * CreateBuffer(const size_t & _size, const void * data);
+
+    /// @brief Creates OpenCL kernel
+    /// @param filepath 
+    /// @param kernelName 
+    /// @return kernel object
+    cl::Kernel CreateKernel(const char * filepath, const char * kernelName);
 
 public:
 
