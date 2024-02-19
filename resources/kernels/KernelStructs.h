@@ -24,6 +24,7 @@ struct Material {
     float emmissionIntensity;
     float anisotropy;
     float anisotropyRotation;
+    int textureID;
 } __attribute((aligned(128)));
 
 enum SpatialType{
@@ -54,6 +55,7 @@ struct Sample{
     float length;
     float3 point;
     float3 normal;
+    unsigned int objectID;
     unsigned int materialID;
 };
 
@@ -80,6 +82,7 @@ struct Resources{
     __global const struct Material * materials;
     __global const float3 * vertices;
     __global const struct Texture * textureInfo;
+    __global const float4 * textureData;
     int numObject;
     int numMaterials;
 } __attribute((aligned(64)));

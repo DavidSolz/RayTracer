@@ -6,7 +6,7 @@ MaterialBuilder::MaterialBuilder(const RenderingContext * _context){
 }       
 
 void MaterialBuilder::ClearMaterial(){
-    temporaryMaterial.albedo = {0};
+    temporaryMaterial.albedo = {0.5f, 0.5f, 0.5f, 1.0f};
     temporaryMaterial.tint = {1.0f,1.0f,1.0f,1.0f};
     temporaryMaterial.specular = {1.0f, 1.0f, 1.0f, 1.0f};
     temporaryMaterial.transmissionFilter = {0};
@@ -22,6 +22,7 @@ void MaterialBuilder::ClearMaterial(){
     temporaryMaterial.emmissionIntensity = 0.0f;
     temporaryMaterial.anisotropy = 0.0f;
     temporaryMaterial.anisotropyRotation = 0.0f;
+    temporaryMaterial.textureID = -1;
 }
 
 MaterialBuilder * MaterialBuilder::SetBaseColor(const Color & _color){
@@ -110,6 +111,34 @@ MaterialBuilder * MaterialBuilder::SetEmission(const float & _factor){
 
 MaterialBuilder * MaterialBuilder::SetSpecularIntensity(const float & _factor){
     temporaryMaterial.specularIntensity = std::fmax(0.0f, std::fmin(_factor, 1.0f));
+    return this;
+}
+
+MaterialBuilder * MaterialBuilder::AttachTexture( const char * _filepath ){
+
+    Image image = BitmapReader::ReadFile(_filepath);
+
+    if( image.data == NULL ){
+        fprintf(stderr, "Texture can't be loaded");
+        return this;
+    }
+
+    Texture info;
+    info.width = image.width;
+    info.height = image.height;
+    info.offset = context->textureData.size();
+
+    temporaryMaterial.textureID = context->textureInfo.size();
+    context->textureInfo.emplace_back(info);
+
+    uint32_t size = image.width * image.height;
+
+    for( uint32_t id = 0; id < size; ++id )
+        context->textureData.emplace_back(image.data[id]);
+    
+
+    delete[] image.data;
+
     return this;
 }
 

@@ -2,6 +2,7 @@
 #define MATERIALBUILDER_H
 
 #include "RenderingContext.h"
+#include "BitmapReader.h"
 
 class MaterialBuilder{
 private:
@@ -53,6 +54,8 @@ public:
     MaterialBuilder * SetEmission(const float & _factor);
 
     MaterialBuilder * SetSpecularIntensity(const float & _factor);
+
+    MaterialBuilder * AttachTexture( const char * _filepath);
 
     uint32_t EmplaceMaterial(const Material & material);
 

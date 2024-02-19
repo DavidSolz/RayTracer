@@ -21,7 +21,7 @@ struct Material {
     float emmissionIntensity;
     float anisotropy;
     float anisotropyRotation;
-    
+    int textureID;
 } __attribute__((aligned(128)));
 
 #endif

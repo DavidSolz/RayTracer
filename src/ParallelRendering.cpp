@@ -87,21 +87,25 @@ ParallelRendering::ParallelRendering(RenderingContext * _context){
     tempSize = sizeof(Texture) * context->textureInfo.size();
     LocalBuffer * textureInfo = CreateBuffer(tempSize, context->textureInfo.data());
 
+    tempSize = sizeof(Color) * context->textureData.size();
+    LocalBuffer * textureData = CreateBuffer(tempSize, context->textureData.data());
+
     globalRange = cl::NDRange(context->width, context->height);
 
     int numObjects = context->objects.size();
     int numMaterials = context->materials.size();
 
-    transferKernel = CreateKernel("resources/transferkernel.cl", "Transfer");
+    transferKernel = CreateKernel("resources/kernels/transferkernel.cl", "Transfer");
     transferKernel.setArg(0, resources->buffer);
     transferKernel.setArg(1, objects->buffer);
     transferKernel.setArg(2, materials->buffer);
     transferKernel.setArg(3, vertices->buffer);
     transferKernel.setArg(4, textureInfo->buffer);
-    transferKernel.setArg(5, numObjects);
-    transferKernel.setArg(6, numMaterials);
+    transferKernel.setArg(5, textureData->buffer);
+    transferKernel.setArg(6, numObjects);
+    transferKernel.setArg(7, numMaterials);
 
-    raytracingKernel = CreateKernel("resources/tracingkernel.cl", "RayTrace");
+    raytracingKernel = CreateKernel("resources/kernels/tracingkernel.cl", "RayTrace");
     raytracingKernel.setArg(0, sizeof(cl_mem), &textureBuffer);
     raytracingKernel.setArg(1, resources->buffer);
     raytracingKernel.setArg(2, sizeof(Camera), &context->camera);
@@ -113,7 +117,7 @@ ParallelRendering::ParallelRendering(RenderingContext * _context){
     queue.enqueueNDRangeKernel(raytracingKernel, cl::NullRange, globalRange);
     queue.finish();
 
-    antialiasingKernel = CreateKernel("resources/antialiasingkernel.cl", "AntiAlias");
+    antialiasingKernel = CreateKernel("resources/kernels/antialiasingkernel.cl", "AntiAlias");
     antialiasingKernel.setArg(0, sizeof(cl_mem), &textureBuffer);
     antialiasingKernel.setArg(1, scratch->buffer);
 

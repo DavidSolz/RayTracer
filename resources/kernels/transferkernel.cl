@@ -1,11 +1,11 @@
-#include "resources/KernelStructs.h"
-
+#include "resources/kernels/KernelStructs.h"
 void kernel Transfer(
     global struct Resources * resources,
-    global struct Object * objects,
-    global struct Material * materials,
+    global const struct Object * objects,
+    global const struct Material * materials,
     global const float3 * vertices,
-    global struct Texture * textureInfo,
+    global const struct Texture * textureInfo,
+    global const float4 * textureData,
     const int numObject,
     const int numMaterials
     ){
@@ -14,6 +14,7 @@ void kernel Transfer(
     resources->materials = materials;
     resources->vertices = vertices;
     resources->textureInfo = textureInfo;
+    resources->textureData = textureData;
     resources->numObject = numObject;
     resources->numMaterials = numMaterials;
 }

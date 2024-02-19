@@ -1,5 +1,5 @@
 
-#include "resources/KernelStructs.h"
+#include "resources/kernels/KernelStructs.h"
 // Defines
 
 #define ONE_OVER_PI 1.0f/M_PI_F
@@ -17,7 +17,7 @@ float Rand(uint * seed){
 }
 
 float3 RandomDirection(uint * seed){
-    float latitude = (2.0f * Rand(seed) - 1.0f) * M_PI_F;
+    float latitude = ( 2.0f * Rand(seed) - 1.0f ) * M_PI_F;
     float longitude = Rand(seed) * M_PI_F;
 
     float cosLatitude = cos(latitude);
@@ -217,6 +217,7 @@ struct Sample FindClosestIntersection(
         if( (length < sample.length) && (length > 0.01f) ){
             sample.length = length ;
             sample.point = ray->origin + ray->direction * length * EPSILON;
+            sample.objectID = id;
             sample.materialID = object.materialID;
 
             switch(object.type){
@@ -284,15 +285,21 @@ float4 SchlickFresnel(const float cosHalf, const float4 F0){
     return F0 + (1.0f - F0) * pow(1.0f - cosHalf, 5.0f);
 }
 
-float GGX(const float cosH, const float roughness){
+float GGX(const float cosHalf, const float roughness){
     float alpha = roughness * roughness;
-    float denominator = (cosH * cosH * (alpha - 1.0f) + 1.0f);
-    return alpha/(M_PI_F*denominator*denominator + 1e-6f);
+    float alpha2 = alpha * alpha;
+    float cosHalf4 = cosHalf*cosHalf*cosHalf*cosHalf;
+    return ONE_OVER_PI * alpha2 / (cosHalf4 * (alpha2 - 1.0f) + 1.0f);
 }
 
-float SchlickGGX(const float cosView, const float roughness){
-    float coeff = roughness * roughness * 0.125f;
-    return fmax(cosView / ( cosView * (1.0f - coeff) + coeff ), 0.0f);
+float SchlickGGX(const float cosDirection, const float roughness){
+    float alpha = roughness * roughness;
+    float alpha2 = alpha * alpha;
+
+    float nominator = 2.0f * cosDirection;
+    float denominator = cosDirection + sqrt(alpha2 + (1.0f - alpha2) * cosDirection * cosDirection);
+
+    return fmin(nominator / denominator, 1.0f);
 }
 
 float GeometricSmithShlickGGX(
@@ -300,8 +307,9 @@ float GeometricSmithShlickGGX(
     const float cosLight, 
     const float roughness
     ){
-    float ggx1 = SchlickGGX(cosView, roughness);
-    float ggx2 = SchlickGGX(cosLight, roughness);
+
+    float ggx1 = SchlickGGX(cosLight, roughness);
+    float ggx2 = SchlickGGX(cosView, roughness);
 
     return ggx1*ggx2;
 }
@@ -315,21 +323,99 @@ float4 physicalBRDF(
     struct Material * material
     ){
 
+    float cosView = fmax(dot(normal, viewVector), 0.0f);
+    float cosLight =  fmax(dot(normal, lightVector), 0.0f);
+
     float cosHalf = dot(normal, halfVector);
-    float cosView = dot(normal, viewVector);
-    float cosLight =  dot(normal, lightVector);
-    float cosHalfOutgoing = dot(halfVector, outgoing);
+    float cosHalfView = fmax(dot(halfVector, viewVector), 0.0f);
 
     float4 R0 = IORToR0(material->indexOfRefraction);
 
     float D = GGX(cosHalf, material->roughness);
     float G = GeometricSmithShlickGGX(cosView, cosLight, material->roughness);
-    float4 F = SchlickFresnel(cosHalf, R0);
+    float4 F = SchlickFresnel(cosHalfView, R0);
 
     float denominator = 4.0f * cosView * cosLight + 1e-6f; 
 
-    return clamp((D * F * G) / denominator, 0.0f , 1.0f);
+    return (D * F * G) / denominator;
 
+}
+
+float4 GetTexturePixel(
+    global const float4 * texture,
+    const struct Object * object,
+    const struct Texture textureInfo,
+    const float3 localPoint,
+    const float3 normal
+    ){
+
+    float4 color = 0.0f;
+    int texelX = 0;
+    int texelY = 0;
+
+    if( object->type == CUBE ){
+
+        float3 boxSize = object->maxPos - object->position;
+        float3 relativePos = (localPoint - object->position) / boxSize;
+
+        float u, v;
+
+        float conditionU = fabs(normal.x) == 1.0f;
+        float conditionV = fabs(normal.y) == 1.0f;
+
+        if( fabs(normal.x) == 1.0f){
+            v = relativePos.z;
+        }else if( fabs(normal.y) == 1.0f ){
+            v = relativePos.z;
+        }else{
+            v = relativePos.y;
+        }
+
+        u = conditionU * relativePos.y + (1.0f - conditionU) * relativePos.x;
+        v = (conditionV+conditionU) * relativePos.z + (1.0f - conditionV - conditionU) * relativePos.y;
+
+        texelX = floor(u * textureInfo.width);
+        texelY = floor(v * textureInfo.height);
+
+        int idx = textureInfo.offset + (textureInfo.height - 1 - texelY) * textureInfo.width + texelX;
+
+        color = texture [ idx ];
+
+    } else if ( object->type == DISK ){
+
+        float3 pointToCenter = localPoint - object->position;
+        float theta = atan2(pointToCenter.y, pointToCenter.x);
+        float radius = length( pointToCenter );
+
+        float u = (theta + M_PI) / M_PI_2_F;
+        float v = (radius / object->radius);
+
+        texelX = floor( u * textureInfo.width );
+        texelY = floor( v * textureInfo.height ); 
+
+        int idx = textureInfo.offset + (textureInfo.height - 1 - texelY) * textureInfo.width + texelX;
+
+        color = texture [ idx ];
+
+    } else if ( object->type == SPHERE ){
+
+        float3 pointToCenter = normalize(localPoint - object->position);
+
+        float theta = acos( pointToCenter.z );
+        float phi = atan2(pointToCenter.y, pointToCenter.x);
+
+        float u = phi / M_PI_2_F;
+        float v = 1.0f -  theta / M_PI_F;
+
+        texelX = floor( u * textureInfo.width );
+        texelY = floor( v * textureInfo.height ); 
+
+        int idx = textureInfo.offset + (textureInfo.height - 1 - texelY) * textureInfo.width + texelX;
+
+        color = texture [ idx ];
+    }
+
+    return color;
 }
 
 float4 ComputeColor(
@@ -345,6 +431,9 @@ float4 ComputeColor(
 
     const float4 skyColor = (float4)(0.2f, 0.2f, 0.25f, 1.0f);
     global const struct Material * materials = resources.materials;
+    global const struct Object * objects = resources.objects;
+    global const struct Texture * infos = resources.textureInfo;
+    global const float4 * texture = resources.textureData;
 
     for(int i = 0; i < 8; ++i){
         struct Sample sample = FindClosestIntersection(resources, ray);
@@ -357,6 +446,8 @@ float4 ComputeColor(
         ray->origin = sample.point;
 
         struct Material material =  materials[ sample.materialID ];
+        struct Object object = objects[ sample.objectID ];
+        struct Texture info = infos[ 0 ]; // Replace with acutal texture idx
 
         float3 normal = sample.normal;
 
@@ -368,15 +459,25 @@ float4 ComputeColor(
 
         float3 halfVector = normalize(normal + reflectionDirection);
 
-        float cosLight = fmax(dot(normal, lightVector), 0.0f);
+        float cosLight = dot(normal, lightVector);
 
-        float3 direction = mix(diffusionDirection, reflectionDirection, material.metallic);
-        ray->direction = normalize(mix(direction, refractionDirecton, material.transparency));
+        float isMetallic = Rand(seed) <=  material.metallic;
+        float isTransparent = Rand(seed) <=  material.transparency;
+
+        float3 direction = mix(diffusionDirection, reflectionDirection, material.metallic * isMetallic);
+        ray->direction = normalize(mix(direction, refractionDirecton, material.transparency * isTransparent));
         
-        float4 emissionComponent = material.albedo * material.emmissionIntensity * cosLight;
-        float4 pbrComponent = material.albedo * physicalBRDF(normal, halfVector, lightVector, ray->direction, viewVector, &material);
+        float4 emissionComponent =  material.albedo * material.emmissionIntensity * (cosLight > 0.0f);
+        float4 pbrComponent = physicalBRDF(normal, halfVector, lightVector, ray->direction, viewVector, &material);
 
-        accumulatedColor +=  (emissionComponent + pbrComponent) * lightColor ;
+        float4 color = 0.0f;
+        
+        if ( material.textureID > -1 )
+            color = GetTexturePixel(texture, &object, info, sample.point, sample.normal);
+
+        accumulatedColor +=  ( emissionComponent + pbrComponent + color) * lightColor ;
+
+
         lightColor *= 2.0f * cosLight * material.albedo;
         lastIOR = material.indexOfRefraction;
     }
@@ -427,7 +528,7 @@ void kernel RayTrace(
     float3 offset = RandomDirection(&seed);
     float3 pixelPosition = CalculatePixelPosition(x + offset.x + 0.5f, y + offset.y + 0.5f, width, height, &camera);
 
-    private struct Ray ray;
+    struct Ray ray;
     ray.origin = camera.position;
     ray.direction = normalize(pixelPosition - ray.origin);
 

@@ -258,7 +258,7 @@ int main(int argc, char **argv){
                     ->SetSpecularIntensity(0.2f)
                     ->Build();
 
-    context.objects.emplace_back(p);
+    //context.objects.emplace_back(p);
 
     p.position = Vector3(context.width/4.0f, context.height/4.0f + 100.0f, 0.0f);
     p.radius = 100.0f;
@@ -270,23 +270,38 @@ int main(int argc, char **argv){
                 ->SetRoughness(0.5f)
                 ->Build();
 
-    context.objects.emplace_back(p);
+    // context.objects.emplace_back(p);
 
-    p.position = Vector3(4.5*context.width/5.0f, context.height/2.0f, 0.0f);
-    p.maxPos = p.position + Vector3(200.0f, 200.0f, 200.0f);
-    p.type = CUBE;
+    float invAspect = (1.0f/context.camera.aspectRatio);
 
-    p.materialID = materialBuilder
-                    .SetBaseColor((Color){0.0f, 0.0f, 1.0f, 1.0f})
-                    ->SetTransparency(1.0f)
-                    ->SetTintColor((Color){1.0f, 0.0f, 1.0f, 1.0f})
-                    ->SetTintRoughness(1.0f)
-                    ->SetRoughness(0.1f)
-                    ->SetRefractiveIndex(1.2f)
-                    ->SetSheen(0.1f)
-                    ->Build();
+    struct Color colorA = (Color){1.0f, 0.37f, 0.45f, 1.0f};
+    struct Color colorB = (Color){0.8f, 0.05f, 1.0f, 1.0f};
 
-    context.objects.emplace_back(p);
+    for(int i=0; i<5; ++i){
+
+        for(int j=0; j<5; ++j){
+            
+            p.position = Vector3(4.5*context.width/5.0f - j * 210.0f * invAspect, context.height/4.0f + i * 210.0f * invAspect, 0.0f);
+            p.maxPos = p.position + Vector3(200.0f, 200.0f, 200.0f) * invAspect;
+            p.type = CUBE;
+
+            struct Color color = Color::Lerp(colorA, colorB, (i*j)/25.0f);
+
+            p.materialID = materialBuilder
+                            //.SetBaseColor(color)
+                            .SetTransparency(1.0f)
+                            ->SetRoughness(1.0f - (i/5.0f))
+                            ->AttachTexture( "resources/textures/crystal-texture.bmp" )
+                            ->SetRefractiveIndex(1.0f + j*1.0f/5.0f)
+                            ->Build();
+
+            context.objects.emplace_back(p);
+
+        }
+       
+    }
+
+    
 
 // Transfer mesh into context
 
@@ -308,7 +323,6 @@ int main(int argc, char **argv){
     //                     ->Build();
 
 }
-
 
 //Main loop
 
