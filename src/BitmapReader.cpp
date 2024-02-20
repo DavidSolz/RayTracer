@@ -103,7 +103,7 @@ Image BitmapReader::ReadFile(const char * filename){
         return Image();
     }
 
-    Color * pixels = new Color[ pixel_count ];
+    int * pixels = new int[ pixel_count ];
 
     unsigned char tempColor[4] = {0};
 
@@ -113,10 +113,12 @@ Image BitmapReader::ReadFile(const char * filename){
 
             uint32_t id = y * infoHeader.width + x;
 
-            pixels[id].A = 1.0f;
-            pixels[id].R = tempColor[2] / 255.0f;
-            pixels[id].G = tempColor[1] / 255.0f;
-            pixels[id].B = tempColor[0] / 255.0f;
+            unsigned char * data = (unsigned char *)&pixels[id];
+
+            data[0] = tempColor[2];
+            data[1] = tempColor[1];
+            data[2] = tempColor[0];
+            data[3] = 255;
         }
 
         offset += (row_size - infoHeader.width * bytes_per_pixel);

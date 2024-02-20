@@ -82,7 +82,7 @@ struct Resources{
     __global const struct Material * materials;
     __global const float3 * vertices;
     __global const struct Texture * textureInfo;
-    __global const float4 * textureData;
+    __global const int * textureData;
     int numObject;
     int numMaterials;
 } __attribute((aligned(64)));

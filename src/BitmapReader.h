@@ -16,7 +16,7 @@ struct Header{
 struct Image{
     uint32_t height;
     uint32_t width;
-    Color * data;
+    int * data;
 };
 
 struct Info{

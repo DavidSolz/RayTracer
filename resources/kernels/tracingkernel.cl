@@ -3,8 +3,10 @@
 // Defines
 
 #define ONE_OVER_PI 1.0f/M_PI_F
-#define ONE_OVER_2_PI 1.0f/M_PI_2_F
+#define ONE_OVER_2_PI 1.0f/(2.0f * M_PI_F)
 #define PI_OVER_TWO M_PI_F/2.0f;
+#define TWO_PI 2.0f * M_PI_F
+#define ONE_OVER_MAX_CHAR 1.0f/255.0f
 
 #define EPSILON 1.000001f
 
@@ -43,29 +45,40 @@ float IntersectSphere(const struct Ray * ray, const struct Object * object) {
     return fmin(t1, t2);
 }
 
+float FlatIntersection(const struct Ray * ray, const float3 position, const float3 normal){
+
+    float d = dot(position, normal);
+    float rayToPlane = dot(ray->origin, normal);
+
+    return (rayToPlane - d) / dot(-ray->direction, normal);
+}
+
 float IntersectPlane(const struct Ray * ray, const struct Object * object) {
 
-    float d = dot(object->position, object->normal);
-    float rayToPlane = dot(ray->origin, object->normal);
+    float length = FlatIntersection(ray, object->position, object->normal);
+    float3 intersection = ray->origin + ray->direction * length;
 
-    return (rayToPlane - d) / dot(-ray->direction, object->normal);
+    float halfWidth = object->maxPos.x * 0.5f;
+    float halfHeight = object->maxPos.y * 0.5f;
+
+    float condition = intersection.x < (object->position.x - halfWidth) ||
+        intersection.x > (object->position.x + halfWidth) ||
+        intersection.z < (object->position.z - halfHeight) ||
+        intersection.z > (object->position.z + halfHeight);
+
+    return (1.0f - condition) * length;
 }
 
 float IntersectDisk(const struct Ray * ray, const struct Object * object) {
 
-    float t = IntersectPlane(ray, object);
+    float length = FlatIntersection(ray, object->position, object->normal);
+    float3 intersection = ray->origin + ray->direction * length * EPSILON;
 
-    if( fabs(t) < 1e-6f)
-        return -1.0f;
+    float3 delta = intersection - object->position;
+    float distance = dot(delta, delta);
+    float condition = distance <= (object->radius * object->radius);
 
-    float3 p = ray->origin + ray->direction * t * EPSILON;
-    float3 v = p - object->position;
-    float d2 = dot(v, v);
-
-    if (d2 <= object->radius * object->radius )
-        return t;
-
-    return -1.0f;
+    return condition * length;
 
 }
 
@@ -243,16 +256,26 @@ struct Sample FindClosestIntersection(
 }
 
 float3 Reflect(const float3 incoming, const float3 normal) {
+
     float3 outgoing = incoming - normal * 2.0f * dot(incoming, normal);
     return normalize(outgoing);
+
 }
 
 float3 DiffuseReflect(const float3 normal, uint * seed){
 
+    /*
+        TODO:
+
+        - fix diffuse specular
+
+    */
+
     float3 randomDirection = RandomDirection(seed);
     float cosDirection = dot(normal, randomDirection);
 
-    return normalize(randomDirection * cosDirection + normal);
+    return normalize(randomDirection * cosDirection + normal );
+
 }
 
 float3 Refract(
@@ -341,81 +364,93 @@ float4 physicalBRDF(
 
 }
 
+float4 Unpack(const int color){
+    unsigned char * byte = (unsigned char *)&color;
+    return (float4)(byte[0], byte[1], byte[2], byte[3]) * ONE_OVER_MAX_CHAR;
+}
+
+float4 ColorSample(global const int * texture, const float u, const float v, const struct Texture info){
+
+
+    int texelX = floor( u * info.width );
+    int texelY = floor( v * info.height );
+
+    float u_ratio = u * info.width - texelX;
+    float v_ratio = v * info.height - texelY;
+
+    int idx_tl = info.offset + (info.height - 1 - texelY) * info.width + texelX;
+    int idx_tr = idx_tl + 1;
+    int idx_bl = idx_tl - info.width;
+    int idx_br = idx_bl + 1;
+
+    float4 color_tl = Unpack(texture[idx_tl]);
+    float4 color_tr = Unpack(texture[idx_tr]);
+    float4 color_bl = Unpack(texture[idx_bl]);
+    float4 color_br = Unpack(texture[idx_br]);
+
+    float4 top_interp = mix(color_tl, color_tr, u_ratio);
+    float4 bottom_interp = mix(color_bl, color_br, u_ratio);
+    float4 final_color = mix(top_interp, bottom_interp, v_ratio);
+
+    return final_color;
+}
+
 float4 GetTexturePixel(
-    global const float4 * texture,
+    global const int * texture,
     const struct Object * object,
-    const struct Texture textureInfo,
+    const struct Texture info,
     const float3 localPoint,
     const float3 normal
     ){
 
-    float4 color = 0.0f;
-    int texelX = 0;
-    int texelY = 0;
+    float u = 0.0f;
+    float v = 0.0f;
+
+    float3 relativePos = localPoint - object->position;
 
     if( object->type == CUBE ){
 
         float3 boxSize = object->maxPos - object->position;
-        float3 relativePos = (localPoint - object->position) / boxSize;
-
-        float u, v;
+        relativePos /= boxSize;
 
         float conditionU = fabs(normal.x) == 1.0f;
         float conditionV = fabs(normal.y) == 1.0f;
 
-        if( fabs(normal.x) == 1.0f){
-            v = relativePos.z;
-        }else if( fabs(normal.y) == 1.0f ){
-            v = relativePos.z;
-        }else{
-            v = relativePos.y;
-        }
-
         u = conditionU * relativePos.y + (1.0f - conditionU) * relativePos.x;
-        v = (conditionV+conditionU) * relativePos.z + (1.0f - conditionV - conditionU) * relativePos.y;
+        v = ( conditionV + conditionU ) * relativePos.z + (1.0f - conditionV - conditionU) * relativePos.y;
 
-        texelX = floor(u * textureInfo.width);
-        texelY = floor(v * textureInfo.height);
-
-        int idx = textureInfo.offset + (textureInfo.height - 1 - texelY) * textureInfo.width + texelX;
-
-        color = texture [ idx ];
 
     } else if ( object->type == DISK ){
 
-        float3 pointToCenter = localPoint - object->position;
-        float theta = atan2(pointToCenter.y, pointToCenter.x);
-        float radius = length( pointToCenter );
+        float theta = atan2(relativePos.z, relativePos.x);
+        float radius = length( relativePos );
 
-        float u = (theta + M_PI) / M_PI_2_F;
-        float v = (radius / object->radius);
-
-        texelX = floor( u * textureInfo.width );
-        texelY = floor( v * textureInfo.height ); 
-
-        int idx = textureInfo.offset + (textureInfo.height - 1 - texelY) * textureInfo.width + texelX;
-
-        color = texture [ idx ];
+        u = (theta + M_PI_F) / TWO_PI;
+        v = radius / object->radius;
 
     } else if ( object->type == SPHERE ){
 
-        float3 pointToCenter = normalize(localPoint - object->position);
+        float phi = atan2(normal.z, normal.x);
+        float theta = normal.y ;
 
-        float theta = acos( pointToCenter.z );
-        float phi = atan2(pointToCenter.y, pointToCenter.x);
+        u = 0.5f + phi / TWO_PI;
+        v = clamp(0.5f + theta * 0.5f, 0.0f, 1.0f);
 
-        float u = phi / M_PI_2_F;
-        float v = 1.0f -  theta / M_PI_F;
+    } else if (object->type == PLANE ){
 
-        texelX = floor( u * textureInfo.width );
-        texelY = floor( v * textureInfo.height ); 
+        float width = object->maxPos.x;
+        float height = object->maxPos.y;
 
-        int idx = textureInfo.offset + (textureInfo.height - 1 - texelY) * textureInfo.width + texelX;
+        float3 minPos = (float3)(width , height, 1.0f) * 0.5f;
 
-        color = texture [ idx ];
+        float3 localPos = (relativePos - minPos);
+
+        u = localPos.x / width;
+        v = 0.5f + localPos.z / height;
+
     }
 
-    return color;
+    return ColorSample(texture, u, v, info);
 }
 
 float4 ComputeColor(
@@ -433,7 +468,7 @@ float4 ComputeColor(
     global const struct Material * materials = resources.materials;
     global const struct Object * objects = resources.objects;
     global const struct Texture * infos = resources.textureInfo;
-    global const float4 * texture = resources.textureData;
+    global const int * texture = resources.textureData;
 
     for(int i = 0; i < 8; ++i){
         struct Sample sample = FindClosestIntersection(resources, ray);
@@ -447,12 +482,13 @@ float4 ComputeColor(
 
         struct Material material =  materials[ sample.materialID ];
         struct Object object = objects[ sample.objectID ];
-        struct Texture info = infos[ 0 ]; // Replace with acutal texture idx
+        struct Texture info = infos[ material.textureID ];
 
         float3 normal = sample.normal;
 
         float3 lightVector = normalize(-ray->direction);
         float3 viewVector = normalize(camera->position - sample.point);
+
         float3 diffusionDirection = DiffuseReflect(normal, seed);
         float3 reflectionDirection = Reflect(ray->direction, normal);
         float3 refractionDirecton = Refract(ray->direction, normal, lastIOR, material.indexOfRefraction);
@@ -460,6 +496,7 @@ float4 ComputeColor(
         float3 halfVector = normalize(normal + reflectionDirection);
 
         float cosLight = dot(normal, lightVector);
+        float cosView = dot(normal, viewVector);
 
         float isMetallic = Rand(seed) <=  material.metallic;
         float isTransparent = Rand(seed) <=  material.transparency;
@@ -475,7 +512,7 @@ float4 ComputeColor(
         if ( material.textureID > -1 )
             color = GetTexturePixel(texture, &object, info, sample.point, sample.normal);
 
-        accumulatedColor +=  ( emissionComponent + pbrComponent + color) * lightColor ;
+        accumulatedColor +=  ( emissionComponent + pbrComponent + color ) * cosLight * lightColor ;
 
 
         lightColor *= 2.0f * cosLight * material.albedo;

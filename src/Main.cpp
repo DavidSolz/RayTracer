@@ -224,18 +224,21 @@ int main(int argc, char **argv){
     Object p;
 
     p.position = Vector3(context.width/2.0f, context.height/4.0f, context.depth/4.0f);
-    p.normal = Vector3(0.0f, 1.0f ,0.0f);
+    p.normal = Vector3(0.0f, 1.0f, 0.0f);
+    p.maxPos = Vector3(5000.0f, 5000.0f, 5000.0f);
     p.radius = 1000.0f;
-    p.type = DISK;
+    p.type = PLANE;
 
     p.materialID = materialBuilder
                     .SetBaseColor({0.5f, 0.5f, 0.5f, 1.0f})
+                    ->SetRoughness(1.0f)
+                    ->AttachTexture( "resources/textures/sand.bmp" )
                     ->Build();
 
     context.objects.emplace_back(p);
 
 // Light
-    p.position = Vector3(context.width/2.0f, 2*context.height, context.depth/4.0f);
+    p.position = Vector3(context.width/2.0f, 4*context.height, context.depth/4.0f);
     p.normal = Vector3(0.0f, -1.0f ,0.0f);
     p.radius = 300.0f;
     p.type = DISK;
@@ -253,12 +256,10 @@ int main(int argc, char **argv){
     p.type = SPHERE;
 
     p.materialID = materialBuilder
-                    .SetBaseColor((Color){1.0f, 0.0f, 0.0f, 1.0f})
-                    ->SetSmoothness(0.2f)
-                    ->SetSpecularIntensity(0.2f)
+                    .AttachTexture( "resources/textures/crystal.bmp" )
                     ->Build();
 
-    //context.objects.emplace_back(p);
+    context.objects.emplace_back(p);
 
     p.position = Vector3(context.width/4.0f, context.height/4.0f + 100.0f, 0.0f);
     p.radius = 100.0f;
@@ -270,36 +271,20 @@ int main(int argc, char **argv){
                 ->SetRoughness(0.5f)
                 ->Build();
 
-    // context.objects.emplace_back(p);
+    context.objects.emplace_back(p);
 
-    float invAspect = (1.0f/context.camera.aspectRatio);
+    p.position = Vector3(4.5*context.width/5.0f, context.height/4.0f, 0.0f);
+    p.maxPos = p.position + Vector3(400.0f, 400.0f, 400.0f);
+    p.type = CUBE;
 
-    struct Color colorA = (Color){1.0f, 0.37f, 0.45f, 1.0f};
-    struct Color colorB = (Color){0.8f, 0.05f, 1.0f, 1.0f};
+    p.materialID = materialBuilder
+                    .SetSmoothness(1.0f)
+                    ->SetRoughness(0.0f)
+                    ->AttachTexture( "resources/textures/metal.bmp" )
+                    ->Build();
 
-    for(int i=0; i<5; ++i){
+    context.objects.emplace_back(p);
 
-        for(int j=0; j<5; ++j){
-            
-            p.position = Vector3(4.5*context.width/5.0f - j * 210.0f * invAspect, context.height/4.0f + i * 210.0f * invAspect, 0.0f);
-            p.maxPos = p.position + Vector3(200.0f, 200.0f, 200.0f) * invAspect;
-            p.type = CUBE;
-
-            struct Color color = Color::Lerp(colorA, colorB, (i*j)/25.0f);
-
-            p.materialID = materialBuilder
-                            //.SetBaseColor(color)
-                            .SetTransparency(1.0f)
-                            ->SetRoughness(1.0f - (i/5.0f))
-                            ->AttachTexture( "resources/textures/crystal-texture.bmp" )
-                            ->SetRefractiveIndex(1.0f + j*1.0f/5.0f)
-                            ->Build();
-
-            context.objects.emplace_back(p);
-
-        }
-       
-    }
 
     
 

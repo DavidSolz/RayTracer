@@ -90,7 +90,7 @@ MaterialBuilder * MaterialBuilder::SetSmoothness(const float & _factor){
 }
 
 MaterialBuilder * MaterialBuilder::SetRoughness(const float & _factor){
-    temporaryMaterial.roughness = std::fmax(0.0f, std::fmin(_factor, 1.0f));
+    temporaryMaterial.roughness = std::fmax(1e-6f, std::fmin(_factor, 1.0f));
     return this;
 }
 
@@ -122,6 +122,8 @@ MaterialBuilder * MaterialBuilder::AttachTexture( const char * _filepath ){
         fprintf(stderr, "Texture can't be loaded");
         return this;
     }
+
+    context->loggingService.Write(MessageType::INFO, "Loading texture file : %s", _filepath);
 
     Texture info;
     info.width = image.width;

@@ -87,7 +87,7 @@ ParallelRendering::ParallelRendering(RenderingContext * _context){
     tempSize = sizeof(Texture) * context->textureInfo.size();
     LocalBuffer * textureInfo = CreateBuffer(tempSize, context->textureInfo.data());
 
-    tempSize = sizeof(Color) * context->textureData.size();
+    tempSize = sizeof(int) * context->textureData.size();
     LocalBuffer * textureData = CreateBuffer(tempSize, context->textureData.data());
 
     globalRange = cl::NDRange(context->width, context->height);

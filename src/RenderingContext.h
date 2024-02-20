@@ -29,7 +29,7 @@ struct RenderingContext {
     std::vector<Object> objects;
     std::vector<Material> materials;
     std::vector<Texture> textureInfo;
-    std::vector<Color> textureData;
+    std::vector<int> textureData;
     
     Mesh mesh;
 

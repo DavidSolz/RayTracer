@@ -71,6 +71,17 @@ struct Color {
         return a + (b-a)*scale;
     }
 
+    static Color Pack(const unsigned char _R, const unsigned char _G, const unsigned char _B){
+        return (Color){_R, _G, _B, 1.0f};
+    }
+
+    static void Unpack(const Color & _color, float * array){
+        array[0] = _color.R;
+        array[1] = _color.G;
+        array[2] = _color.B;
+        array[3] = 1.0f;
+    }
+
     static float Similarity(const Color& colorA, const Color& colorB){
         float dR = fabs(colorA.R - colorB.R);
         float dG = fabs(colorA.G - colorB.G);

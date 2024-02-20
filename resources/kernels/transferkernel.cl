@@ -5,7 +5,7 @@ void kernel Transfer(
     global const struct Material * materials,
     global const float3 * vertices,
     global const struct Texture * textureInfo,
-    global const float4 * textureData,
+    global const int * textureData,
     const int numObject,
     const int numMaterials
     ){

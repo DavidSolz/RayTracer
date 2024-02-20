@@ -24,7 +24,6 @@ void kernel AntiAlias(
         }
     }
 
-
-    write_imagef(image, (int2)(x,y), pixelValue/4.0f);
+    write_imagef(image, (int2)(x,y), pixelValue/9.0f);
 
 }
