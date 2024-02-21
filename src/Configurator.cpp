@@ -12,6 +12,12 @@ Configurator::Configurator(RenderingContext * _context){
 
     context->loggingService.BindOutput("RayTracer_log.txt");
 
+    serializer = new SceneSerializer(context);
+
+}
+
+Configurator::~Configurator(){
+    delete serializer;
 }
 
 void Configurator::ShowHelp(){
@@ -19,18 +25,17 @@ void Configurator::ShowHelp(){
     fprintf(stdout, "Usage: RayTracer [options]\n");
     fprintf(stdout,"Options:\n");
     fprintf(stdout,"  -V              Enable VSync\n");
-    fprintf(stdout,"  -L <filepath>   Load scene from specified file\n");
+    fprintf(stdout,"  -L <filepath>   Load scene from file\n");
     fprintf(stdout,"  -w <width>      Set window width\n");
     fprintf(stdout,"  -h <height>     Set window height\n");
     fprintf(stdout,"  -S              Enable memory sharing\n");
-    fprintf(stdout,"  -H              Show this help menu\n");
+    fprintf(stdout,"  -H              Show help menu\n");
 
 }
 
-
 void Configurator::ParseArgs(const size_t & size, char **args){
 
-    const char* sceneFile = nullptr;
+    const char * filepath = nullptr;
 
     for (int i = 1; i < size; ++i) {
         const char* arg = args[i];
@@ -43,7 +48,7 @@ void Configurator::ParseArgs(const size_t & size, char **args){
             context->vSync = true;
         } else if (arg[1] == 'L' && arg[2] == '\0') {
             if (i + 1 < size && args[i + 1][0] != '-') {
-                sceneFile = args[i + 1];
+                filepath = args[i + 1];
                 i++;
             } else {
                 fprintf(stderr, "Error: -L flag requires a scene file path\n");
@@ -75,6 +80,11 @@ void Configurator::ParseArgs(const size_t & size, char **args){
             fprintf(stderr, "Unknown argument: %s\n", arg);
             exit(-1);
         }
+    }
+
+    if( filepath != NULL ){
+        context->loggingService.Write(MessageType::INFO, "Loading scene file : %s", filepath);
+        serializer->LoadFromFile(filepath);
     }
 
     context->camera.aspectRatio = context->width/(float)context->height;

@@ -8,7 +8,9 @@ struct Sample{
     float distance;
     struct Vector3 point;
     struct Vector3 normal;
-    uint32_t materialID;
+    struct Color texel;
+    unsigned int objectID;
+    unsigned int materialID;
 };
 
 #endif

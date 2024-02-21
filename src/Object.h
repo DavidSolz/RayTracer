@@ -1,6 +1,9 @@
 #ifndef OBJECT_H
 #define OBJECT_H
 
+#define OBJECT_PROPERTIES_SIZE 6
+#define OBJECT_PROPERTIES { "position", "material", "radius", "normal", "scale", "rotation"}
+
 #include "Material.h"
 #include "SpatialType.h"
 #include "Vector3.h"

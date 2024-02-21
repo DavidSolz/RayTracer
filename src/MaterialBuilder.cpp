@@ -2,6 +2,10 @@
 
 MaterialBuilder::MaterialBuilder(const RenderingContext * _context){
     this->context = (RenderingContext *)_context;
+
+    context->textureData.emplace_back(INT32_MAX);
+    context->normalMap.emplace_back(INT32_MAX>>1);
+
     ClearMaterial();
 }       
 
@@ -22,7 +26,14 @@ void MaterialBuilder::ClearMaterial(){
     temporaryMaterial.emmissionIntensity = 0.0f;
     temporaryMaterial.anisotropy = 0.0f;
     temporaryMaterial.anisotropyRotation = 0.0f;
-    temporaryMaterial.textureID = -1;
+    temporaryMaterial.textureID = 0;
+
+    info.width = 1;
+    info.height = 1;
+    info.offset = 0;
+    info.normalWidth = 1;
+    info.normalHeight = 1;
+    info.normalsOffset = 0;
 }
 
 MaterialBuilder * MaterialBuilder::SetBaseColor(const Color & _color){
@@ -106,6 +117,7 @@ MaterialBuilder * MaterialBuilder::SetTintRoughness(const float & _factor){
 
 MaterialBuilder * MaterialBuilder::SetEmission(const float & _factor){
     temporaryMaterial.emmissionIntensity = std::fmax(_factor, 0.0f);
+    temporaryMaterial.roughness = 0.0f;
     return this;
 }
 
@@ -125,45 +137,70 @@ MaterialBuilder * MaterialBuilder::AttachTexture( const char * _filepath ){
 
     context->loggingService.Write(MessageType::INFO, "Loading texture file : %s", _filepath);
 
-    Texture info;
     info.width = image.width;
     info.height = image.height;
     info.offset = context->textureData.size();
 
     temporaryMaterial.textureID = context->textureInfo.size();
-    context->textureInfo.emplace_back(info);
 
     uint32_t size = image.width * image.height;
 
     for( uint32_t id = 0; id < size; ++id )
         context->textureData.emplace_back(image.data[id]);
     
+    delete[] image.data;
 
+    return this;
+}
+
+MaterialBuilder * MaterialBuilder::AttachNormalMap( const char * _filepath ){
+
+    Image image = BitmapReader::ReadFile(_filepath);
+
+    if( image.data == NULL ){
+        fprintf(stderr, "Normal map can't be loaded");
+        return this;
+    }
+
+    context->loggingService.Write(MessageType::INFO, "Loading normal map file : %s", _filepath);
+
+    info.normalWidth = image.width;
+    info.normalHeight = image.height;
+    info.normalsOffset = context->normalMap.size();
+
+    uint32_t size = image.width * image.height;
+
+    for( uint32_t id = 0; id < size; ++id )
+        context->normalMap.emplace_back(image.data[id]);
+    
     delete[] image.data;
 
     return this;
 }
 
 uint32_t MaterialBuilder::EmplaceMaterial(const Material & material){
-    uint32_t idx = FindSimilarMaterial();
+    // uint32_t idx = FindSimilarMaterial();
 
-    if ( idx == UINT32_MAX){
-        context->materials.push_back(material);
-        return context->materials.size()-1;
-    }
-    return idx;
+    // if ( idx == UINT32_MAX){
+    context->materials.push_back(material);
+    return context->materials.size()-1;
+    // }
+
+    // return idx;
 }
 
 uint32_t MaterialBuilder::Build(){
-    uint32_t idx = FindSimilarMaterial();
+    // uint32_t idx = FindSimilarMaterial();
 
-    if ( idx == UINT32_MAX){
-        context->materials.push_back(temporaryMaterial);
-        ClearMaterial();
-        return context->materials.size()-1;
-    }
+    // if ( idx == UINT32_MAX){
+    context->materials.push_back(temporaryMaterial);
+    context->textureInfo.emplace_back(info);
+    
+    ClearMaterial();
+    return context->materials.size()-1;
+    // }
 
-    return idx;
+    // return idx;
 }
 
 

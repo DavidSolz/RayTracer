@@ -29,10 +29,13 @@ struct RenderingContext {
     std::vector<Object> objects;
     std::vector<Material> materials;
     std::vector<Texture> textureInfo;
-    std::vector<int> textureData;
-    
+
     Mesh mesh;
 
+    // Texture data
+    std::vector<int> textureData;
+    std::vector<int> normalMap;
+    
     // Camera info
     Camera camera;
     uint32_t frameCounter;

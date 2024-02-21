@@ -7,8 +7,6 @@
 
 int main(int argc, char **argv){
 
-    srand(time(NULL));
-
     // Objects setup
 
     RenderingContext context;
@@ -232,7 +230,7 @@ int main(int argc, char **argv){
     p.materialID = materialBuilder
                     .SetBaseColor({0.5f, 0.5f, 0.5f, 1.0f})
                     ->SetRoughness(1.0f)
-                    ->AttachTexture( "resources/textures/sand.bmp" )
+                    ->AttachTexture( "resources/textures/dunes.bmp" )
                     ->Build();
 
     context.objects.emplace_back(p);
@@ -257,18 +255,18 @@ int main(int argc, char **argv){
 
     p.materialID = materialBuilder
                     .AttachTexture( "resources/textures/crystal.bmp" )
+                    // ->AttachNormalMap( "resources/textures/crystal_normal.bmp" )
                     ->Build();
 
     context.objects.emplace_back(p);
 
-    p.position = Vector3(context.width/4.0f, context.height/4.0f + 100.0f, 0.0f);
+    p.position = Vector3(context.width/3.0f, context.height/4.0f + 100.0f, 0.0f);
     p.radius = 100.0f;
     p.type = SPHERE;
     
     p.materialID = materialBuilder
-                .SetBaseColor((Color){0.3f, 0.4f, 0.35f, 1.0f})
-                ->SetSmoothness(1.0f)
-                ->SetRoughness(0.5f)
+                .SetEmission(0.1f)
+                ->AttachTexture( "resources/textures/marble.bmp" )
                 ->Build();
 
     context.objects.emplace_back(p);
@@ -279,7 +277,7 @@ int main(int argc, char **argv){
 
     p.materialID = materialBuilder
                     .SetSmoothness(1.0f)
-                    ->SetRoughness(0.0f)
+                    ->SetRoughness(0.5f)
                     ->AttachTexture( "resources/textures/metal.bmp" )
                     ->Build();
 

@@ -1,11 +1,7 @@
 #ifndef KERNELSTRUCTS_H
 #define KERNELSTRUCTS_H
 
-struct Texture{
-    int width;
-    int height;
-    int offset;
-} __attribute((aligned(16)));
+#include "src/Texture.h"
 
 struct Material {
     float4 albedo;
@@ -38,7 +34,6 @@ enum SpatialType{
 struct Ray{
     float3 origin;
     float3 direction;
-    int insideObject;
 };
 
 struct Object{
@@ -55,6 +50,7 @@ struct Sample{
     float length;
     float3 point;
     float3 normal;
+    float4 texel;
     unsigned int objectID;
     unsigned int materialID;
 };
@@ -78,15 +74,14 @@ struct Camera{
 };
 
 struct Resources{
-    __global const struct Object * objects;
-    __global const struct Material * materials;
-    __global const float3 * vertices;
-    __global const struct Texture * textureInfo;
-    __global const int * textureData;
+    global const struct Object * objects;
+    global const struct Material * materials;
+    global const float3 * vertices;
+    global const struct Texture * textureInfo;
+    global const int * textureData;
+    global const int * normalMap;
     int numObject;
     int numMaterials;
 } __attribute((aligned(64)));
-
-
 
 #endif

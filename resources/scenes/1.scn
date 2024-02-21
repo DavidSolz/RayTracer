@@ -1,0 +1,21 @@
+scene
+{
+
+cube	
+{
+
+position 300 550 0
+scale 100 100 100
+
+}
+
+sphere	
+{
+
+position 500 800 0
+radius 100
+
+}
+
+
+}

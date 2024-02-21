@@ -5,6 +5,10 @@ struct Texture{
     int width;
     int height;
     int offset;
-} __attribute((aligned(16)));
+    int normalWidth;
+    int normalHeight;
+    int normalsOffset;
+    unsigned int checksum;
+} __attribute((aligned(32)));
 
 #endif
