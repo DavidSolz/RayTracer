@@ -12,6 +12,8 @@ private:
 
     double timeScale;
     Timepoint lastTime;
+
+    double deltaFrame;
     double deltaTime;
 
     uint32_t lastFrameCount;
@@ -26,17 +28,18 @@ public:
 
     void SetTimeScale(const double& _timeScale);
 
-    double GetDeltaTime() const;
+    double & GetDeltaTime();
 
-    uint32_t GetFrameCount() const;
+    double & GetDeltaFrame();
 
-    static Timer* GetInstance();
+    uint32_t & GetFrameCount();
+
+    static Timer& GetInstance();
 
     static Timepoint GetCurrentTime();
 
     static double GetDurationInSeconds(const std::chrono::high_resolution_clock::duration& duration);
 
-    ~Timer();
 
 };
 

@@ -5,7 +5,7 @@ PerformanceMonitor::PerformanceMonitor(){
     this->logger.BindOutput("Performance_log.csv");
     this->samplingStart = Timer::GetCurrentTime();
     this->lastSamplePoint = samplingStart;
-    this->timer = Timer::GetInstance();
+    this->timer = &Timer::GetInstance();
 
     logger.Write("fps count ; frametime");
 }
@@ -24,7 +24,7 @@ void PerformanceMonitor::GatherInformation(){
 
     uint32_t frameCount = timer->GetFrameCount();
     frameCount = std::max(frameCount, (uint32_t)1);
-    double frameTime = 1000.0f/frameCount;
+    double frameTime = timer->GetDeltaTime();
 
     sample.fpsCount = frameCount;
     sample.frameTime = frameTime;

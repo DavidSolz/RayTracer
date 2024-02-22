@@ -78,7 +78,7 @@ WindowManager::WindowManager(RenderingContext * _context){
 
     pixels = new Color[context->width * context->height];
 
-    timer = Timer::GetInstance();
+    timer = &Timer::GetInstance();
 
     glfwGetCursorPos(window, &lastMouseX, &lastMouseY);
 
@@ -139,7 +139,7 @@ void WindowManager::ProcessInput(){
         double offsetX = lastMouseX - currentX;
         double offsetY = lastMouseY - currentY;
 
-        double deltaTime = timer->GetDeltaTime();
+        double & deltaTime = timer->GetDeltaFrame();
 
         double len = sqrt(offsetX*offsetX + offsetY*offsetY);
         offsetX = (offsetX * deltaTime)/len;
@@ -219,9 +219,10 @@ void WindowManager::UpdateWindow(){
     glEnd();
     glDisable(GL_TEXTURE_2D);
 
-    uint32_t fps = timer->GetFrameCount();
+    uint32_t & fps = timer->GetFrameCount();
+    double & deltaTime = timer->GetDeltaTime();
 
-    sprintf(windowTitle+8, " | FPS : %d | Frametime : %5.3f ms\0", fps, 1000.0f/fps);
+    sprintf(windowTitle+8, " | FPS : %d | Frametime : %5.3f ms\0", fps, deltaTime);
     glfwSetWindowTitle(window, windowTitle);
 
     glfwSwapBuffers(window);
@@ -272,7 +273,7 @@ void WindowManager::TakeScreenShot(){
                 uint8_t(pixel.G * 255), 
                 uint8_t(pixel.R * 255), 
                 uint8_t(pixel.A * 255)
-                };
+            };
                 
             outFile.write((char*)(bgra), 4);
             

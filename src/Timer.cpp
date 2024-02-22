@@ -2,8 +2,6 @@
 
 #include <stdio.h>
 
-static Timer* instance;
-
 Timer::Timer(){
     this->timeScale = 1.0f;
     this->lastTime = GetCurrentTime();
@@ -22,20 +20,24 @@ double Timer::GetDurationInSeconds(const std::chrono::high_resolution_clock::dur
 void Timer::TicTac(){
     Timepoint currentTime = GetCurrentTime();
     frameCount++;
-    double delta = GetDurationInSeconds(currentTime - lastTime);
-    if(delta >= 1.0f){
-        deltaTime = delta/frameCount;
+    deltaFrame = GetDurationInSeconds(currentTime - lastTime);
+    if(deltaFrame >= 1.0f){
+        deltaTime = 1000.0f/frameCount;
         lastFrameCount = frameCount;
         frameCount = 0;
         lastTime = currentTime;
     }
 }
 
-double Timer::GetDeltaTime() const{
+double & Timer::GetDeltaTime() {
     return deltaTime;
 }
 
-uint32_t Timer::GetFrameCount() const{
+double & Timer::GetDeltaFrame(){
+    return deltaFrame;
+}
+
+uint32_t & Timer::GetFrameCount(){
     return lastFrameCount;
 }
 
@@ -43,13 +45,9 @@ void Timer::SetTimeScale(const double& _timeScale){
     this->timeScale = _timeScale;
 }
 
-Timer* Timer::GetInstance(){
-    if(!instance)
-        instance = new Timer();
+Timer& Timer::GetInstance(){
+    static Timer instance;
 
     return instance;
 }
 
-Timer::~Timer(){
-    delete instance;
-}
