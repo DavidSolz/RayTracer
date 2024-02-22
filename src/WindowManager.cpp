@@ -90,7 +90,7 @@ WindowManager::WindowManager(RenderingContext * _context){
 void WindowManager::KeyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mods){
 
 
-    float deltaTime = timer->GetDeltaTime();
+    float deltaTime = timer->GetDeltaFrame();
 
     switch (key){
         case GLFW_KEY_W:
@@ -219,11 +219,12 @@ void WindowManager::UpdateWindow(){
     glEnd();
     glDisable(GL_TEXTURE_2D);
 
-    uint32_t & fps = timer->GetFrameCount();
-    double & deltaTime = timer->GetDeltaTime();
-
-    sprintf(windowTitle+8, " | FPS : %d | Frametime : %5.3f ms\0", fps, deltaTime);
-    glfwSetWindowTitle(window, windowTitle);
+    if( timer->GetAccumulatedTime() >= 1.0f){
+        uint32_t & fps = timer->GetFrameCount();
+        double & deltaTime = timer->GetDeltaTime();
+        sprintf(windowTitle+8, " | FPS : %d | Frametime : %5.3f ms\0", fps, deltaTime);
+        glfwSetWindowTitle(window, windowTitle);
+    }
 
     glfwSwapBuffers(window);
     glfwPollEvents();

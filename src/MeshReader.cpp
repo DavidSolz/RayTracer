@@ -15,19 +15,17 @@ MeshReader::MeshReader(RenderingContext * _context){
     this->context = _context;
 }
 
-Vector3 MeshReader::ParseFace(const std::string & line){
-
-    int temp[3];
+void MeshReader::ParseFace(const std::string & line, int face[3]){
 
     char * token_start = (char*)line.c_str()+2;
     char * token_end = nullptr;
 
     for(int i=0; i<3; i++){
 
-        char * token_end = strpbrk(token_start, " ");
+        token_end = strpbrk(token_start, " ");
         char * data_str = strtok(token_start, "/");
 
-        temp[i] = atoi(data_str);
+        face[i] = atoi(data_str);
         // char * texture = strtok(NULL, delimiter);
         // char * normal = strtok(NULL, delimiter);
 
@@ -39,7 +37,6 @@ Vector3 MeshReader::ParseFace(const std::string & line){
         token_start++;
     }
 
-    return Vector3(temp[0], temp[1], temp[2]);
 }
 
 void MeshReader::BuildTriangles(){
@@ -74,6 +71,7 @@ Mesh * MeshReader::LoadObject(const std::string & filename){
     }
 
     std::string line;
+    int temp[3];
 
     while( std::getline(input, line) ){
         if(line.empty())
@@ -94,10 +92,10 @@ Mesh * MeshReader::LoadObject(const std::string & filename){
 
         case 'f':
 
-            data = ParseFace(line);
-            mesh->indices.emplace_back((int)data.x-1);
-            mesh->indices.emplace_back((int)data.y-1);
-            mesh->indices.emplace_back((int)data.z-1);
+            ParseFace(line, temp);
+            mesh->indices.emplace_back(temp[0]-1);
+            mesh->indices.emplace_back(temp[1]-1);
+            mesh->indices.emplace_back(temp[2]-1);
             mesh->numIndices++;
 
             break;

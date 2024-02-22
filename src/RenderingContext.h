@@ -33,8 +33,7 @@ struct RenderingContext {
     Mesh mesh;
 
     // Texture data
-    std::vector<int> textureData;
-    std::vector<int> normalMap;
+    std::vector<unsigned int> textureData;
     
     // Camera info
     Camera camera;

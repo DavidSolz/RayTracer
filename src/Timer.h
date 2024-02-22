@@ -10,9 +10,9 @@ class Timer {
 
 private:
 
-    double timeScale;
     Timepoint lastTime;
 
+    double accumulatedTime;
     double deltaFrame;
     double deltaTime;
 
@@ -26,13 +26,13 @@ public:
 
     void TicTac();
 
-    void SetTimeScale(const double& _timeScale);
-
     double & GetDeltaTime();
 
     double & GetDeltaFrame();
 
     uint32_t & GetFrameCount();
+
+    double & GetAccumulatedTime();
 
     static Timer& GetInstance();
 

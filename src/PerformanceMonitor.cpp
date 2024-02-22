@@ -12,13 +12,8 @@ PerformanceMonitor::PerformanceMonitor(){
 
 void PerformanceMonitor::GatherInformation(){
 
-    Timepoint currentSamplePoint = Timer::GetCurrentTime();
-    double duration = Timer::GetDurationInSeconds(currentSamplePoint - lastSamplePoint);
-
-    if( duration < 1.0f)
+    if( timer->GetAccumulatedTime() < 1.0f)
         return;
-
-    lastSamplePoint = currentSamplePoint;
 
     PerformanceSample sample = {0};
 

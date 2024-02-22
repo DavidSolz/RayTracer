@@ -217,91 +217,89 @@ int main(int argc, char **argv){
 
 
 {
-// DISK
+//DISK
 
-//     Object p;
+    Object p;
 
-//     p.position = Vector3(context.width/2.0f, context.height/4.0f, context.depth/4.0f);
-//     p.normal = Vector3(0.0f, 1.0f, 0.0f);
-//     p.maxPos = Vector3(5000.0f, 5000.0f, 5000.0f);
-//     p.radius = 1000.0f;
-//     p.type = PLANE;
+    p.position = Vector3(context.width/2.0f, context.height/4.0f, context.depth/4.0f);
+    p.normal = Vector3(0.0f, 1.0f, 0.0f);
+    p.maxPos = Vector3(5000.0f, 5000.0f, 5000.0f);
+    p.radius = 1000.0f;
+    p.type = PLANE;
 
-//     p.materialID = materialBuilder
-//                     .SetBaseColor({0.5f, 0.5f, 0.5f, 1.0f})
-//                     ->SetRoughness(1.0f)
-//                     ->AttachTexture( "resources/textures/dunes.bmp" )
-//                     ->Build();
+    p.materialID = materialBuilder
+                    .SetBaseColor({0.5f, 0.5f, 0.5f, 1.0f})
+                    ->SetRoughness(1.0f)
+                    ->AttachTexture( "resources/textures/dunes.bmp" )
+                    ->Build();
 
-//     context.objects.emplace_back(p);
+    context.objects.emplace_back(p);
 
-// // Light
-//     p.position = Vector3(context.width/2.0f, 4*context.height, context.depth/4.0f);
-//     p.normal = Vector3(0.0f, -1.0f ,0.0f);
-//     p.radius = 300.0f;
-//     p.type = DISK;
+// Light
+    p.position = Vector3(context.width/2.0f, 2*context.height, context.depth/4.0f);
+    p.normal = Vector3(0.0f, -1.0f ,0.0f);
+    p.radius = 300.0f;
+    p.type = DISK;
 
-//     p.materialID = materialBuilder
-//                     .SetBaseColor({1.0f, 1.0f, 1.0f, 1.0f})
-//                     ->SetEmission(2.0f)
-//                     ->Build();
+    p.materialID = materialBuilder
+                    .SetBaseColor({1.0f, 1.0f, 0.8f, 1.0f})
+                    ->SetEmission(2.0f)
+                    ->Build();
 
-//     context.objects.emplace_back(p);
+    context.objects.emplace_back(p);
 
-// // RED SPHERE
-//     p.position = Vector3(context.width/2.0f, context.height/4.0f + 100.0f, context.depth/2.0f);
-//     p.radius = 100.0f;
-//     p.type = SPHERE;
+// RED SPHERE
+    p.position = Vector3(context.width/2.0f, context.height/4.0f + 100.0f, context.depth/2.0f);
+    p.radius = 100.0f;
+    p.type = SPHERE;
 
-//     p.materialID = materialBuilder
-//                     .AttachTexture( "resources/textures/crystal.bmp" )
-//                     // ->AttachNormalMap( "resources/textures/crystal_normal.bmp" )
-//                     ->Build();
+    p.materialID = materialBuilder
+                    .SetTransparency(0.8f)
+                    ->SetBaseColor(1.0f, 1.0f, 1.0f)
+                    ->SetRefractiveIndex(1.54f)
+                    ->SetRoughness(0.0f)
+                    ->Build();
 
-//     context.objects.emplace_back(p);
+    context.objects.emplace_back(p);
 
-//     p.position = Vector3(context.width/3.0f, context.height/4.0f + 100.0f, 0.0f);
-//     p.radius = 100.0f;
-//     p.type = SPHERE;
+    p.position = Vector3(context.width/3.0f, context.height/4.0f + 100.0f, 0.0f);
+    p.radius = 100.0f;
+    p.type = SPHERE;
     
-//     p.materialID = materialBuilder
-//                 .SetEmission(0.1f)
-//                 ->AttachTexture( "resources/textures/marble.bmp" )
-//                 ->Build();
+    p.materialID = materialBuilder
+                .SetEmission(0.1f)
+                ->AttachTexture( "resources/textures/marble.bmp" )
+                ->Build();
 
-//     context.objects.emplace_back(p);
+    context.objects.emplace_back(p);
 
-//     p.position = Vector3(4.5*context.width/5.0f, context.height/4.0f, 0.0f);
-//     p.maxPos = p.position + Vector3(400.0f, 400.0f, 400.0f);
-//     p.type = CUBE;
+    p.position = Vector3(4.5*context.width/5.0f, context.height/4.0f, 0.0f);
+    p.maxPos = p.position + Vector3(400.0f, 400.0f, 400.0f);
+    p.type = CUBE;
 
-//     p.materialID = materialBuilder
-//                     .SetSmoothness(1.0f)
-//                     ->SetRoughness(0.5f)
-//                     ->AttachTexture( "resources/textures/metal.bmp" )
-//                     ->Build();
+    p.materialID = materialBuilder
+                    .SetSmoothness(1.0f)
+                    ->SetRoughness(0.5f)
+                    ->AttachTexture( "resources/textures/metal.bmp" )
+                    ->Build();
 
-//     context.objects.emplace_back(p);
+    context.objects.emplace_back(p);
 
+    MeshReader reader(&context);
 
-    
-
-// Transfer mesh into context
-
-    // MeshReader reader(&context);
-
-    // Mesh * mesh = reader.LoadObject("resources/mesh.obj");
+    // Mesh * mesh = reader.LoadObject("resources/meshes/mesh.obj");
 
     // float scale = 100;
     // Vector3 offset(context.width/2.0f, context.height/2.0f, context.depth/4.0f);
 
-    // mesh->Translate(offset, scale, -45.0f);
+    // mesh->Translate(offset, scale);
 
     // uint32_t materialID = materialBuilder
-    //                     .SetBaseColor({0.0f, 0.5f, 0.2f, 1.0f})
+    //                     .SetBaseColor(0.0f, 0.5f, 0.2f)
     //                     ->SetTransparency(1.0f)
-    //                     ->SetRoughness(0.5f)
-    //                     ->SetRefractiveIndex(1.45f)
+    //                     ->SetRoughness(0.0f)
+    //                     ->SetRefractiveIndex(1.54f)
+    //                     //->AttachTexture( "resources/textures/metal.bmp" )
     //                     //->SetSheen(1.0f)
     //                     ->Build();
 

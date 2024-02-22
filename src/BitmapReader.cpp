@@ -103,7 +103,7 @@ Image BitmapReader::ReadFile(const char * filename){
         return Image();
     }
 
-    int * pixels = new int[ pixel_count ];
+    uint32_t * pixels = new uint32_t[ pixel_count ];
 
     unsigned char tempColor[4] = {0};
 

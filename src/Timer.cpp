@@ -3,7 +3,6 @@
 #include <stdio.h>
 
 Timer::Timer(){
-    this->timeScale = 1.0f;
     this->lastTime = GetCurrentTime();
     this->deltaTime = 1.0f/60.0f;
     this->frameCount = 60;
@@ -18,15 +17,18 @@ double Timer::GetDurationInSeconds(const std::chrono::high_resolution_clock::dur
 }
 
 void Timer::TicTac(){
+
     Timepoint currentTime = GetCurrentTime();
-    frameCount++;
     deltaFrame = GetDurationInSeconds(currentTime - lastTime);
-    if(deltaFrame >= 1.0f){
-        deltaTime = 1000.0f/frameCount;
-        lastFrameCount = frameCount;
-        frameCount = 0;
-        lastTime = currentTime;
-    }
+    lastTime = currentTime;
+    
+    frameCount++;
+    accumulatedTime *= (accumulatedTime < 1.0);
+    accumulatedTime += deltaFrame;
+
+    lastFrameCount = 1.0f / deltaFrame;
+    deltaTime = deltaFrame * 1000.0f;
+
 }
 
 double & Timer::GetDeltaTime() {
@@ -37,12 +39,12 @@ double & Timer::GetDeltaFrame(){
     return deltaFrame;
 }
 
-uint32_t & Timer::GetFrameCount(){
-    return lastFrameCount;
+double & Timer::GetAccumulatedTime(){
+    return accumulatedTime;
 }
 
-void Timer::SetTimeScale(const double& _timeScale){
-    this->timeScale = _timeScale;
+uint32_t & Timer::GetFrameCount(){
+    return lastFrameCount;
 }
 
 Timer& Timer::GetInstance(){

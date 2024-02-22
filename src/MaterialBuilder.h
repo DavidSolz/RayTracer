@@ -38,6 +38,10 @@ public:
 
     MaterialBuilder * SetTransmissionFilter(const uint8_t & _R, const uint8_t & _G, const uint8_t & _B);
 
+    MaterialBuilder * SetBaseColor(const float & _R, const float & _G, const float & _B);
+
+    MaterialBuilder * SetTintColor(const float & _R, const float & _G, const float & _B);
+
     MaterialBuilder * SetSmoothness(const float & _factor);
 
     MaterialBuilder * SetSheen(const float & _factor);
@@ -57,8 +61,6 @@ public:
     MaterialBuilder * SetSpecularIntensity(const float & _factor);
 
     MaterialBuilder * AttachTexture( const char * _filepath);
-
-    MaterialBuilder * AttachNormalMap( const char * _filepath );
 
     uint32_t EmplaceMaterial(const Material & material);
 

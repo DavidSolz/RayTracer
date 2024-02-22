@@ -2,6 +2,8 @@
 #include "resources/kernels/KernelStructs.h"
 // Defines
 
+#define NUM_BOUNCES 8
+
 #define PI 3.1416926535f
 #define ONE_OVER_PI 1.0f/PI
 #define ONE_OVER_2_PI 1.0f/(2.0f * PI)
@@ -44,12 +46,19 @@ float3 RandomDirection(uint * seed){
 */
 
 
-float4 Unpack(const int color){
+float4 Unpack(const unsigned int color){
     unsigned char * byte = (unsigned char *)&color;
     return (float4)(byte[0], byte[1], byte[2], byte[3]) * ONE_OVER_MAX_CHAR;
 }
 
-float4 ColorSample(global const int * texture, const float u, const float v, const int width, const int height, const float offset){
+float4 ColorSample(
+    global const unsigned int * texture, 
+    const float u, 
+    const float v, 
+    const int width, 
+    const int height, 
+    const float offset
+    ){
 
     int texelX = floor( u * width );
     int texelY = floor( v * height );
@@ -60,7 +69,8 @@ float4 ColorSample(global const int * texture, const float u, const float v, con
 }
 
 float4 GetTexturePixel(
-    global const int * texture,
+    global const unsigned int * texture,
+    global const float3 * vertices,
     const struct Object * object,
     const struct Texture info,
     const float3 localPoint,
@@ -83,7 +93,6 @@ float4 GetTexturePixel(
         u = conditionU * relativePos.y + (1.0f - conditionU) * relativePos.x;
         v = ( conditionV + conditionU ) * relativePos.z + (1.0f - conditionV - conditionU) * relativePos.y;
 
-
     } else if ( object->type == DISK ){
 
         float theta = atan2(relativePos.z, relativePos.x);
@@ -91,6 +100,41 @@ float4 GetTexturePixel(
 
         u = (theta + M_PI_F) / TWO_PI;
         v = radius / object->radius;
+
+    } else if ( object->type == PLANE){
+
+        float width = object->maxPos.x;
+        float height = object->maxPos.y;
+
+        float3 minPos = (float3)(-width , -height, 0.0f) * 0.5f;
+        float3 localPos = (relativePos - minPos);
+
+        u = localPos.x / width;
+        v = 0.5f + localPos.z / height;
+
+    }else if ( object->type == SPHERE){
+        float theta = atan2(normal.z, normal.x);
+        float phi = acos(normal.y);
+
+        u = theta * ONE_OVER_2_PI;
+        v = phi * ONE_OVER_PI;
+    }else if( object->type == TRIANGLE ){
+
+        int idA = object->indiceID.x;
+        int idB = object->indiceID.y;
+        int idC = object->indiceID.z;
+
+        float3 A = vertices[idA];
+        float3 B = vertices[idB];
+        float3 C = vertices[idC];
+
+        float area = 0.5f * ((B.x - A.x) * (C.y - A.y) - (B.y - A.y) * (C.x - A.x));
+        float areaPBC = 0.5f * ((B.x - localPoint.x) * (C.y - localPoint.y) - (B.y - localPoint.y) * (C.x - localPoint.x));
+        float areaPCA = 0.5f * ((C.x - localPoint.x) * (A.y - localPoint.y) - (C.y - localPoint.y) * (A.x - localPoint.x));
+        float areaPAB = 0.5f * ((A.x - localPoint.x) * (B.y - localPoint.y) - (A.y - localPoint.y) * (B.x - localPoint.x));
+
+        u = clamp(areaPBC / area, 0.0f, 1.0f);
+        v = clamp(areaPCA / area, 0.0f, 1.0f);
 
     }
 
@@ -103,8 +147,6 @@ float4 GetTexturePixel(
 ================INTERSECTIONS================
 
 */
-
-
 
 float IntersectSphere(const struct Ray * ray, const struct Object * object) {
     float3 originToSphereCenter = ray->origin - object->position;
@@ -216,11 +258,7 @@ float IntersectCube(const struct Ray * ray, const struct Object * object) {
     return -1.0f;
 }
 
-float IntersectTriangle(
-    const struct Ray * ray,
-    const struct Object * object,
-    global const float3 * vertices
-    ) {
+float IntersectTriangle(const struct Ray * ray,const struct Object * object,global const float3 * vertices) {
 
     int idA = object->indiceID.x;
     int idB = object->indiceID.y;
@@ -252,102 +290,19 @@ float IntersectTriangle(
     return inverseDeterminant * dot(e2, q);
 }
 
-void ComputeBoxNormal(
-    global const int * normalMap,
-    global const int * texture,
-    struct Sample * sample,
-    const struct Texture info,
-    const struct Object * object
-    ){
+void ComputeBoxNormal(struct Sample * sample,const struct Object * object){
 
-    float3 boxCenter = (object->maxPos + object->position)*0.5f;
-    float3 radius = (object->maxPos - object->position)*0.5f;
+    float3 boxCenter = (object->maxPos + object->position) * 0.5f;
+    float3 radius = (object->maxPos - object->position) * 0.5f;
     float3 pointToCenter = sample->point - boxCenter;
 
-    float3 normal = normalize(sign(pointToCenter) * step(fabs(fabs(pointToCenter) - radius), EPSILON));
-
-    float3 relativePos = sample->point - object->position;
-
-    float3 boxSize = object->maxPos - object->position;
-    relativePos /= boxSize;
-
-    float conditionU = fabs(normal.x) == 1.0f;
-    float conditionV = fabs(normal.y) == 1.0f;
-
-    float u = conditionU * relativePos.y + (1.0f - conditionU) * relativePos.x;
-    float v = ( conditionV + conditionU ) * relativePos.z + (1.0f - conditionV - conditionU) * relativePos.y;
-
-    float3 normalMapValue = ColorSample(normalMap, u, v, info.normalWidth, info.normalHeight, info.normalsOffset).yxz;
-    float3 mappedNormal = normalize(normalMapValue - 0.5f);
-
-    sample->normal = normalize(normal);
-    sample->texel = ColorSample(texture, u, v, info.width, info.height, info.offset);
+    sample->normal = normalize(sign(pointToCenter) * step(fabs(fabs(pointToCenter) - radius), EPSILON));
 }
 
-// TODO : FIX NORMAL MAPS
-
-void ComputeSphereNormal(
-    global const int * normalMap,
-    global const int * texture,
-    struct Sample * sample,
-    const struct Texture info,
-    const struct Object * object 
-    ){
-
-    float3 relativePos = sample->point - object->position;
-    float3 normal = normalize(relativePos);
-
-    float phi = atan2(normal.z, normal.x) + PI;
-    float theta = normal.y + 1.0f;
-
-    float u = phi / TWO_PI;
-    float v = theta * 0.5f;
-
-    float3 normalMapValue = ColorSample(normalMap, u, v, info.normalWidth, info.normalHeight, info.normalsOffset).yxz;
-    float3 mappedNormal = normalize(normalMapValue - 0.5f);
-
-    sample->normal = normalize(normal);
-    sample->texel = ColorSample(texture, u, v, info.width, info.height, info.offset);
-}
-
-void ComputePlaneNormal(
-    global const int * normalMap,
-    global const int * texture,
-    struct Sample * sample,
-    const struct Texture info,
-    const struct Object * object
-){
-
-    float width = object->maxPos.x;
-    float height = object->maxPos.y;
-
-    float3 minPos = (float3)(width , height, 1.0f) * 0.5f;
-
-    float3 relativePos = sample->point - object->position;
-
-    float3 localPos = (relativePos - minPos);
-
-    float u = localPos.x / width;
-    float v = 0.5f + localPos.z / height;
-
-    float3 normalMapValue = ColorSample(normalMap, u, v, info.normalWidth, info.normalHeight, info.normalsOffset).yxz;
-    float3 mappedNormal = normalize(normalMapValue - 0.5f);
-
-    sample->normal = normalize(object->normal);
-    sample->texel = ColorSample(texture, u, v, info.width, info.height, info.offset);
-}
-
-
-struct Sample FindClosestIntersection(
-    const struct Resources resources, 
-    const struct Ray * ray
-    ){
+struct Sample FindClosestIntersection(const struct Resources resources, const struct Ray * ray){
 
     global const struct Object * objects = resources.objects;
     global const float3 * vertices = resources.vertices;
-    global const struct Material * materials = resources.materials;
-    global const struct Texture * infos = resources.textureInfo;
-
     int numObject = resources.numObject;
 
     struct Sample sample = {0};
@@ -356,7 +311,6 @@ struct Sample FindClosestIntersection(
     for (int id = 0; id < numObject; ++id) {
 
         struct Object object = objects[id];
-        int textureID = materials[ object.materialID ].textureID;
 
         float length = -1.0f;
 
@@ -386,18 +340,14 @@ struct Sample FindClosestIntersection(
             switch(object.type){
 
                 case CUBE:
-                    ComputeBoxNormal(resources.normalMap, resources.textureData, &sample, infos[ textureID ], &object);
+                    ComputeBoxNormal(&sample, &object);
                     break;
 
                 case SPHERE:
-                    ComputeSphereNormal(resources.normalMap, resources.textureData, &sample, infos[ textureID ], &object);
+                    sample.normal = normalize(sample.point - object.position);
                     break;
 
-                case PLANE:
-                    ComputePlaneNormal(resources.normalMap, resources.textureData, &sample, infos[ textureID ], &object);
-                    break;
-
-                default:
+                default :
                     sample.normal = normalize(object.normal);
                     break;
             }
@@ -418,13 +368,6 @@ float3 Reflect(const float3 incoming, const float3 normal) {
 
 float3 DiffuseReflect(const float3 normal, uint * seed){
 
-    /*
-        TODO:
-
-        - fix diffuse specular
-
-    */
-
     float3 randomDirection = RandomDirection(seed);
     float cosDirection = dot(normal, randomDirection);
 
@@ -439,7 +382,7 @@ float3 Refract(
     const float n2
     ){
 
-    float cosI = fmin(dot(-incoming, normal), 1.0f);
+    float cosI = -dot(incoming, normal);
     float sinI = sqrt(1.0f - cosI*cosI);
     float eta = n1/n2;
 
@@ -491,7 +434,7 @@ float GeometricSmithShlickGGX(
     return ggx1*ggx2;
 }
 
-float4 physicalBRDF(
+float4 PhysicalBRDF(
     const float3 normal, 
     const float3 halfVector, 
     const float3 lightVector, 
@@ -526,6 +469,9 @@ float4 ComputeColor(
     float lastIOR = 1.0f;
 
     const float4 skyColor = (float4)(0.2f, 0.2f, 0.25f, 1.0f);
+
+    global const float3 * vertices = resources.vertices;
+    global const unsigned int * textureData = resources.textureData;
     global const struct Material * materials = resources.materials;
     global const struct Object * objects = resources.objects;
     global const struct Texture * infos = resources.textureInfo;
@@ -546,21 +492,17 @@ float4 ComputeColor(
 
         float3 normal = sample.normal;
 
-        float4 color = material.albedo;
-
-        if ( material.textureID > -1 )
-            color *= sample.texel;
-
         float3 lightVector = normalize(-ray->direction);
         float3 viewVector = normalize(camera->position - sample.point);
 
         float3 diffusionDirection = DiffuseReflect(normal, seed);
-        float3 reflectionDirection = Reflect(-viewVector, normal);
-        float3 refractionDirecton = Refract(-viewVector, normal, lastIOR, material.indexOfRefraction);
+        float3 reflectionDirection = Reflect(ray->direction, normal);
+        float3 refractionDirecton = Refract(ray->direction, normal, lastIOR, material.indexOfRefraction);
 
         float3 halfVector = normalize(normal + reflectionDirection);
 
         float cosLight = dot(normal, lightVector);
+        float cosView = dot(normal, viewVector);
 
         float isSpecular = Rand(seed) >=  material.roughness;
 
@@ -568,10 +510,13 @@ float4 ComputeColor(
         ray->direction = normalize(mix(direction, refractionDirecton, material.transparency));
 
         float4 emission =  material.albedo * material.emmissionIntensity * (cosLight> 0.0f);
+        float4 color = material.albedo * GetTexturePixel(textureData, vertices, &object, info, sample.point, normal);
 
-        accumulatedColor += ( emission ) * lightColor; 
+        float fresnel = 1.0f - clamp(cosView, 0.0f, 1.0f);
 
-        lightColor *= 2.0f * cosLight * color ;
+        accumulatedColor += (emission ) * lightColor; 
+
+        lightColor *= 2.0f * cosLight * color;
         lastIOR = material.indexOfRefraction;
     }
 

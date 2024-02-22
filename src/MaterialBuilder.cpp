@@ -3,10 +3,8 @@
 MaterialBuilder::MaterialBuilder(const RenderingContext * _context){
     this->context = (RenderingContext *)_context;
 
-    context->textureData.emplace_back(INT32_MAX);
-    context->normalMap.emplace_back(INT32_MAX>>1);
-
     ClearMaterial();
+
 }       
 
 void MaterialBuilder::ClearMaterial(){
@@ -31,9 +29,6 @@ void MaterialBuilder::ClearMaterial(){
     info.width = 1;
     info.height = 1;
     info.offset = 0;
-    info.normalWidth = 1;
-    info.normalHeight = 1;
-    info.normalsOffset = 0;
 }
 
 MaterialBuilder * MaterialBuilder::SetBaseColor(const Color & _color){
@@ -72,8 +67,16 @@ MaterialBuilder * MaterialBuilder::SetTintColor(const Color & _color){
 }
 
 MaterialBuilder * MaterialBuilder::SetBaseColor(const uint8_t & _R, const uint8_t & _G, const uint8_t & _B){
-    Color color = {_R/255.0f, _G/255.0f, _B/255.0f};
+    Color color = {_R/255.0f, _G/255.0f, _B/255.0f, 1.0f};
     temporaryMaterial.albedo = color;
+    return this;
+}
+
+MaterialBuilder * MaterialBuilder::SetBaseColor(const float & _R, const float & _G, const float & _B){
+    temporaryMaterial.albedo.R = _R;
+    temporaryMaterial.albedo.G = _G;
+    temporaryMaterial.albedo.B = _B;
+    temporaryMaterial.albedo.A = 1.0f;
     return this;
 }
 
@@ -86,6 +89,14 @@ MaterialBuilder * MaterialBuilder::SetSpecularColor(const uint8_t & _R, const ui
 MaterialBuilder * MaterialBuilder::SetTintColor(const uint8_t & _R, const uint8_t & _G, const uint8_t & _B){
     Color color = {_R/255.0f, _G/255.0f, _B/255.0f};
     temporaryMaterial.tint = color;
+    return this;
+}
+
+MaterialBuilder * MaterialBuilder::SetTintColor(const float & _R, const float & _G, const float & _B){
+    temporaryMaterial.tint.R = _R;
+    temporaryMaterial.tint.G = _G;
+    temporaryMaterial.tint.B = _B;
+    temporaryMaterial.tint.A = 1.0f;
     return this;
 }
 
@@ -147,31 +158,6 @@ MaterialBuilder * MaterialBuilder::AttachTexture( const char * _filepath ){
 
     for( uint32_t id = 0; id < size; ++id )
         context->textureData.emplace_back(image.data[id]);
-    
-    delete[] image.data;
-
-    return this;
-}
-
-MaterialBuilder * MaterialBuilder::AttachNormalMap( const char * _filepath ){
-
-    Image image = BitmapReader::ReadFile(_filepath);
-
-    if( image.data == NULL ){
-        fprintf(stderr, "Normal map can't be loaded");
-        return this;
-    }
-
-    context->loggingService.Write(MessageType::INFO, "Loading normal map file : %s", _filepath);
-
-    info.normalWidth = image.width;
-    info.normalHeight = image.height;
-    info.normalsOffset = context->normalMap.size();
-
-    uint32_t size = image.width * image.height;
-
-    for( uint32_t id = 0; id < size; ++id )
-        context->normalMap.emplace_back(image.data[id]);
     
     delete[] image.data;
 

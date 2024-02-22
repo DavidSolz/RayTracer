@@ -3,55 +3,35 @@
 
 SceneSerializer::SceneSerializer(RenderingContext * _context){
     this->context = _context;
-    this->materialBuilder = new MaterialBuilder(context);
+    this->materialReader = new MaterialReader(context);
     ResetObject();
 }
 
 SceneSerializer::~SceneSerializer(){
-    delete materialBuilder;
+    delete materialReader;
 }
 
-std::vector<std::string>& SceneSerializer::Tokenize(const char * data, const char * delimiter){
-
+std::vector<std::string>& SceneSerializer::Tokenize(const std::string & data){
     static std::vector<std::string> tokens;
 
     tokens.clear();
 
-    char * saveptr;
+    char * temp = new char [ data.size( ) + 1];
 
-    const char * token =  strtok_r((char*)data, delimiter, &saveptr);
+    memcpy(temp, data.c_str(), data.size());
+
+    temp[data.size()] = '\0';
+
+    const char * token =  strtok(temp, " ");
 
     while( token != NULL ){
         tokens.push_back(std::string(token));
-        token = strtok_r(NULL, delimiter, &saveptr);
+        token = strtok(NULL, " ");
     }
+
+    delete[] temp;
 
     return tokens;
-}
-
-
-bool SceneSerializer::CheckBrackets(const char * data, const size_t & size){
-
-    uint32_t invalidBracketCounter = 0 ;
-
-    for(uint32_t pos = 0; pos < size; ++pos){
-
-        if ( data[pos] == '{' ) 
-            invalidBracketCounter++;
-        
-
-        if ( data[pos] == '}' ){
-
-            if(invalidBracketCounter==0)
-                return false;
-
-            invalidBracketCounter--;
-        }
-
-    }
-
-    return !invalidBracketCounter;
-
 }
 
 const char * SceneSerializer::CheckProperties(const char * data){
@@ -98,6 +78,7 @@ void SceneSerializer::ResetObject(){
     temporaryObject.maxPos = Vector3(1.0f, 1.0f, 1.0f);
     temporaryObject.normal = Vector3(0.0f, 1.0f, 0.0f);
     temporaryObject.type = SpatialType::INVALID;
+    temporaryObject.materialID = 0;
 }
 
 void SceneSerializer::ParseObject(const std::vector<std::string> & tokens){
@@ -116,17 +97,7 @@ void SceneSerializer::ParseObject(const std::vector<std::string> & tokens){
 
         temporaryObject.radius = atof(tokens[1].c_str());
 
-    } else if( tokens[0] == "position" ){
-
-        temp.x = atof(tokens[1].c_str());
-        temp.y = atof(tokens[2].c_str());
-        temp.z = atof(tokens[3].c_str());
-        
-        temporaryObject.normal = temp.Normalize();
-
     } else if( tokens[0] == "scale" ){
-
-        // TODO single or multiple scaling factors
 
         temp.x = atof(tokens[1].c_str());
         
@@ -139,12 +110,8 @@ void SceneSerializer::ParseObject(const std::vector<std::string> & tokens){
 
     }else if( tokens[0] == "material" ){
 
-        for(uint32_t id = 0; id < materials.size(); ++id){
-
-            if( tokens[1] == materials[id].materialname )
-                temporaryObject.materialID = materials[id].materialID;
-        
-        }
+        temporaryObject.materialID = materialReader->GetMaterial(tokens[1]); 
+        printf("%d\n", temporaryObject.materialID);
 
     }else if( tokens[0] == "normal" ){
 
@@ -154,22 +121,31 @@ void SceneSerializer::ParseObject(const std::vector<std::string> & tokens){
         
         temporaryObject.normal = temp;
 
-    }else if( tokens[0] == "rotation" ){
-        // TODO mesh rotation
     }
 
 }
 
-void SceneSerializer::ParseScene(const char * data){
+void SceneSerializer::ParseScene(std::ifstream & file, const char * filename){
 
     bool inScene = false;
 
-    const char * delimiter= "\n";
-    const char * line  = strtok((char*)data, delimiter);
+    std::filesystem::path filepath(filename);
+    std::filesystem::path directory = filepath.parent_path();
+    std::string tempPath;
 
-    while (line != NULL) {
+    std::string line;
+
+    while ( std::getline(file, line, '\n') ) {
+
+        if( line.empty() )
+            continue;
 
         std::vector<std::string> tokens = Tokenize(line);
+
+        if (tokens.empty()) {
+            fprintf(stderr, "Invalid file format: empty line\n");
+            continue;
+        }
 
         if(inScene){
 
@@ -183,7 +159,7 @@ void SceneSerializer::ParseScene(const char * data){
 
                 }else{
 
-                    if(tokens[0]=="}"){
+                    if( tokens[0] == "}" ){
                         temporaryObject.maxPos = temporaryObject.position + temporaryObject.maxPos;
                         context->objects.emplace_back(temporaryObject);
                         ResetObject();
@@ -193,8 +169,6 @@ void SceneSerializer::ParseScene(const char * data){
             
 
             }else{
-
-                
 
                 if( CheckTypes( tokens[0].c_str() ) == false ){
 
@@ -208,23 +182,22 @@ void SceneSerializer::ParseScene(const char * data){
 
         } else{
 
-            if(tokens[0]=="material")
-                context->loggingService.Write(MessageType::INFO, "Loading material file %s", tokens[1].c_str());
-                // TODO material parsing
-
-            if(tokens[0]=="scene")
+            if(tokens[0] == "materials"){
+                tempPath = directory.string() + "/" + tokens[1];
+                //materialReader->LoadFromFile(tempPath.c_str());    
+            }else if(tokens[0]=="scene"){
                 inScene = true;  
+            }
 
         }      
 
-        line = strtok(NULL, delimiter);
     }
 
 }
 
 void SceneSerializer::SaveToFile( const char * _filename){
 
-    file.open(_filename, std::ios::out);
+    std::ofstream file(_filename, std::ios::out);
 
     if( !file.is_open() ){
         fprintf(stderr, "File %s can't be opened or does not exist.\n", _filename);
@@ -239,27 +212,17 @@ void SceneSerializer::SaveToFile( const char * _filename){
 
 void SceneSerializer::LoadFromFile(const char * _filename){
 
-    file.open(_filename, std::ios::in | std::ios::ate);
+    std::ifstream file(_filename, std::ios::in );
+
+    context->loggingService.Write(MessageType::INFO, "Loading scene file : %s", _filename);
 
     if( !file.is_open() ){
         fprintf(stderr, "File %s can't be opened or does not exist.\n", _filename);
         exit(-1);
     }
 
-    size_t fileSize = file.tellg();
-    file.seekg( 0, std::ios::beg );
+    ParseScene(file, _filename);
 
-    char * data = new char [fileSize];
-    file.read(data, fileSize);
     file.close();
-
-    if( CheckBrackets(data, fileSize) != true ){
-        fprintf(stderr, "File %s have invalid format\n", _filename);
-        exit(-1);
-    }
-
-    ParseScene(data);
-
-    delete [] data;
 
 }

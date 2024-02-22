@@ -52,41 +52,50 @@ void Configurator::ParseArgs(const size_t & size, char **args){
                 i++;
             } else {
                 fprintf(stderr, "Error: -L flag requires a scene file path\n");
-                return;
+                exit(-1);
             }
         } else if (arg[1] == 'w' && arg[2] == '\0') {
             if (i + 1 < size && args[i + 1][0] != '-') {
-                context->width = atoi(args[i+1]);
+                context->width = std::max(atoi(args[i+1]), 100);
                 i++;
             } else {
                 fprintf(stderr, "Error: -w flag requires window width\n");
-                return;
+                exit(-1);
             }
         }else if (arg[1] == 'h' && arg[2] == '\0') {
             if (i + 1 < size && args[i + 1][0] != '-') {
-                context->height = atoi(args[i+1]);
+                context->height = std::max(atoi(args[i+1]), 100);
                 i++;
             } else {
                 fprintf(stderr, "Error: -h flag requires requires window height\n");
-                return;
+                exit(-1);
             }
         }else if (arg[1] == 'S' && arg[2] == '\0') {
             fprintf(stdout, "Memory sharing enabled.\n");
             context->memorySharing = true;
         } else if (arg[1] == 'H' && arg[2] == '\0') {
             ShowHelp();
-            exit(-1);
-        }else {
-            fprintf(stderr, "Unknown argument: %s\n", arg);
-            exit(-1);
+            exit(0);
         }
     }
 
-    if( filepath != NULL ){
-        context->loggingService.Write(MessageType::INFO, "Loading scene file : %s", filepath);
+    if( filepath != NULL )
         serializer->LoadFromFile(filepath);
-    }
 
     context->camera.aspectRatio = context->width/(float)context->height;
+
+    Material material;
+    
+    material.albedo = {0.5f, 0.5f, 0.5f, 1.0f};
+    material.tint = {1.0f,1.0f,1.0f,1.0f};
+    material.specular = {1.0f, 1.0f, 1.0f, 1.0f};
+    material.specularIntensity = 1.0f;
+    material.indexOfRefraction = 1.0f; 
+    material.roughness = 0.5f;
+    material.tintRoughness = 0.5f;
+    material.textureID = 0;
+
+    context->materials.emplace_back(material);
+    context->textureData.emplace_back(UINT32_MAX);
 
 }

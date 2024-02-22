@@ -15,17 +15,11 @@ struct Mesh{
     std::vector<Vector3> normals;
     std::vector<int> indices;
 
-    void Translate(const Vector3 & offset, const float & scale, const float & angle){
-        for(uint32_t i=0; i < numVertices; ++i){
-
-            Vector3 temp = vertices[i];
-
-            vertices[i].x = temp.x * cos(angle) + temp.z * sin(angle);
-            vertices[i].z = -temp.x * sin(angle) + temp.z * cos(angle);
+    void Translate(const Vector3 & offset, const float & scale){
+        for(uint32_t i=0; i < numVertices; ++i)
 
             vertices[i] = vertices[i] * scale + offset;
-        }
-        CalculateNormals();
+        
     }
 
     void CalculateNormals(){

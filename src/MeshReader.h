@@ -16,7 +16,7 @@ private:
     RenderingContext * context;
 
     Vector3 ParseVertice(const std::string & line);
-    Vector3 ParseFace(const std::string & line);
+    void ParseFace(const std::string & line, int face[3]);
 
     void BuildTriangles();
 

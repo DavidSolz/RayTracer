@@ -43,6 +43,7 @@ struct Object{
     float3 normal;
     float3 maxPos;
     float3 indiceID;
+    float3 uv;
     unsigned int materialID;
 } __attribute((aligned(128)));
 
@@ -78,8 +79,7 @@ struct Resources{
     global const struct Material * materials;
     global const float3 * vertices;
     global const struct Texture * textureInfo;
-    global const int * textureData;
-    global const int * normalMap;
+    global const unsigned int * textureData;
     int numObject;
     int numMaterials;
 } __attribute((aligned(64)));

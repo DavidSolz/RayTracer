@@ -1,3 +1,5 @@
+materials mesh.mtl
+
 scene
 {
 
@@ -6,6 +8,7 @@ cube
 
 position 300 550 0
 scale 100 100 100
+material mat0
 
 }
 
@@ -14,6 +17,7 @@ sphere
 
 position 500 800 0
 radius 100
+material mat1
 
 }
 

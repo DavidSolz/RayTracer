@@ -16,7 +16,7 @@ struct Header{
 struct Image{
     uint32_t height;
     uint32_t width;
-    int * data;
+    uint32_t * data;
     uint32_t checksum;
 };
 
