@@ -40,8 +40,6 @@ WindowManager::WindowManager(RenderingContext * _context){
     glfwMakeContextCurrent(window);
     glfwSwapInterval( context->vSync );
 
-    glfwSetKeyCallback(window, KeyboardCallback);
-
     glLoadIdentity();
     glOrtho(0, context->width, 0, context->height, -1.0f, 1.0f);
 
@@ -75,7 +73,6 @@ WindowManager::WindowManager(RenderingContext * _context){
 
     context->loggingService.Write(MessageType::INFO, "Window configuration done");
 
-
     pixels = new Color[context->width * context->height];
 
     timer = &Timer::GetInstance();
@@ -85,50 +82,14 @@ WindowManager::WindowManager(RenderingContext * _context){
     minIndex = 10;
     maxIndex = 0;
     selectedService = 0;
-}
 
-void WindowManager::KeyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mods){
-
-
-    float deltaTime = timer->GetDeltaFrame();
-
-    switch (key){
-        case GLFW_KEY_W:
-            context->camera.Move(context->camera.front, deltaTime);
-            context->frameCounter=0;
-            break;
-        case GLFW_KEY_S:
-            context->camera.Move(context->camera.front*(-1.0f), deltaTime);
-            context->frameCounter=0;
-            break;
-        case GLFW_KEY_A:
-            context->camera.Move(context->camera.right*(-1.0f), deltaTime);
-            context->frameCounter=0;
-            break;
-        case GLFW_KEY_D:
-            context->camera.Move(context->camera.right, deltaTime);
-            context->frameCounter=0;
-            break;
-        case GLFW_KEY_LEFT_SHIFT:
-            context->camera.Move(worldUp*(-1.0f), deltaTime);
-            context->frameCounter=0;
-            break;
-        case GLFW_KEY_SPACE:
-            context->camera.Move(worldUp, deltaTime);
-            context->frameCounter=0;
-            break;
-        case GLFW_KEY_ESCAPE:
-            glfwSetWindowShouldClose(window, true);
-            break;
-        default:
-            break;
-    }
-
+    input = new InputService(window);
+    glfwSetWindowUserPointer(window, input);
 }
 
 void WindowManager::ProcessInput(){
 
-    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
+    if (input->IsMouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT)) {
         double currentX, currentY;
 
         glfwGetCursorPos(window, &currentX, &currentY);
@@ -154,24 +115,46 @@ void WindowManager::ProcessInput(){
     }
 
     for (int key = minIndex; key <= maxIndex; key++) {
-        if (glfwGetKey(window, '0'+key) == GLFW_PRESS && key!= selectedService) {
+        if (input->IsPressed('0' + key) && key!= selectedService) {
             memcpy(windowTitle, "CPU Mode", 9);
             selectedService = key;
             context->frameCounter=0;
         }
     }
 
-    if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS){
-        TakeScreenShot();
-        fprintf(stdout, "Taking screenshoot\n");
+    float deltaTime = timer->GetDeltaFrame();
+
+    if(input->IsHold(GLFW_KEY_W)){
+        context->camera.Move(context->camera.front, deltaTime);
+        context->frameCounter=0;
+    }else if(input->IsHold(GLFW_KEY_S)){
+        context->camera.Move(context->camera.front*(-1.0f), deltaTime);
+        context->frameCounter=0;
+    }else if(input->IsHold(GLFW_KEY_A)){
+        context->camera.Move(context->camera.right*(-1.0f), deltaTime);
+        context->frameCounter=0;
+    }else if(input->IsHold(GLFW_KEY_D)){
+        context->camera.Move(context->camera.right, deltaTime);
+        context->frameCounter=0;
+    }else if(input->IsHold(GLFW_KEY_LEFT_SHIFT)){
+        context->camera.Move(worldUp*(-1.0f), deltaTime);
+        context->frameCounter=0;
+    }else if(input->IsHold(GLFW_KEY_SPACE)){
+        context->camera.Move(worldUp, deltaTime);
+        context->frameCounter=0;
     }
 
-    if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS){
+    if(input->IsPressed(GLFW_KEY_ESCAPE)){
+        glfwSetWindowShouldClose(window, true);
+    }else if(input->IsPressed(GLFW_KEY_P)){
+        TakeScreenShot();
+        fprintf(stdout, "Taking screenshoot\n");
+    }else if (input->IsPressed(GLFW_KEY_R)){
         context->vSync ^= true;
         glfwSwapInterval( context->vSync );
         fprintf(stdout, "Toggling V-Sync...\n");
     }
-
+    
 }
 
 bool WindowManager::ShouldClose(){
@@ -286,8 +269,8 @@ void WindowManager::TakeScreenShot(){
 
 WindowManager::~WindowManager(){
 
-    if( pixels != NULL)
-        delete[] pixels;
+    delete input;
+    delete[] pixels;
 
     context->loggingService.Write(MessageType::INFO, "Deleting texture buffer...");
 

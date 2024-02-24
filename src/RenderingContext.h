@@ -1,16 +1,14 @@
 #ifndef RENDERINGCONTEXT_H
 #define RENDERINGCONTEXT_H
 
-#define GL_SILENCE_DEPRECATION
-
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
-
-#include "Mesh.h"
 #include "Object.h"
 #include "Logger.h"
 #include "Camera.h"
 #include "Texture.h"
+
+#include <GL/glew.h>
+#include <GLFW/glfw3.h>
+#include <vector>
 
 struct RenderingContext {
 
@@ -28,11 +26,9 @@ struct RenderingContext {
     // Objects data
     std::vector<Object> objects;
     std::vector<Material> materials;
-    std::vector<Texture> textureInfo;
-
-    Mesh mesh;
-
+    
     // Texture data
+    std::vector<Texture> textureInfo;
     std::vector<unsigned int> textureData;
     
     // Camera info

@@ -9,7 +9,7 @@ BVHTree::BVHTree(){
     root.maximalPosition = Vector3(-INFINITY, -INFINITY, -INFINITY);
 }
 
-void BVHTree::Insert(const Object & _object, const uint32_t & _objectID, const Mesh * mesh){
+void BVHTree::Insert(const Object & _object, const uint32_t & _objectID){
 
     BoundingBox box = {0};
 
@@ -29,13 +29,9 @@ void BVHTree::Insert(const Object & _object, const uint32_t & _objectID, const M
 
     }else if( _object.type == TRIANGLE ){
 
-        uint32_t idA = _object.indicesID.x;
-        uint32_t idB = _object.indicesID.x;
-        uint32_t idC = _object.indicesID.x;
-
-        Vector3 A = mesh->vertices[idA];
-        Vector3 B = mesh->vertices[idB];
-        Vector3 C = mesh->vertices[idC];
+        Vector3 A = _object.verticeA;
+        Vector3 B = _object.verticeB;
+        Vector3 C = _object.verticeC;
 
         Vector3 min = Vector3::Minimal(A, B);
         min = Vector3::Minimal(min, C);
@@ -72,10 +68,10 @@ BoundingBox BVHTree::CombineBoxes(const BoundingBox & a, const BoundingBox & b){
 }
 
 
-void BVHTree::Insert(const std::vector<Object> & _objects, const Mesh * mesh){
+void BVHTree::Insert(const std::vector<Object> & _objects){
 
     for(uint32_t id=0; id < _objects.size(); id++){
-        Insert(_objects[id], id, mesh);
+        Insert(_objects[id], id);
     }
 
 }

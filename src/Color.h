@@ -1,8 +1,6 @@
 #ifndef COLOR_H
 #define COLOR_H
 
-typedef unsigned char uchar;
-
 #include <cmath>
 
 struct Color {
@@ -28,13 +26,21 @@ struct Color {
         return *this;
     }
 
+    Color operator-=(const Color& color){
+        this->R -= color.R;
+        this->G -= color.G;
+        this->B -= color.B;
+        this->A -= color.A;
+        return *this;
+    }
+
     Color operator-(const Color& color) const{
         return {
             R - color.R,
             G - color.G,
             B - color.B,
             A - color.A
-            };
+        };
     }
 
     Color operator*(float factor) const {
@@ -66,27 +72,51 @@ struct Color {
         return *this;
     }
 
+    /// @brief Mixes colors in equal proportion
+    /// @param a 
+    /// @param b 
+    /// @return mixture of color a and color b
+    static Color Mix(const Color & a, const Color & b){
+        return a * b;
+    }
+
+    /// @brief Lineary interpolates between two colors
+    /// @param a first color
+    /// @param b second color
+    /// @param t interpolation scale
+    /// @return lineary interpolated color between a and b
     static Color Lerp(const Color & a, const Color & b, const float & t){
         float scale = std::fmax(0.0f, std::fmin(t, 1.0f));
         return a + (b-a)*scale;
     }
 
-    static Color Pack(const unsigned char _R, const unsigned char _G, const unsigned char _B){
-        return (Color){_R, _G, _B, 1.0f};
+    /// @brief Packs RGB values to single int where A is always 255
+    /// @param _R red amount
+    /// @param _G green amount
+    /// @param _B blue amount
+    /// @return color packind in single int
+    static unsigned int Pack(const unsigned char _R, const unsigned char _G, const unsigned char _B){
+        return _R<<24 | _G <<16 | _B << 8 | 255 ;
     }
 
-    static void Unpack(const Color & _color, float * array){
-        array[0] = _color.R;
-        array[1] = _color.G;
-        array[2] = _color.B;
-        array[3] = 1.0f;
+    /// @brief Unpacks coded RGB values to float array
+    /// @param _color 
+    /// @param _array inout array of colors
+    static void Unpack(const unsigned int & _color, float _array[3]){
+        _array[0] = (_color>>24 && 255)/ 255.0f;
+        _array[1] = (_color>>16 && 255)/ 255.0f;
+        _array[2] = (_color>>8 && 255)/ 255.0f;
     }
 
-    static float Similarity(const Color& colorA, const Color& colorB){
-        float dR = fabs(colorA.R - colorB.R);
-        float dG = fabs(colorA.G - colorB.G);
-        float dB = fabs(colorA.B - colorB.B);
-        float dA = fabs(colorA.A - colorB.A);
+    /// @brief Determines similarity between two colors
+    /// @param _colorA 
+    /// @param _colorB 
+    /// @return value in range <0, 1> representing similarity
+    static float Similarity(const Color& _colorA, const Color& _colorB){
+        float dR = fabs(_colorA.R - _colorB.R);
+        float dG = fabs(_colorA.G - _colorB.G);
+        float dB = fabs(_colorA.B - _colorB.B);
+        float dA = fabs(_colorA.A - _colorB.A);
         return 1.0f - (dR+dG+dB+dA)/4.0f;
     }
 

@@ -14,7 +14,9 @@ struct Object{
     Vector3 position;
     Vector3 normal;
     Vector3 maxPos;
-    Vector3 indicesID;
+    Vector3 verticeA;
+    Vector3 verticeB;
+    Vector3 verticeC;
     Vector3 uv;
     uint32_t materialID;
 } __attribute((aligned(128)));

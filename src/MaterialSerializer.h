@@ -1,29 +1,28 @@
-#ifndef MATERIALREADER_H
-#define MATERIALREADER_H
+#ifndef MATERIALSERIALIZER_H
+#define MATERIALSERIALIZER_H
+
+#define DEFAULT_MATERIAL_ID 0
 
 #include "MaterialBuilder.h"
 #include "RenderingContext.h"
+#include "Serializer.h"
+#include "BitmapReader.h"
 
 #include <map>
-#include <vector>
-#include <cstring>
-#include <string>
-#include <fstream>
 
-class MaterialReader{
+class MaterialSerializer : public Serializer{
 private:
+
     RenderingContext * context;
     MaterialBuilder * builder;
 
     std::map<std::string, uint32_t> gatheredMaterials;
 
-    std::vector<std::string>& Tokenize(const std::string & data);
-
-    void ParseMaterial(std::ifstream & file);
+    void Parse(std::ifstream & file, const char * filename);
 
 public:
 
-    MaterialReader(RenderingContext * _context);
+    MaterialSerializer(RenderingContext * _context);
     
     uint32_t GetMaterial(const std::string & _materialName);
 
@@ -31,7 +30,7 @@ public:
 
     void LoadFromFile(const char * _filename);
 
-    ~MaterialReader();
+    ~MaterialSerializer();
 
 };
 

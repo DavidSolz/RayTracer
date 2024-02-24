@@ -3,7 +3,6 @@ void kernel Transfer(
     global struct Resources * resources,
     global const struct Object * objects,
     global const struct Material * materials,
-    global const float3 * vertices,
     global const struct Texture * textureInfo,
     global const unsigned int * textureData,
     const int numObject,
@@ -12,7 +11,6 @@ void kernel Transfer(
 
     resources->objects = objects;
     resources->materials = materials;
-    resources->vertices = vertices;
     resources->textureInfo = textureInfo;
     resources->textureData = textureData;
     resources->numObject = numObject;

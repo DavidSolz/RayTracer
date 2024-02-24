@@ -60,8 +60,8 @@ float4 ColorSample(
     const float offset
     ){
 
-    int texelX = floor( u * width );
-    int texelY = floor( v * height );
+    int texelX = floor( u * (width - 1) );
+    int texelY = floor( v * (height - 1) );
 
     int idx = offset + texelY * width + texelX;
 
@@ -70,7 +70,6 @@ float4 ColorSample(
 
 float4 GetTexturePixel(
     global const unsigned int * texture,
-    global const float3 * vertices,
     const struct Object * object,
     const struct Texture info,
     const float3 localPoint,
@@ -79,6 +78,7 @@ float4 GetTexturePixel(
 
     float u = 0.0f;
     float v = 0.0f;
+    float w = 0.0f;
 
     float3 relativePos = localPoint - object->position;
 
@@ -113,30 +113,35 @@ float4 GetTexturePixel(
         v = 0.5f + localPos.z / height;
 
     }else if ( object->type == SPHERE){
-        float theta = atan2(normal.z, normal.x);
+        float theta = atan2(normal.z, normal.x) + M_PI;
         float phi = acos(normal.y);
 
         u = theta * ONE_OVER_2_PI;
         v = phi * ONE_OVER_PI;
     }else if( object->type == TRIANGLE ){
 
-        int idA = object->indiceID.x;
-        int idB = object->indiceID.y;
-        int idC = object->indiceID.z;
+        float3 A = object->verticeA;
+        float3 B = object->verticeB;
+        float3 C = object->verticeC;
 
-        float3 A = vertices[idA];
-        float3 B = vertices[idB];
-        float3 C = vertices[idC];
-
-        float area = 0.5f * ((B.x - A.x) * (C.y - A.y) - (B.y - A.y) * (C.x - A.x));
-        float areaPBC = 0.5f * ((B.x - localPoint.x) * (C.y - localPoint.y) - (B.y - localPoint.y) * (C.x - localPoint.x));
-        float areaPCA = 0.5f * ((C.x - localPoint.x) * (A.y - localPoint.y) - (C.y - localPoint.y) * (A.x - localPoint.x));
-        float areaPAB = 0.5f * ((A.x - localPoint.x) * (B.y - localPoint.y) - (A.y - localPoint.y) * (B.x - localPoint.x));
+        float area = fabs((B.x - A.x) * (C.y - A.y) - (B.y - A.y) * (C.x - A.x));
+        float areaPBC = fabs((B.x - localPoint.x) * (C.y - localPoint.y) - (B.y - localPoint.y) * (C.x - localPoint.x));
+        float areaPCA = fabs((C.x - localPoint.x) * (A.y - localPoint.y) - (C.y - localPoint.y) * (A.x - localPoint.x));
+        float areaPAB = fabs((A.x - localPoint.x) * (B.y - localPoint.y) - (A.y - localPoint.y) * (B.x - localPoint.x));
 
         u = clamp(areaPBC / area, 0.0f, 1.0f);
         v = clamp(areaPCA / area, 0.0f, 1.0f);
+        w = clamp(1.0f - u - v, 0.0f, 1.0f);
+
+        float3 interpolated = u * A + v * B + w * C;
+        
+        u = interpolated.x;
+        v = interpolated.z;
 
     }
+
+    u = clamp(u, 0.0f, 1.0f);
+    v = clamp(v, 0.0f, 1.0f);
 
     return ColorSample(texture, u, v, info.width, info.height, info.offset);
 }
@@ -258,14 +263,14 @@ float IntersectCube(const struct Ray * ray, const struct Object * object) {
     return -1.0f;
 }
 
-float IntersectTriangle(const struct Ray * ray,const struct Object * object,global const float3 * vertices) {
+float IntersectTriangle(const struct Ray * ray,const struct Object * object) {
 
-    int idA = object->indiceID.x;
-    int idB = object->indiceID.y;
-    int idC = object->indiceID.z;
+    float3 A = object->verticeA;
+    float3 B = object->verticeB;
+    float3 C = object->verticeC;
 
-    float3 e1 = (vertices[idB] - vertices[idA]);
-    float3 e2 = (vertices[idC] - vertices[idA]);
+    float3 e1 = (B - A);
+    float3 e2 = (C - A);
 
     float3 normal = cross(ray->direction, e2);
 
@@ -275,7 +280,7 @@ float IntersectTriangle(const struct Ray * ray,const struct Object * object,glob
         return -1.0f;
 
     float inverseDeterminant = 1.0f/determinant;
-    float3 rayToTriangle = ray->origin - vertices[idA];
+    float3 rayToTriangle = ray->origin - A;
     float u = inverseDeterminant * dot(rayToTriangle, normal);
 
     if( u < 0.0f || u >1.0f)
@@ -302,7 +307,6 @@ void ComputeBoxNormal(struct Sample * sample,const struct Object * object){
 struct Sample FindClosestIntersection(const struct Resources resources, const struct Ray * ray){
 
     global const struct Object * objects = resources.objects;
-    global const float3 * vertices = resources.vertices;
     int numObject = resources.numObject;
 
     struct Sample sample = {0};
@@ -325,7 +329,7 @@ struct Sample FindClosestIntersection(const struct Resources resources, const st
                 length = IntersectDisk(ray, &object);
                 break;
             case TRIANGLE:
-                length = IntersectTriangle(ray, &object, vertices);
+                length = IntersectTriangle(ray, &object);
                 break;
             default:
                 length = IntersectSphere(ray, &object);
@@ -470,13 +474,12 @@ float4 ComputeColor(
 
     const float4 skyColor = (float4)(0.2f, 0.2f, 0.25f, 1.0f);
 
-    global const float3 * vertices = resources.vertices;
     global const unsigned int * textureData = resources.textureData;
     global const struct Material * materials = resources.materials;
     global const struct Object * objects = resources.objects;
     global const struct Texture * infos = resources.textureInfo;
 
-    for(int i = 0; i < 8; ++i){
+    for(int i = 0; i < NUM_BOUNCES; ++i){
         struct Sample sample = FindClosestIntersection(resources, ray);
 
         if( isinf(sample.length) ){
@@ -504,13 +507,16 @@ float4 ComputeColor(
         float cosLight = dot(normal, lightVector);
         float cosView = dot(normal, viewVector);
 
+        float m = 2.0f * sqrt( pow( reflectionDirection.x, 2.0f ) + pow( reflectionDirection.y, 2.0f ) + pow( reflectionDirection.z + 1.0f, 2.0f ) );
+        float2 n = reflectionDirection.xy/m + 0.5f;
+
         float isSpecular = Rand(seed) >=  material.roughness;
 
         float3 direction = mix(diffusionDirection, reflectionDirection, material.metallic * isSpecular);
-        ray->direction = normalize(mix(direction, refractionDirecton, material.transparency));
+        ray->direction = normalize(mix(direction, refractionDirecton, material.transparency * (material.metallic==0.0f)));
 
         float4 emission =  material.albedo * material.emmissionIntensity * (cosLight> 0.0f);
-        float4 color = material.albedo * GetTexturePixel(textureData, vertices, &object, info, sample.point, normal);
+        float4 color = material.albedo * GetTexturePixel(textureData, &object, info, sample.point, normal);
 
         float fresnel = 1.0f - clamp(cosView, 0.0f, 1.0f);
 

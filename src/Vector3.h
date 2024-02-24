@@ -7,6 +7,7 @@ struct Vector3 {
     float x;
     float y;
     float z;
+    float w;
 
     Vector3(){
         this->x=0;
@@ -15,25 +16,27 @@ struct Vector3 {
     }
 
     Vector3(const float & _x, const float & _y, const float & _z){
-        this->x=_x;
-        this->y=_y;
-        this->z=_z;
+        this->x = _x;
+        this->y = _y;
+        this->z = _z;
+        this->w = 0.0f;
     }
 
     Vector3(const float & _x, const float & _y){
-        this->x=_x;
-        this->y=_y;
-        this->z= 0;
+        this->x = _x;
+        this->y = _y;
+        this->z = 0.0f;
+        this->w = 0.0f;
     }
 
     static float DotProduct(const Vector3 & a, const Vector3 & b) {
-        return a.x * b.x + a.y * b.y + a.z * b.z;
+        return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
     }
 
     static Vector3 CrossProduct(const Vector3 & a, const Vector3 & b) {
     
         float nX = a.y*b.z - b.y*a.z;
-        float nY =  -(a.x*b.z - b.x*a.z);
+        float nY = -(a.x*b.z - b.x*a.z);
         float nZ = a.x*b.y - b.x*a.y;
 
         return Vector3(nX, nY, nZ);
@@ -77,7 +80,7 @@ struct Vector3 {
     }
 
     Vector3 Directions() const{
-        return Vector3(2*(x>0)-1, 2*(y>0)-1, 2*(z>0)-1);
+        return Vector3(2.0f * ( x > 0.0f) - 1.0f, 2.0f * ( y > 0.0f ) - 1.0f, 2.0f * ( z > 0.0f ) - 1.0f);
     }
 
     Vector3 Absolute() const{

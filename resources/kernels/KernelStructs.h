@@ -42,7 +42,9 @@ struct Object{
     float3 position;
     float3 normal;
     float3 maxPos;
-    float3 indiceID;
+    float3 verticeA;
+    float3 verticeB;
+    float3 verticeC;
     float3 uv;
     unsigned int materialID;
 } __attribute((aligned(128)));
@@ -77,7 +79,6 @@ struct Camera{
 struct Resources{
     global const struct Object * objects;
     global const struct Material * materials;
-    global const float3 * vertices;
     global const struct Texture * textureInfo;
     global const unsigned int * textureData;
     int numObject;

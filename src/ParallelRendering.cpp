@@ -76,9 +76,6 @@ ParallelRendering::ParallelRendering(RenderingContext * _context){
     tempSize = sizeof(Material) * context->materials.size();
     LocalBuffer * materials = CreateBuffer(tempSize, context->materials.data());
 
-    tempSize = sizeof(Vector3) * context->mesh.vertices.size();
-    LocalBuffer * vertices = CreateBuffer(tempSize, context->mesh.vertices.data());
-
     LocalBuffer * resources = CreateBuffer(64, CL_MEM_READ_WRITE);
 
     tempSize = sizeof(Color) * context->width * context->height;
@@ -100,11 +97,10 @@ ParallelRendering::ParallelRendering(RenderingContext * _context){
     transferKernel.setArg(0, resources->buffer);
     transferKernel.setArg(1, objects->buffer);
     transferKernel.setArg(2, materials->buffer);
-    transferKernel.setArg(3, vertices->buffer);
-    transferKernel.setArg(4, textureInfo->buffer);
-    transferKernel.setArg(5, textureData->buffer);
-    transferKernel.setArg(6, numObjects);
-    transferKernel.setArg(7, numMaterials);
+    transferKernel.setArg(3, textureInfo->buffer);
+    transferKernel.setArg(4, textureData->buffer);
+    transferKernel.setArg(5, numObjects);
+    transferKernel.setArg(6, numMaterials);
 
     raytracingKernel = CreateKernel("resources/kernels/tracingkernel.cl", "RayTrace");
     raytracingKernel.setArg(0, sizeof(cl_mem), &textureBuffer);

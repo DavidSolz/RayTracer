@@ -16,6 +16,10 @@ double Timer::GetDurationInSeconds(const std::chrono::high_resolution_clock::dur
     return std::chrono::duration_cast<std::chrono::duration<double>>(duration).count();
 }
 
+double Timer::GetDurationInMiliseconds(const std::chrono::high_resolution_clock::duration& duration){
+    return std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
+}
+
 void Timer::TicTac(){
 
     Timepoint currentTime = GetCurrentTime();

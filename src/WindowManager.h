@@ -2,13 +2,11 @@
 #define OPENGLRENDERER_H
 
 #include <stdio.h>
-#include <unordered_map>
 
 #include "IFrameRender.h"
+#include "InputService.h"
 #include "Timer.h"
 
-#include "ThreadedRendering.h"
-#include "ParallelRendering.h"
 
 class WindowManager {
 
@@ -20,6 +18,8 @@ private:
 
     char windowTitle[50]={0};
     GLFWwindow * window;
+
+    InputService * input;
 
     Color * pixels;
     
@@ -33,8 +33,6 @@ private:
     void HandleErrors();
 
     void UpdateWindow();
-
-    static void KeyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
 public:
     WindowManager(RenderingContext * _context);

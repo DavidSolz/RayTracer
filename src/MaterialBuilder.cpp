@@ -8,7 +8,7 @@ MaterialBuilder::MaterialBuilder(const RenderingContext * _context){
 }       
 
 void MaterialBuilder::ClearMaterial(){
-    temporaryMaterial.albedo = {0.5f, 0.5f, 0.5f, 1.0f};
+    temporaryMaterial.albedo = {1.0f, 1.0f, 1.0f, 1.0f};
     temporaryMaterial.tint = {1.0f,1.0f,1.0f,1.0f};
     temporaryMaterial.specular = {1.0f, 1.0f, 1.0f, 1.0f};
     temporaryMaterial.transmissionFilter = {0};
@@ -86,6 +86,14 @@ MaterialBuilder * MaterialBuilder::SetSpecularColor(const uint8_t & _R, const ui
     return this;
 }
 
+MaterialBuilder * MaterialBuilder::SetSpecularColor(const float & _R, const float & _G, const float & _B){
+    temporaryMaterial.specular.R = _R;
+    temporaryMaterial.specular.G = _G;
+    temporaryMaterial.specular.B = _B;
+    temporaryMaterial.specular.A = 1.0f;
+    return this;
+}
+
 MaterialBuilder * MaterialBuilder::SetTintColor(const uint8_t & _R, const uint8_t & _G, const uint8_t & _B){
     Color color = {_R/255.0f, _G/255.0f, _B/255.0f};
     temporaryMaterial.tint = color;
@@ -106,6 +114,24 @@ MaterialBuilder * MaterialBuilder::SetTransmissionFilter(const uint8_t & _R, con
     return this;
 }
 
+MaterialBuilder * MaterialBuilder::SetTransmissionFilter(const float & _R, const float & _G, const float & _B){
+    temporaryMaterial.transmissionFilter.R = _R;
+    temporaryMaterial.transmissionFilter.G = _G;
+    temporaryMaterial.transmissionFilter.B = _B;
+    temporaryMaterial.transmissionFilter.A = 1.0f;
+    return this;
+}
+
+MaterialBuilder * MaterialBuilder::SetClearcoatThickness(const float & _factor){
+    temporaryMaterial.clearcoatThickness = _factor;
+    return this;
+}
+
+MaterialBuilder * MaterialBuilder::SetClearcoatRoughness(const float & _factor){
+    temporaryMaterial.clearcoatRoughness = _factor;
+    return this;
+}
+
 MaterialBuilder * MaterialBuilder::SetSmoothness(const float & _factor){
     temporaryMaterial.metallic = std::fmax(0.0f, std::fmin(_factor, 1.0f));
     return this;
@@ -120,6 +146,11 @@ MaterialBuilder * MaterialBuilder::SetAnisotropy(const float & _factor){
     temporaryMaterial.anisotropy = std::fmax(0.0f, std::fmin(_factor, 1.0f));
     return this;
 }
+
+ MaterialBuilder * MaterialBuilder::SetAnisotropyRotation(const float & _factor){
+    temporaryMaterial.anisotropyRotation = _factor;
+    return this;
+ }
 
 MaterialBuilder * MaterialBuilder::SetTintRoughness(const float & _factor){
     temporaryMaterial.tintRoughness = std::fmax(0.0f, std::fmin(_factor, 1.0f));

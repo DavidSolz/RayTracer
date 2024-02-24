@@ -79,14 +79,9 @@ void Configurator::ParseArgs(const size_t & size, char **args){
         }
     }
 
-    if( filepath != NULL )
-        serializer->LoadFromFile(filepath);
-
-    context->camera.aspectRatio = context->width/(float)context->height;
-
     Material material;
     
-    material.albedo = {0.5f, 0.5f, 0.5f, 1.0f};
+    material.albedo = {1.0f, 1.0f, 1.0f, 1.0f};
     material.tint = {1.0f,1.0f,1.0f,1.0f};
     material.specular = {1.0f, 1.0f, 1.0f, 1.0f};
     material.specularIntensity = 1.0f;
@@ -96,6 +91,20 @@ void Configurator::ParseArgs(const size_t & size, char **args){
     material.textureID = 0;
 
     context->materials.emplace_back(material);
+
+    Texture info;
+
+    info.width = 1;
+    info.height = 1;
+    info.offset = 0;
+
+    context->textureInfo.emplace_back(info);
     context->textureData.emplace_back(UINT32_MAX);
 
+    context->camera.aspectRatio = context->width/(float)context->height;
+
+    if( filepath != NULL )
+        serializer->LoadFromFile(filepath);
+
+    
 }

@@ -3,8 +3,8 @@
 
 #include "BoundingBox.h"
 #include "Object.h"
-#include "Mesh.h"
 
+#include <vector>
 
 class BVHTree{
 private:
@@ -19,9 +19,9 @@ private:
 public:
     BVHTree();
 
-    void Insert(const Object & _object, const uint32_t & _objectID, const Mesh * mesh);
+    void Insert(const Object & _object, const uint32_t & _objectID);
 
-    void Insert(const std::vector<Object> & _objects, const Mesh * mesh);
+    void Insert(const std::vector<Object> & _objects);
 
     uint32_t GetSize() const;
 

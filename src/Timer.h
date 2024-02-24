@@ -40,6 +40,8 @@ public:
 
     static double GetDurationInSeconds(const std::chrono::high_resolution_clock::duration& duration);
 
+    static double GetDurationInMiliseconds(const std::chrono::high_resolution_clock::duration& duration);
+
 
 };
 

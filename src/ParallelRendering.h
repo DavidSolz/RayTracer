@@ -4,6 +4,8 @@
 #define CL_HPP_TARGET_OPENCL_VERSION 200
 #define CL_HPP_ENABLE_EXCEPTIONS
 
+#define GL_SILENCE_DEPRECATION
+
 #ifdef __APPLE__
 
 #include <GL/glew.h>
@@ -62,8 +64,10 @@ class ParallelRendering : public IFrameRender {
 
     std::vector< LocalBuffer * > buffers;
 
+    /// @brief Creates private handle to selected device
     void GetDefaultDevice();
 
+    /// @brief Creates context within defualt device
     void CreateDeviceContext();
 
     /// @brief Creates buffer of specified type and size

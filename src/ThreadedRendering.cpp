@@ -125,12 +125,13 @@ float ThreadedRendering::IntersectDisk(const Ray & ray, const Object & object) {
 float ThreadedRendering::IntersectTriangle(const Ray & ray, const Object & object){
     const float epsilon = 1e-6f;
 
-    int idA = object.indicesID.x;
-    int idB = object.indicesID.y;
-    int idC = object.indicesID.z;
+    Vector3 A = object.verticeA;
+    Vector3 B = object.verticeB;
+    Vector3 C = object.verticeC;
 
-    Vector3 e1 = (context->mesh.vertices[idB] - context->mesh.vertices[idA]);
-    Vector3 e2 = (context->mesh.vertices[idC] - context->mesh.vertices[idA]);
+
+    Vector3 e1 = (B - A);
+    Vector3 e2 = (C - A);
 
     Vector3 normal = Vector3::CrossProduct(ray.direction, e2);
     float det = Vector3::DotProduct(e1, normal);
@@ -139,7 +140,7 @@ float ThreadedRendering::IntersectTriangle(const Ray & ray, const Object & objec
         return -1.0f;
 
     float f = 1.0f/det;
-    Vector3 rayToTriangle = ray.origin - context->mesh.vertices[idA];
+    Vector3 rayToTriangle = ray.origin - A;
     float u = f * Vector3::DotProduct(rayToTriangle, normal);
 
     if( u < 0.0f || u >1.0f)

@@ -3,38 +3,20 @@
 
 SceneSerializer::SceneSerializer(RenderingContext * _context){
     this->context = _context;
-    this->materialReader = new MaterialReader(context);
+    this->materialSerializer = new MaterialSerializer(context);
+    this->meshSerializer = new MeshSerializer(_context, materialSerializer);
     ResetObject();
 }
 
 SceneSerializer::~SceneSerializer(){
-    delete materialReader;
-}
 
-std::vector<std::string>& SceneSerializer::Tokenize(const std::string & data){
-    static std::vector<std::string> tokens;
+    delete meshSerializer;
+    delete materialSerializer;
 
-    tokens.clear();
-
-    char * temp = new char [ data.size( ) + 1];
-
-    memcpy(temp, data.c_str(), data.size());
-
-    temp[data.size()] = '\0';
-
-    const char * token =  strtok(temp, " ");
-
-    while( token != NULL ){
-        tokens.push_back(std::string(token));
-        token = strtok(NULL, " ");
-    }
-
-    delete[] temp;
-
-    return tokens;
 }
 
 const char * SceneSerializer::CheckProperties(const char * data){
+
     char propertyType[20];  
     int result = sscanf(data, "%19s", propertyType);
 
@@ -87,47 +69,81 @@ void SceneSerializer::ParseObject(const std::vector<std::string> & tokens){
 
     if( tokens[0] == "position" ){
 
-        temp.x = atof(tokens[1].c_str());
-        temp.y = atof(tokens[2].c_str());
-        temp.z = atof(tokens[3].c_str());
-        
-        temporaryObject.position = temp;
+        if(tokens.size() > 3){
+
+            temp.x = atof(tokens[1].c_str());
+            temp.y = atof(tokens[2].c_str());
+            temp.z = atof(tokens[3].c_str());
+            
+            temporaryObject.position = temp;
+
+        }else{
+            fprintf(stderr, "Invalid position format\n");
+            return;
+        }
 
     } else if( tokens[0] == "radius" ){
 
-        temporaryObject.radius = atof(tokens[1].c_str());
+        if(tokens.size() > 1){
+
+            temporaryObject.radius = atof(tokens[1].c_str());
+
+        }else{
+            fprintf(stderr, "Invalid radius format\n");
+            return;
+        }
 
     } else if( tokens[0] == "scale" ){
 
-        temp.x = atof(tokens[1].c_str());
-        
-        if( temporaryObject.type == SpatialType::CUBE  || temporaryObject.type == SpatialType::PLANE){
-            temp.y = atof(tokens[2].c_str());
-            temp.z = atof(tokens[3].c_str());
+        if( tokens.size() > 1){
+
+            temp.x = atof(tokens[1].c_str());
+            
+            if( tokens.size() > 3 && (temporaryObject.type == SpatialType::CUBE  || temporaryObject.type == SpatialType::PLANE) ){
+                temp.y = atof(tokens[2].c_str());
+                temp.z = atof(tokens[3].c_str());
+            }
+
+            temporaryObject.maxPos = temp;
+        }else{
+            fprintf(stderr, "Invalid scale format\n");
+            return;
         }
 
-        temporaryObject.maxPos = temp;
+    }else if( tokens[0] == "usemtl" ){
+        if( tokens.size() > 1){
 
-    }else if( tokens[0] == "material" ){
+            temporaryObject.materialID = materialSerializer->GetMaterial(tokens[1]); 
 
-        temporaryObject.materialID = materialReader->GetMaterial(tokens[1]); 
-        printf("%d\n", temporaryObject.materialID);
+        }else{
+            fprintf(stderr, "Invalid material format\n");
+            return;
+        }
 
     }else if( tokens[0] == "normal" ){
 
-        temp.x = atof(tokens[1].c_str());
-        temp.y = atof(tokens[2].c_str());
-        temp.z = atof(tokens[3].c_str());
-        
-        temporaryObject.normal = temp;
+        if( tokens.size() > 3){
+
+            temp.x = atof(tokens[1].c_str());
+            temp.y = atof(tokens[2].c_str());
+            temp.z = atof(tokens[3].c_str());
+            
+            temporaryObject.normal = temp;
+
+        }else{
+            fprintf(stderr, "Invalid normal format\n");
+            return;
+        }
 
     }
 
 }
 
-void SceneSerializer::ParseScene(std::ifstream & file, const char * filename){
+void SceneSerializer::Parse(std::ifstream & file, const char * filename){
 
     bool inScene = false;
+
+    const char * type;
 
     std::filesystem::path filepath(filename);
     std::filesystem::path directory = filepath.parent_path();
@@ -137,7 +153,7 @@ void SceneSerializer::ParseScene(std::ifstream & file, const char * filename){
 
     while ( std::getline(file, line, '\n') ) {
 
-        if( line.empty() )
+        if( line.empty() || line[0]=='#')
             continue;
 
         std::vector<std::string> tokens = Tokenize(line);
@@ -151,9 +167,9 @@ void SceneSerializer::ParseScene(std::ifstream & file, const char * filename){
 
             if( temporaryObject.type != SpatialType::INVALID ){
 
-                const char * property = CheckProperties(tokens[0].c_str());
+                type = CheckProperties(tokens[0].c_str());
 
-                if ( property != NULL){
+                if (type != NULL){
 
                     ParseObject(tokens);
 
@@ -161,7 +177,9 @@ void SceneSerializer::ParseScene(std::ifstream & file, const char * filename){
 
                     if( tokens[0] == "}" ){
                         temporaryObject.maxPos = temporaryObject.position + temporaryObject.maxPos;
+
                         context->objects.emplace_back(temporaryObject);
+
                         ResetObject();
                     }
 
@@ -170,7 +188,17 @@ void SceneSerializer::ParseScene(std::ifstream & file, const char * filename){
 
             }else{
 
-                if( CheckTypes( tokens[0].c_str() ) == false ){
+                if ( tokens[0] == "mesh"){
+
+                    if(tokens.size() > 1){
+                        tempPath = directory.string() + "/" + tokens[1];
+                        meshSerializer->LoadFromFile(tempPath.c_str());
+                    }else{
+                        fprintf(stderr, "Invalid mesh format.\n");
+                        return;
+                    }
+                    
+                }else if( CheckTypes( tokens[0].c_str() ) == false ){
 
                     if(tokens[0]=="}")
                         inScene = false;
@@ -182,9 +210,9 @@ void SceneSerializer::ParseScene(std::ifstream & file, const char * filename){
 
         } else{
 
-            if(tokens[0] == "materials"){
+            if(tokens[0] == "mtllib"){
                 tempPath = directory.string() + "/" + tokens[1];
-                //materialReader->LoadFromFile(tempPath.c_str());    
+                materialSerializer->LoadFromFile(tempPath.c_str());    
             }else if(tokens[0]=="scene"){
                 inScene = true;  
             }
@@ -212,7 +240,7 @@ void SceneSerializer::SaveToFile( const char * _filename){
 
 void SceneSerializer::LoadFromFile(const char * _filename){
 
-    std::ifstream file(_filename, std::ios::in );
+    std::ifstream file(_filename, std::ios::in);
 
     context->loggingService.Write(MessageType::INFO, "Loading scene file : %s", _filename);
 
@@ -221,7 +249,7 @@ void SceneSerializer::LoadFromFile(const char * _filename){
         exit(-1);
     }
 
-    ParseScene(file, _filename);
+    Parse(file, _filename);
 
     file.close();
 

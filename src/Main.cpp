@@ -1,9 +1,10 @@
 
 #include "WindowManager.h"
-#include "MaterialBuilder.h"
 #include "PerformanceMonitor.h"
 #include "Configurator.h"
-#include "MeshReader.h"
+
+#include "ThreadedRendering.h"
+#include "ParallelRendering.h"
 
 int main(int argc, char **argv){
 
@@ -236,10 +237,9 @@ int main(int argc, char **argv){
     context.objects.emplace_back(p);
 
 // Light
-    p.position = Vector3(context.width/2.0f, 2*context.height, context.depth/4.0f);
-    p.normal = Vector3(0.0f, -1.0f ,0.0f);
-    p.radius = 300.0f;
-    p.type = DISK;
+    p.position = Vector3(context.width/2.0f, 4*context.height, context.depth/2.0f);
+    p.radius = 600.0f;
+    p.type = SPHERE;
 
     p.materialID = materialBuilder
                     .SetBaseColor({1.0f, 1.0f, 0.8f, 1.0f})
@@ -249,18 +249,22 @@ int main(int argc, char **argv){
     context.objects.emplace_back(p);
 
 // RED SPHERE
-    p.position = Vector3(context.width/2.0f, context.height/4.0f + 100.0f, context.depth/2.0f);
-    p.radius = 100.0f;
-    p.type = SPHERE;
+    Vector3 pos = Vector3(200.0f, 200.0f, 200.0f);
+    p.type = CUBE;
+
+    p.position = Vector3(context.width/2.0f, context.height/4.0f, context.depth/2.0f);
+    p.maxPos = pos + p.position;
+
 
     p.materialID = materialBuilder
-                    .SetTransparency(0.8f)
-                    ->SetBaseColor(1.0f, 1.0f, 1.0f)
-                    ->SetRefractiveIndex(1.54f)
-                    ->SetRoughness(0.0f)
+                    .SetBaseColor(1.0f, 0.0f, 0.0f)
+                    ->SetRoughness(0.7f)
+                    ->SetTransparency(1.0f)
+                    ->AttachTexture( "resources/textures/crystal.bmp" )
+                    ->SetRefractiveIndex(2.54f)
                     ->Build();
 
-    context.objects.emplace_back(p);
+    context.objects.emplace_back(p);    
 
     p.position = Vector3(context.width/3.0f, context.height/4.0f + 100.0f, 0.0f);
     p.radius = 100.0f;
@@ -284,24 +288,6 @@ int main(int argc, char **argv){
                     ->Build();
 
     context.objects.emplace_back(p);
-
-    MeshReader reader(&context);
-
-    // Mesh * mesh = reader.LoadObject("resources/meshes/mesh.obj");
-
-    // float scale = 100;
-    // Vector3 offset(context.width/2.0f, context.height/2.0f, context.depth/4.0f);
-
-    // mesh->Translate(offset, scale);
-
-    // uint32_t materialID = materialBuilder
-    //                     .SetBaseColor(0.0f, 0.5f, 0.2f)
-    //                     ->SetTransparency(1.0f)
-    //                     ->SetRoughness(0.0f)
-    //                     ->SetRefractiveIndex(1.54f)
-    //                     //->AttachTexture( "resources/textures/metal.bmp" )
-    //                     //->SetSheen(1.0f)
-    //                     ->Build();
 
 }
 

@@ -42,6 +42,14 @@ public:
 
     MaterialBuilder * SetTintColor(const float & _R, const float & _G, const float & _B);
 
+    MaterialBuilder * SetSpecularColor(const float & _R, const float & _G, const float & _B);
+
+    MaterialBuilder * SetTransmissionFilter(const float & _R, const float & _G, const float & _B);
+
+    MaterialBuilder * SetClearcoatThickness(const float & _factor);
+
+    MaterialBuilder * SetClearcoatRoughness(const float & _factor);
+
     MaterialBuilder * SetSmoothness(const float & _factor);
 
     MaterialBuilder * SetSheen(const float & _factor);
@@ -51,6 +59,8 @@ public:
     MaterialBuilder * SetRoughness(const float & _factor);
 
     MaterialBuilder * SetAnisotropy(const float & _factor);
+
+    MaterialBuilder * SetAnisotropyRotation(const float & _factor);
 
     MaterialBuilder * SetTransparency(const float & _factor);
 
