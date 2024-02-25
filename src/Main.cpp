@@ -3,12 +3,12 @@
 #include "PerformanceMonitor.h"
 #include "Configurator.h"
 
-#include "BVHTree.h"
-
 #include "ThreadedRendering.h"
 #include "ParallelRendering.h"
 
 void HandleCameraMovement(RenderingContext & context, const Vector3 & direction);
+
+void SetupKeyBindings(RenderingContext & context, WindowManager & manager, ParallelRendering & accelerator, ThreadedRendering & processor);
 
 int main(int argc, char **argv){
 
@@ -16,11 +16,11 @@ int main(int argc, char **argv){
 
     RenderingContext context;
 
+    BVHTree tree(&context);
+
     Configurator configurator(&context);
 
     configurator.ParseArgs(argc, argv);
-
-    BVHTree tree(&context);
 
     MaterialBuilder materialBuilder(&context);
 
@@ -226,34 +226,34 @@ int main(int argc, char **argv){
 //{
 //DISK
 
-//     Object p;
+    Object p;
 
-//     p.position = Vector3(context.width/2.0f, context.height/4.0f, context.depth/4.0f);
-//     p.normal = Vector3(0.0f, 1.0f, 0.0f);
-//     p.maxPos = Vector3(5000.0f, 5000.0f, 5000.0f);
-//     p.radius = 1000.0f;
-//     p.type = DISK;
+    p.position = Vector3(context.width/2.0f, context.height/4.0f, context.depth/4.0f);
+    p.normal = Vector3(0.0f, 1.0f, 0.0f);
+    p.maxPos = Vector3(5000.0f, 5000.0f, 5000.0f);
+    p.radius = 1000.0f;
+    p.type = DISK;
 
-//     p.materialID = materialBuilder
-//                     .SetBaseColor({0.5f, 0.5f, 0.5f, 1.0f})
-//                     ->SetRoughness(1.0f)
-//                     ->AttachTexture( "resources/textures/dunes.bmp" )
-//                     ->Build();
+    p.materialID = materialBuilder
+                    .SetBaseColor({0.5f, 0.5f, 0.5f, 1.0f})
+                    ->SetRoughness(1.0f)
+                    ->AttachTexture( "resources/textures/dunes.bmp" )
+                    ->Build();
 
-//     context.objects.emplace_back(p);
+    context.objects.emplace_back(p);
 
-// // Light
-//     p.position = Vector3(context.width/2.0f, 4*context.height, context.depth/2.0f);
-//     p.normal = Vector3(0.0f, -1.0f, -1.0f);
-//     p.radius = 600.0f;
-//     p.type = DISK;
+// Light
+    p.position = Vector3(context.width/2.0f, 2*context.height, context.depth/2.0f);
+    p.normal = Vector3(0.0f, -1.0f, 0.0f);
+    p.radius = 600.0f;
+    p.type = DISK;
 
-//     p.materialID = materialBuilder
-//                     .SetBaseColor({1.0f, 1.0f, 0.8f, 1.0f})
-//                     ->SetEmission(2.0f)
-//                     ->Build();
+    p.materialID = materialBuilder
+                    .SetBaseColor({1.0f, 1.0f, 0.8f, 1.0f})
+                    ->SetEmission(2.0f)
+                    ->Build();
 
-//     context.objects.emplace_back(p);
+    context.objects.emplace_back(p);
 
 // // RED SPHERE
 //     Vector3 pos = Vector3(200.0f, 200.0f, 200.0f);
@@ -299,16 +299,33 @@ int main(int argc, char **argv){
 
 //Main loop
 
+    tree.BuildBVH();
+
     WindowManager manager(&context);
     PerformanceMonitor monitor;
-
-    tree.BuildBVH();
 
     ThreadedRendering processor(&context);
     ParallelRendering accelerator(&context);
 
     manager.SetRenderingService(&accelerator, "Acc mode");
 
+    SetupKeyBindings(context, manager, accelerator, processor);
+
+    while (manager.ShouldClose()) {
+        manager.Update();
+        monitor.GatherInformation();
+    }
+
+    return EXIT_SUCCESS;
+}
+
+void HandleCameraMovement(RenderingContext & context, const Vector3 & direction) {
+    Timer& timer = Timer::GetInstance();
+    context.camera.Move(direction, timer.GetDeltaFrame());
+    context.frameCounter = 0;
+}
+
+void SetupKeyBindings(RenderingContext & context, WindowManager & manager, ParallelRendering & accelerator, ThreadedRendering & processor){
     manager.BindAction(GLFW_KEY_0, [&manager, &processor](){
         manager.SetRenderingService(&processor, "Cpu mode");
     });
@@ -348,17 +365,4 @@ int main(int argc, char **argv){
     manager.BindAction(GLFW_KEY_LEFT_SHIFT, [&context](){
         HandleCameraMovement(context, worldUp * (-1.0f));
     });
-
-    while (manager.ShouldClose()) {
-        manager.Update();
-        monitor.GatherInformation();
-    }
-
-    return EXIT_SUCCESS;
-}
-
-void HandleCameraMovement(RenderingContext & context, const Vector3 & direction) {
-    Timer& timer = Timer::GetInstance();
-    context.camera.Move(direction, timer.GetDeltaFrame());
-    context.frameCounter = 0;
 }

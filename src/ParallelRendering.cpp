@@ -106,7 +106,7 @@ ParallelRendering::ParallelRendering(RenderingContext * _context){
     transferKernel.setArg(6, numObjects);
     transferKernel.setArg(7, numMaterials);
 
-    if( context->boxes.size() > 0){
+    if( context->bvhAcceleration ){
         context->loggingService.Write(MessageType::INFO, "Enabling BVH accelerated kernel...");
         raytracingKernel = CreateKernel("resources/kernels/BVHRayTrace.cl", "RayTrace");
     }else{
@@ -125,7 +125,7 @@ ParallelRendering::ParallelRendering(RenderingContext * _context){
     queue.enqueueNDRangeKernel(raytracingKernel, cl::NullRange, globalRange);
     queue.finish();
 
-    antialiasingKernel = CreateKernel("resources/kernels/antialiasingkernel.cl", "AntiAlias");
+    antialiasingKernel = CreateKernel("resources/kernels/AntiAlias.cl", "AntiAlias");
     antialiasingKernel.setArg(0, sizeof(cl_mem), &textureBuffer);
     antialiasingKernel.setArg(1, scratch->buffer);
 

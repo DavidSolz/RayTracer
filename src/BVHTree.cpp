@@ -79,19 +79,7 @@ void BVHTree::BuildBVH(){
     }
 
     Insert(ids, 0);
-
     BalanceTree(0);
-
-    for (int32_t id = 0; id < context->boxes.size(); id++){
-        BoundingBox box = context->boxes[id];
-        printf("Box [%3d] :  %3d { %3d, %3d} [% 4.2f % 4.2f % 4.2f] [% 4.2f % 4.2f % 4.2f]\n", 
-        id, 
-        box.objectID, box.leftID, box.rightID, 
-        box.minimalPosition.x, box.minimalPosition.y,  box.minimalPosition.z,
-        box.maximalPosition.x, box.maximalPosition.y, box.maximalPosition.z
-        );
-    }
-
 }
 
 int32_t BVHTree::CalculateDepth(const int32_t & currentNode){
@@ -119,8 +107,10 @@ void BVHTree::BalanceTree(const int32_t & currentNode){
 
     int32_t threshold = 2;
 
-    if( abs(sizeLeft - sizeRight) > threshold)
+    if( abs(sizeLeft - sizeRight) > threshold){
         printf("Unbalanced branch.\n");
+        // TODO
+    }
 
 }
 

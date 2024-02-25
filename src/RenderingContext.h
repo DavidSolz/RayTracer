@@ -20,6 +20,7 @@ struct RenderingContext {
 
     bool vSync = false;
     bool memorySharing = false;
+    bool bvhAcceleration = false;
 
     // Texture transfer object
     GLuint textureID;

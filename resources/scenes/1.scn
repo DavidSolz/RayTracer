@@ -3,6 +3,6 @@ mtllib mat.mtl
 scene
 {
 
-mesh mesh.obj
+mesh dragon.obj
 
 }

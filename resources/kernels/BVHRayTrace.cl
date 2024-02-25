@@ -338,6 +338,7 @@ struct Sample FindClosestIntersection(const struct Resources resources, const st
     stack[top++] = 0;
 
     while (top > 0) {
+        
         int boxID = stack[--top];
         struct BoundingBox box = boxes[boxID];
 
@@ -541,18 +542,11 @@ float4 ComputeColor(
         float cosLight = dot(normal, lightVector);
         float cosView = dot(normal, viewVector);
 
-        float m = 2.0f * sqrt( pow( reflectionDirection.x, 2.0f ) + pow( reflectionDirection.y, 2.0f ) + pow( reflectionDirection.z + 1.0f, 2.0f ) );
-        float2 n = reflectionDirection.xy/m + 0.5f;
-
-        float isSpecular = Rand(seed) >=  material.roughness;
-
-        float3 direction = mix(diffusionDirection, reflectionDirection, material.metallic * isSpecular);
-        ray->direction = normalize(mix(direction, refractionDirecton, material.transparency * (material.metallic==0.0f)));
+        float3 direction = mix(diffusionDirection, reflectionDirection, material.metallic);
+        ray->direction = normalize( mix(direction, refractionDirecton, material.transparency) );
 
         float4 emission =  material.albedo * material.emmissionIntensity * (cosLight> 0.0f);
         float4 color = material.albedo * GetTexturePixel(textureData, &object, info, sample.point, normal);
-
-        float fresnel = 1.0f - clamp(cosView, 0.0f, 1.0f);
 
         accumulatedColor += emission * lightColor; 
 

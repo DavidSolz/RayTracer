@@ -2,6 +2,7 @@
 #define CONFIGURATOR_H
 
 #include "SceneSerializer.h"
+#include "BVHTree.h"
 
 class Configurator{
 private:

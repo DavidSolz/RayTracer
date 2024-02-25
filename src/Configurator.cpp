@@ -12,8 +12,7 @@ Configurator::Configurator(RenderingContext * _context){
 
     context->loggingService.BindOutput("RayTracer_log.txt");
 
-    serializer = new SceneSerializer(context);
-
+    this->serializer = new SceneSerializer(context);
 }
 
 Configurator::~Configurator(){
@@ -30,6 +29,7 @@ void Configurator::ShowHelp(){
     fprintf(stdout,"  -h <height>     Set window height\n");
     fprintf(stdout,"  -S              Enable memory sharing\n");
     fprintf(stdout,"  -H              Show help menu\n");
+    fprintf(stdout,"  -B              Build BVH tree\n");
 
 }
 
@@ -73,6 +73,9 @@ void Configurator::ParseArgs(const size_t & size, char **args){
         }else if (arg[1] == 'S' && arg[2] == '\0') {
             fprintf(stdout, "Memory sharing enabled.\n");
             context->memorySharing = true;
+        } else if (arg[1] == 'B' && arg[2] == '\0') {
+            fprintf(stdout, "BVH tree enabled.\n");
+            context->bvhAcceleration = true;
         } else if (arg[1] == 'H' && arg[2] == '\0') {
             ShowHelp();
             exit(0);
@@ -106,5 +109,4 @@ void Configurator::ParseArgs(const size_t & size, char **args){
     if( filepath != NULL )
         serializer->LoadFromFile(filepath);
 
-    
 }

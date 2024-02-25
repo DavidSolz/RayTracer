@@ -69,7 +69,7 @@ void MeshSerializer::CalculateNormals(){
         Vector3 u = B - A;
         Vector3 v = C - A;
 
-        Vector3 normal = Vector3::CrossProduct(u,v).Normalize();
+        Vector3 normal = Vector3::CrossProduct(v, u).Normalize();
 
         normals.emplace_back(normal);
     }
