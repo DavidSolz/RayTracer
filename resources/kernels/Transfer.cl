@@ -5,6 +5,7 @@ void kernel Transfer(
     global const struct Material * materials,
     global const struct Texture * textureInfo,
     global const unsigned int * textureData,
+    global const struct BoundingBox * boxes,
     const int numObject,
     const int numMaterials
     ){
@@ -13,6 +14,7 @@ void kernel Transfer(
     resources->materials = materials;
     resources->textureInfo = textureInfo;
     resources->textureData = textureData;
+    resources->boxes = boxes;
     resources->numObject = numObject;
     resources->numMaterials = numMaterials;
 }

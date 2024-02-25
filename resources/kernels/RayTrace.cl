@@ -45,7 +45,6 @@ float3 RandomDirection(uint * seed){
 
 */
 
-
 float4 Unpack(const unsigned int color){
     unsigned char * byte = (unsigned char *)&color;
     return (float4)(byte[0], byte[1], byte[2], byte[3]) * ONE_OVER_MAX_CHAR;
@@ -339,7 +338,6 @@ struct Sample FindClosestIntersection(const struct Resources resources, const st
             sample.length = length ;
             sample.point = ray->origin + ray->direction * length * EPSILON;
             sample.objectID = id;
-            sample.materialID = object.materialID;
 
             switch(object.type){
 
@@ -489,8 +487,8 @@ float4 ComputeColor(
 
         ray->origin = sample.point;
 
-        struct Material material =  materials[ sample.materialID ];
         struct Object object = objects[ sample.objectID ];
+        struct Material material =  materials[ object.materialID ];
         struct Texture info = infos[ material.textureID ];
 
         float3 normal = sample.normal;
@@ -520,7 +518,7 @@ float4 ComputeColor(
 
         float fresnel = 1.0f - clamp(cosView, 0.0f, 1.0f);
 
-        accumulatedColor += (emission ) * lightColor; 
+        accumulatedColor += emission * lightColor; 
 
         lightColor *= 2.0f * cosLight * color;
         lastIOR = material.indexOfRefraction;

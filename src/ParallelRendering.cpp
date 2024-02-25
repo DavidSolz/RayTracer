@@ -87,22 +87,33 @@ ParallelRendering::ParallelRendering(RenderingContext * _context){
     tempSize = sizeof(int) * context->textureData.size();
     LocalBuffer * textureData = CreateBuffer(tempSize, context->textureData.data());
 
+    tempSize = sizeof(BoundingBox) * context->boxes.size();
+    LocalBuffer * boxBuffer = CreateBuffer(tempSize, context->boxes.data());
+
 
     globalRange = cl::NDRange(context->width, context->height);
 
     int numObjects = context->objects.size();
     int numMaterials = context->materials.size();
 
-    transferKernel = CreateKernel("resources/kernels/transferkernel.cl", "Transfer");
+    transferKernel = CreateKernel("resources/kernels/Transfer.cl", "Transfer");
     transferKernel.setArg(0, resources->buffer);
     transferKernel.setArg(1, objects->buffer);
     transferKernel.setArg(2, materials->buffer);
     transferKernel.setArg(3, textureInfo->buffer);
     transferKernel.setArg(4, textureData->buffer);
-    transferKernel.setArg(5, numObjects);
-    transferKernel.setArg(6, numMaterials);
+    transferKernel.setArg(5, boxBuffer->buffer);
+    transferKernel.setArg(6, numObjects);
+    transferKernel.setArg(7, numMaterials);
 
-    raytracingKernel = CreateKernel("resources/kernels/tracingkernel.cl", "RayTrace");
+    if( context->boxes.size() > 0){
+        context->loggingService.Write(MessageType::INFO, "Enabling BVH accelerated kernel...");
+        raytracingKernel = CreateKernel("resources/kernels/BVHRayTrace.cl", "RayTrace");
+    }else{
+        context->loggingService.Write(MessageType::INFO, "Enabling standard accelerated kernel...");
+        raytracingKernel = CreateKernel("resources/kernels/RayTrace.cl", "RayTrace");
+    }
+    
     raytracingKernel.setArg(0, sizeof(cl_mem), &textureBuffer);
     raytracingKernel.setArg(1, resources->buffer);
     raytracingKernel.setArg(2, sizeof(Camera), &context->camera);
@@ -139,7 +150,7 @@ void ParallelRendering::Render(Color * _pixels){
     raytracingKernel.setArg(3, sizeof(int), &context->frameCounter);
 
     queue.enqueueNDRangeKernel(raytracingKernel, cl::NullRange, globalRange);
-    //queue.enqueueNDRangeKernel(antialiasingKernel, cl::NullRange, globalRange);
+    queue.enqueueNDRangeKernel(antialiasingKernel, cl::NullRange, globalRange);
 
     queue.finish();
 

@@ -2,30 +2,35 @@
 #define BVHTREE_H
 
 #include "BoundingBox.h"
-#include "Object.h"
+#include "RenderingContext.h"
 
-#include <vector>
+#include <stdio.h>
 
 class BVHTree{
 private:
-    
-    uint32_t size;
-    std::vector<BoundingBox> boxes;
+
+    RenderingContext * context;
 
     BoundingBox CombineBoxes(const BoundingBox & a, const BoundingBox & b);
 
-    void InsertBox(const BoundingBox & box);
+    BoundingBox CreateLeaf(const uint32_t & objectID);
+
+    void Insert(const uint32_t & objectID);
+
+    int32_t Insert(std::vector<int32_t> ids, const int32_t & parentID = 0, const uint32_t & depth = 0);
+
+    void BalanceTree(const int32_t & currentNode = -1);
+
+    int32_t CalculateDepth(const int32_t & currentNode = -1);
 
 public:
-    BVHTree();
+    BVHTree(RenderingContext * _context);
 
-    void Insert(const Object & _object, const uint32_t & _objectID);
-
-    void Insert(const std::vector<Object> & _objects);
+    void BuildBVH();
 
     uint32_t GetSize() const;
 
-    std::vector<BoundingBox> GetData() const;
+    std::vector<BoundingBox> & GetData() const;
 
     ~BVHTree();
 };

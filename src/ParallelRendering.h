@@ -76,7 +76,7 @@ class ParallelRendering : public IFrameRender {
     /// @return buffer
     LocalBuffer * CreateBuffer(const size_t & _size, const cl_mem_flags & flag);
 
-    /// @brief Creates read only buffer  of specified size
+    /// @brief Creates read only buffer of specified size
     /// @param size 
     /// @param data 
     /// @return read only buffer filled with data

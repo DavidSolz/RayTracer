@@ -1,37 +1,38 @@
 #include "BVHTree.h"
 
-BVHTree::BVHTree(){
-    this->size = 0;
-    this->boxes.clear();
-
-    BoundingBox root;
-    root.minimalPosition = Vector3(INFINITY, INFINITY, INFINITY);
-    root.maximalPosition = Vector3(-INFINITY, -INFINITY, -INFINITY);
+BVHTree::BVHTree(RenderingContext * _context){
+    this->context = _context;
+    context->boxes.clear();
 }
 
-void BVHTree::Insert(const Object & _object, const uint32_t & _objectID){
+BoundingBox BVHTree::CreateLeaf(const uint32_t & objectID){
 
     BoundingBox box = {0};
-
-    box.objectID = _objectID;
+    box.minimalPosition = Vector3(INFINITY, INFINITY, INFINITY);
+    box.maximalPosition = Vector3(-INFINITY, -INFINITY, -INFINITY);
+    box.objectID = objectID;
     box.leftID = -1;
     box.rightID = -1;
 
-    if( _object.type == SPHERE ){
-        Vector3 radiusVector = Vector3(_object.radius, _object.radius, _object.radius);
-        box.minimalPosition = Vector3::Minimal(_object.position-radiusVector, _object.position+radiusVector);
-        box.maximalPosition = Vector3::Maximal(_object.position-radiusVector, _object.position+radiusVector);
+    Object & object = context->objects[objectID];
 
-    }else if ( _object.type == CUBE ){
+    Vector3 radiusVector = Vector3(object.radius, object.radius, object.radius);
 
-        box.minimalPosition = _object.position;
-        box.maximalPosition = _object.maxPos;
+    if( object.type == SPHERE){
 
-    }else if( _object.type == TRIANGLE ){
+        box.minimalPosition = object.position-radiusVector;
+        box.maximalPosition = object.position+radiusVector;
 
-        Vector3 A = _object.verticeA;
-        Vector3 B = _object.verticeB;
-        Vector3 C = _object.verticeC;
+    }else if ( object.type == CUBE ){
+
+        box.minimalPosition = Vector3::Minimal(object.position, object.maxPos);
+        box.maximalPosition = Vector3::Maximal(object.position, object.maxPos);
+
+    }else if( object.type == TRIANGLE ){
+
+        Vector3 A = object.verticeA;
+        Vector3 B = object.verticeB;
+        Vector3 C = object.verticeC;
 
         Vector3 min = Vector3::Minimal(A, B);
         min = Vector3::Minimal(min, C);
@@ -42,50 +43,146 @@ void BVHTree::Insert(const Object & _object, const uint32_t & _objectID){
         box.minimalPosition = min;
         box.maximalPosition = max;
 
+    }else if( (object.type == DISK) || (object.type == PLANE) ){
+
+        // TODO
+
+        box.minimalPosition = object.position - radiusVector;
+        box.maximalPosition = object.position + radiusVector;
+
     }
 
-    // case SpatialType::PLANE:
-    //     break;
-
-    // case SpatialType::DISK:
-    //     break;
-
-    InsertBox(box);
+    return box;
 }
 
 BoundingBox BVHTree::CombineBoxes(const BoundingBox & a, const BoundingBox & b){
 
     BoundingBox result;
 
-    result.objectID = -1;
     result.leftID = -1;
     result.rightID = -1;
 
     result.minimalPosition = Vector3::Minimal(a.minimalPosition, b.minimalPosition);
     result.maximalPosition = Vector3::Maximal(a.maximalPosition, b.maximalPosition);
+
     return result;
 
 }
 
+void BVHTree::BuildBVH(){
 
-void BVHTree::Insert(const std::vector<Object> & _objects){
+    std::vector<int32_t> ids;
 
-    for(uint32_t id=0; id < _objects.size(); id++){
-        Insert(_objects[id], id);
+
+    for(int32_t id = 0; id < context->objects.size(); ++id){
+        ids.emplace_back(id);
+    }
+
+    Insert(ids, 0);
+
+    BalanceTree(0);
+
+    for (int32_t id = 0; id < context->boxes.size(); id++){
+        BoundingBox box = context->boxes[id];
+        printf("Box [%3d] :  %3d { %3d, %3d} [% 4.2f % 4.2f % 4.2f] [% 4.2f % 4.2f % 4.2f]\n", 
+        id, 
+        box.objectID, box.leftID, box.rightID, 
+        box.minimalPosition.x, box.minimalPosition.y,  box.minimalPosition.z,
+        box.maximalPosition.x, box.maximalPosition.y, box.maximalPosition.z
+        );
     }
 
 }
 
-void  BVHTree::InsertBox(const BoundingBox & box){
+int32_t BVHTree::CalculateDepth(const int32_t & currentNode){
+    if(currentNode == -1)
+        return 0;
 
+    int32_t sizeLeft = CalculateDepth( context->boxes[currentNode].leftID );
+    int32_t sizeRight = CalculateDepth( context->boxes[currentNode].rightID );
+
+    return 1 + sizeLeft + sizeRight;
+}
+
+void BVHTree::BalanceTree(const int32_t & currentNode){
+    if(currentNode == -1)
+        return;
+
+    BalanceTree( context->boxes[currentNode].leftID );
+    BalanceTree( context->boxes[currentNode].rightID );
+
+    int32_t leftChild = context->boxes[currentNode].leftID;
+    int32_t rightChild = context->boxes[currentNode].rightID;
+
+    int32_t sizeLeft = CalculateDepth(leftChild);
+    int32_t sizeRight = CalculateDepth(rightChild);
+
+    int32_t threshold = 2;
+
+    if( abs(sizeLeft - sizeRight) > threshold)
+        printf("Unbalanced branch.\n");
+
+}
+
+
+int32_t BVHTree::Insert(std::vector<int32_t> ids, const int32_t & parentID, const uint32_t & depth){
+
+    if( ids.empty() )
+        return -1;
+
+    if( ids.size() == 1 ){
+        BoundingBox box = CreateLeaf( ids[0] );
+        int32_t boxID = context->boxes.size();
+        context->boxes.emplace_back(box);
+        return boxID;
+    }
+
+    int32_t currentNodeID = context->boxes.size();
+
+    std::vector<Object> & objects = context->objects;
+
+    int32_t splitAxis = depth%3;
+
+    std::sort(ids.begin(), ids.end(), 
+        [splitAxis, &objects](const int32_t & a, const int32_t & b){
+            return objects[a].position[splitAxis] < objects[b].position[splitAxis];
+        }
+    );
+
+    int32_t middle = ids.size() >> 1;
+    std::vector<int32_t> left(ids.begin(), ids.begin()+middle); 
+    std::vector<int32_t> right(ids.begin()+middle, ids.end()); 
+
+    BoundingBox temp;
+    temp.minimalPosition = Vector3(INFINITY, INFINITY, INFINITY);
+    temp.maximalPosition = Vector3(-INFINITY, -INFINITY, -INFINITY);
+    temp.leftID = -1;
+    temp.rightID = -1;
+    temp.objectID = -1;
+
+    context->boxes.emplace_back(temp);
+
+    int32_t leftChildID = Insert(left, currentNodeID, depth + 1);
+    int32_t rightChildID = Insert(right, currentNodeID, depth + 1);
+    
+    if( leftChildID > 0)
+        context->boxes[currentNodeID].minimalPosition = Vector3::Minimal(context->boxes[leftChildID].minimalPosition, context->boxes[rightChildID].minimalPosition);
+    
+    if( rightChildID > 0)
+        context->boxes[currentNodeID].maximalPosition = Vector3::Maximal(context->boxes[leftChildID].maximalPosition, context->boxes[rightChildID].maximalPosition);
+
+    context->boxes[currentNodeID].rightID = rightChildID;
+    context->boxes[currentNodeID].leftID  = leftChildID;
+
+    return currentNodeID;
 }
 
 uint32_t BVHTree::GetSize() const{
-    return size;
+    return context->boxes.size();
 }
 
-std::vector<BoundingBox> BVHTree::GetData() const{
-    return boxes;
+std::vector<BoundingBox> & BVHTree::GetData() const{
+    return context->boxes;
 }
 
 BVHTree::~BVHTree(){

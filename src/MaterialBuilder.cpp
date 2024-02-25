@@ -170,6 +170,8 @@ MaterialBuilder * MaterialBuilder::SetSpecularIntensity(const float & _factor){
 
 MaterialBuilder * MaterialBuilder::AttachTexture( const char * _filepath ){
 
+    context->loggingService.Write(MessageType::INFO, "Loading texture file : %s", _filepath);
+
     Image image = BitmapReader::ReadFile(_filepath);
 
     if( image.data == NULL ){
@@ -177,13 +179,29 @@ MaterialBuilder * MaterialBuilder::AttachTexture( const char * _filepath ){
         return this;
     }
 
-    context->loggingService.Write(MessageType::INFO, "Loading texture file : %s", _filepath);
+    int32_t id = -1;
+
+    for(int32_t i = 0; i < context->textureInfo.size(); ++i){
+
+        if( context->textureInfo[i].checksum == image.checksum){
+            id = i;
+            break;
+        }
+
+    }
+
+    if( id != -1 ){
+        temporaryMaterial.textureID = id;
+        return this;
+    }
 
     info.width = image.width;
     info.height = image.height;
     info.offset = context->textureData.size();
+    info.checksum = image.checksum;
 
     temporaryMaterial.textureID = context->textureInfo.size();
+    context->textureInfo.emplace_back(info);
 
     uint32_t size = image.width * image.height;
 
@@ -211,8 +229,7 @@ uint32_t MaterialBuilder::Build(){
 
     // if ( idx == UINT32_MAX){
     context->materials.push_back(temporaryMaterial);
-    context->textureInfo.emplace_back(info);
-    
+
     ClearMaterial();
     return context->materials.size()-1;
     // }

@@ -45,7 +45,7 @@ void MaterialSerializer::Parse(std::ifstream & file, const char * filename){
             if( !materialName.empty() ){
 
                 if( GetMaterial( materialName ) != DEFAULT_MATERIAL_ID ){
-                    fprintf(stderr, "Material %s already exists.\n", materialName);
+                    fprintf(stderr, "Material %s already exists.\n", materialName.c_str());
                 }else{
                     gatheredMaterials[ materialName ] = builder->Build();
                     context->loggingService.Write(MessageType::INFO, "Registering new material : %s", materialName.c_str());

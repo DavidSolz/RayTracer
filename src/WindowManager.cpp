@@ -9,8 +9,6 @@ WindowManager::WindowManager(RenderingContext * _context){
 
     context->loggingService.Write(MessageType::INFO, "Configuring window...");
 
-    memcpy(windowTitle, "ACC Mode", 9);
-
     if( glfwInit() == GLFW_FALSE ){
 
         context->loggingService.Write(MessageType::ISSUE, "Cannot initialize GLFW");
@@ -61,15 +59,9 @@ WindowManager::WindowManager(RenderingContext * _context){
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, context->width, context->height, 0, GL_RGBA, GL_FLOAT, nullptr);
 
-    char buffer[200] = {0};
+    context->loggingService.Write(MessageType::INFO, "Current resolution : %d x %d", context->width, context->height);
 
-    sprintf(buffer, "Current resolution : %d x %d", context->width, context->height);
-
-    context->loggingService.Write(MessageType::INFO, buffer);
-
-    sprintf(buffer, "Checking for V-Sync : %s", context->vSync?"enabled":"disabled");
-
-    context->loggingService.Write(MessageType::INFO, buffer);
+    context->loggingService.Write(MessageType::INFO, "Checking for V-Sync : %s", context->vSync?"enabled":"disabled");
 
     context->loggingService.Write(MessageType::INFO, "Window configuration done");
 
@@ -77,19 +69,20 @@ WindowManager::WindowManager(RenderingContext * _context){
 
     timer = &Timer::GetInstance();
 
-    glfwGetCursorPos(window, &lastMouseX, &lastMouseY);
-
-    minIndex = 10;
-    maxIndex = 0;
-    selectedService = 0;
-
-    input = new InputService(window);
-    glfwSetWindowUserPointer(window, input);
 }
 
 void WindowManager::ProcessInput(){
 
-    if (input->IsMouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT)) {
+    for(auto pair : actions){
+
+        if( glfwGetKey(window, pair.first) == GLFW_PRESS)
+            pair.second();
+
+    }
+
+    if (glfwGetMouseButton(window,GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
+        
+        static double lastMouseX, lastMouseY;
         double currentX, currentY;
 
         glfwGetCursorPos(window, &currentX, &currentY);
@@ -113,58 +106,19 @@ void WindowManager::ProcessInput(){
 
         context->frameCounter=0;
     }
-
-    for (int key = minIndex; key <= maxIndex; key++) {
-        if (input->IsPressed('0' + key) && key!= selectedService) {
-            memcpy(windowTitle, "CPU Mode", 9);
-            selectedService = key;
-            context->frameCounter=0;
-        }
-    }
-
-    float deltaTime = timer->GetDeltaFrame();
-
-    if(input->IsHold(GLFW_KEY_W)){
-        context->camera.Move(context->camera.front, deltaTime);
-        context->frameCounter=0;
-    }else if(input->IsHold(GLFW_KEY_S)){
-        context->camera.Move(context->camera.front*(-1.0f), deltaTime);
-        context->frameCounter=0;
-    }else if(input->IsHold(GLFW_KEY_A)){
-        context->camera.Move(context->camera.right*(-1.0f), deltaTime);
-        context->frameCounter=0;
-    }else if(input->IsHold(GLFW_KEY_D)){
-        context->camera.Move(context->camera.right, deltaTime);
-        context->frameCounter=0;
-    }else if(input->IsHold(GLFW_KEY_LEFT_SHIFT)){
-        context->camera.Move(worldUp*(-1.0f), deltaTime);
-        context->frameCounter=0;
-    }else if(input->IsHold(GLFW_KEY_SPACE)){
-        context->camera.Move(worldUp, deltaTime);
-        context->frameCounter=0;
-    }
-
-    if(input->IsPressed(GLFW_KEY_ESCAPE)){
-        glfwSetWindowShouldClose(window, true);
-    }else if(input->IsPressed(GLFW_KEY_P)){
-        TakeScreenShot();
-        fprintf(stdout, "Taking screenshoot\n");
-    }else if (input->IsPressed(GLFW_KEY_R)){
-        context->vSync ^= true;
-        glfwSwapInterval( context->vSync );
-        fprintf(stdout, "Toggling V-Sync...\n");
-    }
     
+}
+
+void WindowManager::SetWindowTitle(const char _title[9]){
+    memcpy(windowTitle, _title, 9);
 }
 
 bool WindowManager::ShouldClose(){
     return !glfwWindowShouldClose(window);
 }
 
-void WindowManager::BindRenderingService(const uint8_t & _key, IFrameRender * _service){
-    renderingServices[ _key ] = _service;
-    minIndex = std::min(minIndex, _key);
-    maxIndex = std::max(maxIndex, _key);
+void WindowManager::BindAction(const uint16_t & _key, Callback _callback){
+    actions[ _key ] = _callback;
 }
 
 void  WindowManager::HandleErrors(){
@@ -176,7 +130,7 @@ void  WindowManager::HandleErrors(){
 
     }
 
-    if( renderingServices [selectedService] == nullptr || selectedService < 0 || selectedService > 9){
+    if( renderer == nullptr ){
         context->loggingService.Write(MessageType::ISSUE, "Rendering service error");
         glfwSetWindowShouldClose(window, GLFW_TRUE);
     }
@@ -186,7 +140,7 @@ void WindowManager::UpdateWindow(){
 
     timer->TicTac();
 
-    renderingServices[ selectedService ]->Render(pixels);
+    renderer->Render(pixels);
 
     context->frameCounter++;
 
@@ -223,11 +177,24 @@ void WindowManager::Update(){
 
 }
 
-void WindowManager::TakeScreenShot(){
+void WindowManager::SetRenderingService(IFrameRender * _service, const char _name[9]){
+    this->renderer = _service;
+    memcpy(windowTitle, _name, 9);
+}
+
+bool WindowManager::IsButtonPressed(const uint16_t & _key){
+    return glfwGetKey(window, _key);
+}
+
+void WindowManager::Close(){
+    glfwSetWindowShouldClose(window, true);
+}
+
+void WindowManager::DumpContent(){
 
     glReadPixels(0, 0, context->width, context->height, GL_RGBA, GL_FLOAT, pixels);
 
-    std::ofstream outFile("ScreenShot.bmp", std::ios::binary);
+    std::ofstream outFile("screenshot.bmp", std::ios::binary);
 
     outFile << "BM"; 
     uint32_t fileSize = 54 + sizeof(Color) * context->width * context->height; 
@@ -269,7 +236,6 @@ void WindowManager::TakeScreenShot(){
 
 WindowManager::~WindowManager(){
 
-    delete input;
     delete[] pixels;
 
     context->loggingService.Write(MessageType::INFO, "Deleting texture buffer...");

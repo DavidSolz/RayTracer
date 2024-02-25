@@ -33,6 +33,10 @@ struct Vector3 {
         return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
     }
 
+    static Vector3 Root(const Vector3 & a) {
+        return Vector3(sqrtf(a.x), sqrtf(a.y), sqrtf(a.z));
+    }
+
     static Vector3 CrossProduct(const Vector3 & a, const Vector3 & b) {
     
         float nX = a.y*b.z - b.y*a.z;
@@ -59,12 +63,24 @@ struct Vector3 {
         return Vector3(x - b.x, y - b.y, z - b.z);
     }
 
+    Vector3 operator-(const float & scalar) const {
+        return Vector3(x - scalar, y - scalar, z - scalar);
+    }
+
     Vector3 operator+(const Vector3 & b) const {
         return Vector3(x + b.x, y + b.y, z + b.z);
     }
 
+    Vector3 operator+(const float & scalar) const {
+        return Vector3(x + scalar, y + scalar, z + scalar);
+    }
+
     Vector3 operator*(const float & scalar) const{
         return Vector3(x*scalar, y*scalar, z*scalar);
+    }
+
+    Vector3 operator/(const float & scalar) const{
+        return Vector3(x/scalar, y/scalar, z/scalar);
     }
 
     Vector3 operator*(const Vector3 & other) const {
@@ -73,6 +89,19 @@ struct Vector3 {
 
     bool operator<(const Vector3 & other) const{
         return x<other.x && y<other.y && z<other.z;
+    }
+
+    float operator[](const int & id) const{
+        
+        if(id == 0){
+            return x;
+        }else if(id == 1){
+            return y;
+        }else if(id == 2){
+            return z;
+        }
+
+        return 0.0f;
     }
 
     float Magnitude() const {

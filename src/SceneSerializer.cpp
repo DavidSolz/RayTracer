@@ -1,6 +1,5 @@
 #include "SceneSerializer.h"
 
-
 SceneSerializer::SceneSerializer(RenderingContext * _context){
     this->context = _context;
     this->materialSerializer = new MaterialSerializer(context);
@@ -34,24 +33,24 @@ const char * SceneSerializer::CheckProperties(const char * data){
     return NULL;
 }
 
-bool SceneSerializer::CheckTypes(const char * data){
+SpatialType SceneSerializer::CheckTypes(const char * data){
 
     char type[20];  
     int result = sscanf(data, "%19s", type);
 
     if( result != 1)
-        return false;
+        return SpatialType::INVALID;
 
     for(size_t pos = 0; pos < SPATIAL_TYPE_SIZE; ++pos){
 
         if( strcmp(type, types[pos] ) == 0){
             temporaryObject.type = SpatialType(pos);
-            return true;
+            return temporaryObject.type;
         }
 
     }
 
-    return false;
+    return SpatialType::INVALID;
 
 }
 
@@ -198,7 +197,7 @@ void SceneSerializer::Parse(std::ifstream & file, const char * filename){
                         return;
                     }
                     
-                }else if( CheckTypes( tokens[0].c_str() ) == false ){
+                }else if( CheckTypes( tokens[0].c_str() ) != SpatialType::INVALID ){
 
                     if(tokens[0]=="}")
                         inScene = false;

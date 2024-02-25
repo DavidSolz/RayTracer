@@ -93,6 +93,8 @@ void MeshSerializer::BuildTriangles(){
         temp.verticeB = vertices[ indiceB ] * 100.0f + offset;
         temp.verticeC = vertices[ indiceC ] * 100.0f + offset;
 
+        temp.position = (temp.verticeA + temp.verticeB + temp.verticeC)/3.0f;
+
         Vector3 normal = normals[id];
 
         if( faces[id].normals[0] != -1){
@@ -217,6 +219,10 @@ void MeshSerializer::LoadFromFile(const char * _filename){
         fprintf(stderr, "File %s can't be opened.\n", _filename);
         return;
     }
+
+    faces.clear();
+    vertices.clear();
+    normals.clear();
 
     Parse(file, _filename);    
 

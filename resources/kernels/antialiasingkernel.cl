@@ -3,27 +3,18 @@ void kernel AntiAlias(
     global float4 * scratch 
     ){
 
-    int x = get_global_id(0);
-    int y = get_global_id(1);
-
+    int2 coord = (int2)(get_global_id(0), get_global_id(1));
     int width = get_global_size(0);
     int height = get_global_size(1);
+    int size = width * height;
+    int idx = coord.y * width + coord.x;
 
-    float4 pixelValue = 0.0f;
+    int top = clamp(coord.y - 1, 0, height - 1) * width + coord.x;
+    int bot = clamp(coord.y + 1, 0, height - 1) * width + coord.x;
+    int left = coord.y * width + clamp(coord.x - 1, 0, width - 1);
+    int right = coord.y * width + clamp(coord.x + 1, 0, width - 1);
 
-    for (int i = -1; i <= 1; i++) {
-        for (int j = -1; j <= 1; j++) {
-
-            int neighborX = clamp(x + i, 0, width - 1);
-            int neighborY = clamp(y + j, 0, height - 1);
-
-            int index = neighborY * width + neighborX;
-
-            pixelValue += scratch[index] ;
-
-        }
-    }
-
-    write_imagef(image, (int2)(x,y), pixelValue/9.0f);
+    float4 pixelValue = scratch[idx] + scratch[top] + scratch[bot] + scratch[left] + scratch[right];
+    write_imagef(image, coord, pixelValue / 5.0f);
 
 }

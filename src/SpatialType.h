@@ -10,7 +10,8 @@ enum SpatialType{
     DISK,
     CUBE,
     TRIANGLE,
-    INVALID
+    INVALID,
+    NUM_SPATIALS
 };
 
 #endif

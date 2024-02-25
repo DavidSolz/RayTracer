@@ -4,6 +4,7 @@
 #include "Object.h"
 #include "Logger.h"
 #include "Camera.h"
+#include "BoundingBox.h"
 #include "Texture.h"
 
 #include <GL/glew.h>
@@ -27,6 +28,9 @@ struct RenderingContext {
     std::vector<Object> objects;
     std::vector<Material> materials;
     
+    // Bounding Boxes
+    std::vector<BoundingBox> boxes;
+
     // Texture data
     std::vector<Texture> textureInfo;
     std::vector<unsigned int> textureData;

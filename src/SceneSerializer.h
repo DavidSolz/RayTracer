@@ -25,7 +25,7 @@ private:
 
     const char * CheckProperties(const char * data);
 
-    bool CheckTypes(const char * data);
+    SpatialType CheckTypes(const char * data);
 
     void ResetObject();
 

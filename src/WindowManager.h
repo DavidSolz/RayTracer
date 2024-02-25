@@ -2,46 +2,69 @@
 #define OPENGLRENDERER_H
 
 #include <stdio.h>
+#include <functional>
+#include <unordered_map>
 
 #include "IFrameRender.h"
-#include "InputService.h"
 #include "Timer.h"
 
+using Callback = std::function<void()>;
 
 class WindowManager {
-
 private:
 
-    IFrameRender * renderingServices[10];
-    uint8_t selectedService;
-    uint8_t minIndex, maxIndex;
-
-    char windowTitle[50]={0};
+    Color * pixels;
+    IFrameRender * renderer;
     GLFWwindow * window;
 
-    InputService * input;
-
-    Color * pixels;
+    char windowTitle[50]={0};
     
-    double lastMouseX;
-    double lastMouseY;
+    std::unordered_map<uint16_t, Callback> actions;
 
+    /// @brief Processes input events
     void ProcessInput();
 
-    void TakeScreenShot();
-
+    /// @brief Handles occuring errors
     void HandleErrors();
 
+    /// @brief Update window data
     void UpdateWindow();
 
 public:
+
     WindowManager(RenderingContext * _context);
 
+    /// @brief Sets first 9 characters of window title
+    /// @param _title 
+    void SetWindowTitle(const char _title[9]);
+
+    /// @brief Sets Rendering service and first 9 characters of window title
+    /// @param _service 
+    /// @param _name 
+    void SetRenderingService(IFrameRender * _service, const char _name[9]);
+
+    /// @brief Binds and callback to given key within window context
+    /// @param _key 
+    /// @param _callback 
+    void BindAction(const uint16_t & _key, Callback _callback);
+
+    /// @brief Checks if button is being pressed
+    /// @param _key 
+    /// @return true or false
+    bool IsButtonPressed(const uint16_t & _key);
+
+    /// @brief Updates content of window using rendering service
+    void Update();
+
+    /// @brief Determines if window should be closed
+    /// @return true or false
     bool ShouldClose();
 
-    void BindRenderingService(const uint8_t & _key, IFrameRender * _service);
+    /// @brief Dumps current window content to bmp file
+    void DumpContent();
 
-    void Update();
+    /// @brief Closes window after completing all internal actions
+    void Close();
     
     ~WindowManager();
 };

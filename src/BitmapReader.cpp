@@ -130,6 +130,42 @@ Image BitmapReader::ReadFile(const char * filename){
     image.width = infoHeader.width;
     image.height = infoHeader.height;
     image.data = pixels;
+    CalculateChecksum(image);
 
     return image;
+}
+
+void BitmapReader::CalculateChecksum(Image & image){
+
+    uint32_t tempChecksum = 0;
+
+    for(uint32_t index=0; index<(image.width*image.height); index++){
+
+        uint8_t * bytes = (uint8_t *)&image.data[index];
+
+        for(uint8_t byteIndex=0; byteIndex<4; ++byteIndex){
+
+            uint8_t minDifference = 255;
+            uint8_t minDifferenceIndex = 0;
+
+            for(uint8_t i=0; i < 8; i++){
+
+                uint8_t difference = (1<<i) & bytes[byteIndex];
+
+                if(difference < minDifference){
+                    minDifference = difference;
+                    minDifferenceIndex = i;
+                }
+
+            }
+
+            tempChecksum ^= bytes[byteIndex];
+            tempChecksum <<= (1 << minDifferenceIndex);
+            tempChecksum |= bytes[byteIndex];
+
+        }
+
+        image.checksum ^= tempChecksum;
+    }
+
 }
