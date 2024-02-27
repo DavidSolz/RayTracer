@@ -52,13 +52,13 @@ CLShader::CLShader(RenderingContext * _context) : ComputeShader(_context){
     transferKernel = ComputeEnvironment::CreateKernel(deviceContext, device, "resources/kernels/Transfer.cl", "Transfer");
     
     if( context->bvhAcceleration ){
-        context->loggingService.Write(MessageType::INFO, "Enabling BVH accelerated kernel");
-        raytracingKernel = ComputeEnvironment::CreateKernel(deviceContext, device, "resources/kernels/BVHRayTrace.cl", "ComputeLight");
-        texturingKernel = ComputeEnvironment::CreateKernel(deviceContext, device, "resources/kernels/Texturing.cl", "ApplyTexture");
+        context->loggingService.Write(MessageType::INFO, "Enabling BVH accelerated kernels");
+        raytracingKernel = ComputeEnvironment::CreateKernel(deviceContext, device, "resources/kernels/BVHRayTracing.cl", "ComputeLight");
+        texturingKernel = ComputeEnvironment::CreateKernel(deviceContext, device, "resources/kernels/BVHTexturing.cl", "ApplyTexture");
     }else{
-        context->loggingService.Write(MessageType::INFO, "Enabling standard accelerated kernel");
-        raytracingKernel = ComputeEnvironment::CreateKernel(deviceContext, device, "resources/kernels/RayTrace.cl", "RayTrace");
-        // TODO texturing kernel
+        context->loggingService.Write(MessageType::INFO, "Enabling standard accelerated kernels");
+        raytracingKernel = ComputeEnvironment::CreateKernel(deviceContext, device, "resources/kernels/LinearRayTracing.cl", "ComputeLight");
+        texturingKernel = ComputeEnvironment::CreateKernel(deviceContext, device, "resources/kernels/LinearTexturing.cl", "ApplyTexture");
     }
     
     raytracingKernel.setArg(0, resources->buffer);
@@ -79,7 +79,6 @@ CLShader::CLShader(RenderingContext * _context) : ComputeShader(_context){
     transferKernel.setArg(5, boxBuffer->buffer);
     transferKernel.setArg(6, numObjects);
     transferKernel.setArg(7, numMaterials);
-
 
     context->loggingService.Write(MessageType::INFO, "Transfering data to accelerator");
     queue.enqueueNDRangeKernel(transferKernel, cl::NullRange, cl::NDRange(1), cl::NDRange(1));

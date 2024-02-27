@@ -80,6 +80,8 @@ void MeshSerializer::BuildTriangles(){
 
     const Vector3 offset = Vector3(context->width/2.0f, context->height/2.0f, context->depth/2.0f);
 
+    float scale = 100.0f * context->camera.aspectRatio;
+
     Object temp;
     temp.type = TRIANGLE;
 
@@ -89,9 +91,9 @@ void MeshSerializer::BuildTriangles(){
         uint32_t indiceB = faces[id].indices[1];
         uint32_t indiceC = faces[id].indices[2];
 
-        temp.verticeA = vertices[ indiceA ] * 100.0f + offset;
-        temp.verticeB = vertices[ indiceB ] * 100.0f + offset;
-        temp.verticeC = vertices[ indiceC ] * 100.0f + offset;
+        temp.verticeA = vertices[ indiceA ] * scale + offset;
+        temp.verticeB = vertices[ indiceB ] * scale + offset;
+        temp.verticeC = vertices[ indiceC ] * scale + offset;
 
         temp.position = (temp.verticeA + temp.verticeB + temp.verticeC)/3.0f;
 
@@ -177,29 +179,11 @@ void MeshSerializer::Parse(std::ifstream & file, const char * filename){
 
             //TODO UV coords
 
-        }else if( tokens[0] == "vn"){
-
-            if(tokens.size() > 3){
-
-                tempVector.x = atof(tokens[1].c_str());
-                tempVector.y = atof(tokens[2].c_str());
-                tempVector.z = atof(tokens[3].c_str());
-
-                tempVector = tempVector.Normalize();
-
-                //normals.emplace_back(tempVector);
-
-            }else{
-                fprintf(stderr, "Invalid normal format.\n");
-                return;
-            }
-
         }
 
     }
 
-    if( normals.empty() )
-        CalculateNormals();
+    CalculateNormals();
 
     BuildTriangles();
     

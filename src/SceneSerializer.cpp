@@ -109,7 +109,7 @@ void SceneSerializer::ParseObject(const std::vector<std::string> & tokens){
             return;
         }
 
-    }else if( tokens[0] == "usemtl" ){
+    }else if( tokens[0] == "material" ){
         if( tokens.size() > 1){
 
             temporaryObject.materialID = materialSerializer->GetMaterial(tokens[1]); 

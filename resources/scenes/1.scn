@@ -3,6 +3,15 @@ mtllib mat.mtl
 scene
 {
 
+sphere
+{
+
+position 500 500 500
+radius 100 100 100
+material Stone
+
+}
+
 mesh dragon.obj
 
 }
