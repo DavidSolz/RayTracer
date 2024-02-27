@@ -4,11 +4,13 @@
 #include "Configurator.h"
 
 #include "ThreadedRendering.h"
-#include "ParallelRendering.h"
+
+#include "ThreadedShader.h"
+#include "CLShader.h"
 
 void HandleCameraMovement(RenderingContext & context, const Vector3 & direction);
 
-void SetupKeyBindings(RenderingContext & context, WindowManager & manager, ParallelRendering & accelerator, ThreadedRendering & processor);
+void SetupKeyBindings(RenderingContext & context, WindowManager & manager, IFrameRender * accelerator, IFrameRender * processor);
 
 int main(int argc, char **argv){
 
@@ -23,125 +25,6 @@ int main(int argc, char **argv){
     configurator.ParseArgs(argc, argv);
 
     MaterialBuilder materialBuilder(&context);
-
-
-// {
-
-//     Object p;
-
-// // BLUE CUBE
-
-//     p.position = Vector3(context.width/2.0f, context.height/4.0f, context.depth);
-//     p.maxPos = p.position + Vector3(300, 400, 300);
-//     p.type = CUBE;
-
-//     p.materialID = materialBuilder
-//                     .SetBaseColor({0.0f, 0.0f, 1.0f, 1.0f})
-//                     ->Build();
-
-//     context.objects.emplace_back(p);
-
-// // RED CUBE
-
-//     p.position = Vector3(context.width/3.0f, context.height/4.0f, context.depth/2.0f);
-//     p.maxPos = p.position + Vector3(200, 200, 200);
-//     p.type = CUBE;
-
-//     p.materialID = materialBuilder
-//                     .SetBaseColor({1.0f, 0.0f, 0.0f, 1.0f})
-//                     ->Build();
-
-//     context.objects.emplace_back(p);
-
-// // GREEN CUBE
-
-//     p.position = Vector3(context.width/5.0f, context.height/4.0f, 3*context.depth/4.0f);
-//     p.maxPos = p.position + Vector3(100, 100, 100);
-//     p.type = CUBE;
-
-//     p.materialID = materialBuilder
-//                     .SetBaseColor({0.0f, 1.0f, 0.0f, 1.0f})
-//                     ->Build();
-
-//     context.objects.emplace_back(p);
-
-// // GLASS CUBE
-
-//     p.position = Vector3(context.width/3.0f, context.height/4.0f, -130.0f);
-//     p.maxPos = p.position + Vector3(300, 300, 20);
-//     p.type = CUBE;
-
-//     p.materialID = materialBuilder
-//                     .SetBaseColor({1.0f, 1.0f, 1.0f, 1.0f})
-//                     ->SetRefractiveIndex(2.25f)
-//                     ->SetTransparency(1.0f)
-//                     ->Build();
-
-//     context.objects.emplace_back(p);
-
-// // // MIRROR
-
-// //     p.position = Vector3(context.width/2.0f, context.height/4.0f + 50.0f, 0.0f);
-// //     p.type = SPHERE;
-// //     p.radius = 50.0f;
-
-// //     p.materialID = materialBuilder
-// //                     .SetBaseColor({0.5f, 0.5f, 0.5f, 1.0f})
-// //                     ->SetSmoothness(1.0f)
-// //                     ->Build();
-
-// //     context.objects.emplace_back(p);
-
-// //     p.position = Vector3(context.width/2.0f + 120.0f, context.height/4.0f + 50.0f, 0.0f);
-// //     p.type = SPHERE;
-// //     p.radius = 50.0f;
-
-// //     p.materialID = materialBuilder
-// //                     .SetBaseColor({0.5f, 0.5f, 0.5f, 1.0f})
-// //                     ->SetSmoothness(0.5f)
-// //                     ->Build();
-
-// //     context.objects.emplace_back(p);
-
-// //     p.position = Vector3(context.width/2.0f + 240.0f, context.height/4.0f + 50.0f, 0.0f);
-// //     p.type = SPHERE;
-// //     p.radius = 50.0f;
-
-// //     p.materialID = materialBuilder
-// //                     .SetBaseColor({0.5f, 0.5f, 0.5f, 1.0f})
-// //                     ->SetSmoothness(0.0f)
-// //                     ->Build();
-
-// //     context.objects.emplace_back(p);
-
-
-// // PLANE
-
-//     p.position = Vector3(context.width/2.0f, context.height/4.0f, context.depth/4.0f);
-//     p.normal = Vector3(0.0f, 1.0f ,0.0f);
-//     p.radius = 1000.0f;
-//     p.type = DISK;
-
-//     p.materialID = materialBuilder
-//                     .SetBaseColor({0.5f, 0.5f, 0.5f, 1.0f})
-//                     ->SetRoughness(0.5f)
-//                     ->Build();
-
-//     context.objects.emplace_back(p);
-
-// // SUN
-//     p.position = Vector3(context.width/2.0f, 2*context.height, context.depth/4.0f);
-//     p.radius = 600.0f;
-//     p.type = SPHERE;
-
-//     p.materialID = materialBuilder
-//                     .SetEmissionColor({1.0f, 1.0f, 1.0f, 1.0f})
-//                     ->SetEmission(10.0f)
-//                     ->Build();
-
-//     context.objects.emplace_back(p);
-
-// }
 
 // {
 
@@ -305,13 +188,15 @@ int main(int argc, char **argv){
     PerformanceMonitor monitor;
 
     ThreadedRendering processor(&context);
-    ParallelRendering accelerator(&context);
 
-    manager.SetRenderingService(&accelerator, "Acc mode");
+    ThreadedShader threaded(&context);
+    CLShader accelerated(&context);
 
-    SetupKeyBindings(context, manager, accelerator, processor);
+    manager.SetRenderingService(&accelerated, "Acc mode");
 
-    while (manager.ShouldClose()) {
+    SetupKeyBindings(context, manager, &accelerated, &processor);
+
+    while ( manager.ShouldClose() ) {
         manager.Update();
         monitor.GatherInformation();
     }
@@ -325,13 +210,13 @@ void HandleCameraMovement(RenderingContext & context, const Vector3 & direction)
     context.frameCounter = 0;
 }
 
-void SetupKeyBindings(RenderingContext & context, WindowManager & manager, ParallelRendering & accelerator, ThreadedRendering & processor){
+void SetupKeyBindings(RenderingContext & context, WindowManager & manager, IFrameRender * accelerator, IFrameRender * processor){
     manager.BindAction(GLFW_KEY_0, [&manager, &processor](){
-        manager.SetRenderingService(&processor, "Cpu mode");
+        manager.SetRenderingService(processor, "Cpu mode");
     });
 
     manager.BindAction(GLFW_KEY_1, [&manager, &accelerator](){
-        manager.SetRenderingService(&accelerator, "Acc mode");
+        manager.SetRenderingService(accelerator, "Acc mode");
     });
 
     manager.BindAction(GLFW_KEY_ESCAPE, [&manager](){

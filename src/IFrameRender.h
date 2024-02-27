@@ -5,7 +5,7 @@
 
 class IFrameRender {
 public:
-    virtual void Render(Color * pixels) = 0;
+    virtual void Render(Color * _pixels) = 0;
 };
 
 #endif

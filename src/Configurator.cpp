@@ -12,7 +12,10 @@ Configurator::Configurator(RenderingContext * _context){
 
     context->loggingService.BindOutput("RayTracer_log.txt");
 
+    ComputeEnvironment::SetContext( _context );
+
     this->serializer = new SceneSerializer(context);
+    
 }
 
 Configurator::~Configurator(){

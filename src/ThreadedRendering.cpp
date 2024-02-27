@@ -43,18 +43,9 @@ ThreadedRendering::ThreadedRendering(RenderingContext * _context){
     numThreads = std::thread::hardware_concurrency();
     bool isHyperThreadinEnabled = CheckForHyperthreading();
 
-    char buffer[250]={0};
-
     context->loggingService.Write(MessageType::INFO, "Configuring CPU...");
-
-    sprintf(buffer, "Discovered %d logic cores", numThreads);
-
-    context->loggingService.Write(MessageType::INFO, buffer);
-
-    sprintf(buffer, "Checking for hyperthreading : %s", isHyperThreadinEnabled ? "enabled":"disabled");
-
-    context->loggingService.Write(MessageType::INFO, buffer);
-
+    context->loggingService.Write(MessageType::INFO, "Discovered %d logic cores", numThreads);
+    context->loggingService.Write(MessageType::INFO, "Checking for hyperthreading : %s", isHyperThreadinEnabled ? "enabled":"disabled");
     context->loggingService.Write(MessageType::INFO, "CPU configuration done");
 
     threads = new std::thread[numThreads];

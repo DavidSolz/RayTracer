@@ -38,7 +38,7 @@ struct RenderingContext {
     
     // Camera info
     Camera camera;
-    uint32_t frameCounter;
+    uint32_t frameCounter = 0;
 
     // Logging service
     Logger loggingService;

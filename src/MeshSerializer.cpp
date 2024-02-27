@@ -69,7 +69,7 @@ void MeshSerializer::CalculateNormals(){
         Vector3 u = B - A;
         Vector3 v = C - A;
 
-        Vector3 normal = Vector3::CrossProduct(v, u).Normalize();
+        Vector3 normal = Vector3::CrossProduct(u, v).Normalize();
 
         normals.emplace_back(normal);
     }
@@ -187,7 +187,7 @@ void MeshSerializer::Parse(std::ifstream & file, const char * filename){
 
                 tempVector = tempVector.Normalize();
 
-                normals.emplace_back(tempVector);
+                //normals.emplace_back(tempVector);
 
             }else{
                 fprintf(stderr, "Invalid normal format.\n");

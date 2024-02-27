@@ -79,7 +79,7 @@ void BVHTree::BuildBVH(){
     }
 
     Insert(ids, 0);
-    BalanceTree(0);
+    //BalanceTree(0);
 }
 
 int32_t BVHTree::CalculateDepth(const int32_t & currentNode){
@@ -109,13 +109,62 @@ void BVHTree::BalanceTree(const int32_t & currentNode){
 
     if( abs(sizeLeft - sizeRight) > threshold){
         printf("Unbalanced branch.\n");
-        // TODO
     }
 
 }
 
+float BVHTree::CalculateArea(const BoundingBox & box){
 
-int32_t BVHTree::Insert(std::vector<int32_t> ids, const int32_t & parentID, const uint32_t & depth){
+    Vector3 edgesLen = box.maximalPosition - box.minimalPosition;
+
+    float facesA = 2.0f * edgesLen.x * edgesLen.y;
+    float facesB = 2.0f * edgesLen.x * edgesLen.z;
+    float facesC = 2.0f * edgesLen.y * edgesLen.z;
+
+    return facesA + facesB + facesC;
+}
+
+
+int32_t BVHTree::FindBestAxis(const std::vector<int32_t> & ids){
+
+    float bestCost = INFINITY;
+    int32_t bestSplit = -1;
+
+    BoundingBox bestLeft, bestRight;
+    BoundingBox currentLeft, currentRight;
+
+    currentLeft.maximalPosition = Vector3(-INFINITY, -INFINITY, -INFINITY);
+    currentRight.maximalPosition = Vector3(-INFINITY, -INFINITY, -INFINITY);
+    currentLeft.minimalPosition = Vector3(INFINITY, INFINITY, INFINITY);
+    currentRight.minimalPosition = Vector3(INFINITY, INFINITY, INFINITY);
+
+    for (int32_t i = 0; i < ids.size(); ++i) {
+        BoundingBox box = CreateLeaf(ids[i]);
+        currentRight.minimalPosition = Vector3::Minimal(currentRight.minimalPosition, box.minimalPosition);
+        currentRight.maximalPosition = Vector3::Maximal(currentRight.maximalPosition, box.maximalPosition);
+    }
+
+    for (int32_t id = 1; id < ids.size(); ++id) {
+        BoundingBox box = CreateLeaf(ids[id]);
+        currentLeft.minimalPosition = Vector3::Minimal(currentLeft.minimalPosition, box.minimalPosition);
+        currentLeft.maximalPosition = Vector3::Maximal(currentLeft.maximalPosition, box.maximalPosition);
+        currentRight.minimalPosition = Vector3::Minimal(currentRight.minimalPosition, box.minimalPosition);
+        currentRight.maximalPosition = Vector3::Maximal(currentRight.maximalPosition, box.maximalPosition);
+
+        float splitCost = CalculateArea(currentLeft) * id + CalculateArea(currentRight) * (ids.size() - id);
+
+        if (splitCost < bestCost) {
+            bestCost = splitCost;
+            bestSplit = id;
+            bestLeft = currentLeft;
+            bestRight = currentRight;
+        }
+    }
+
+    return bestSplit;
+}
+
+int32_t BVHTree::Insert(std::vector<int32_t> & ids, const int32_t & parentID, const uint32_t & depth){
 
     if( ids.empty() )
         return -1;
@@ -129,9 +178,9 @@ int32_t BVHTree::Insert(std::vector<int32_t> ids, const int32_t & parentID, cons
 
     int32_t currentNodeID = context->boxes.size();
 
-    std::vector<Object> & objects = context->objects;
-
     int32_t splitAxis = depth%3;
+
+    std::vector<Object> & objects = context->objects;
 
     std::sort(ids.begin(), ids.end(), 
         [splitAxis, &objects](const int32_t & a, const int32_t & b){
@@ -139,9 +188,10 @@ int32_t BVHTree::Insert(std::vector<int32_t> ids, const int32_t & parentID, cons
         }
     );
 
-    int32_t middle = ids.size() >> 1;
-    std::vector<int32_t> left(ids.begin(), ids.begin()+middle); 
-    std::vector<int32_t> right(ids.begin()+middle, ids.end()); 
+    int32_t bestSplit = ids.size() >> 1;
+
+    std::vector<int32_t> left(ids.begin(), ids.begin() + bestSplit); 
+    std::vector<int32_t> right(ids.begin() + bestSplit, ids.end()); 
 
     BoundingBox temp;
     temp.minimalPosition = Vector3(INFINITY, INFINITY, INFINITY);

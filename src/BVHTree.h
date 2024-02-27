@@ -17,7 +17,11 @@ private:
 
     void Insert(const uint32_t & objectID);
 
-    int32_t Insert(std::vector<int32_t> ids, const int32_t & parentID = 0, const uint32_t & depth = 0);
+    float CalculateArea(const BoundingBox & box);
+
+    int32_t FindBestAxis(const std::vector<int32_t> & ids);
+
+    int32_t Insert(std::vector<int32_t> & ids, const int32_t & parentID = 0, const uint32_t & depth = 0);
 
     void BalanceTree(const int32_t & currentNode = -1);
 

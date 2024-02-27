@@ -194,7 +194,7 @@ void WindowManager::DumpContent(){
 
     glReadPixels(0, 0, context->width, context->height, GL_RGBA, GL_FLOAT, pixels);
 
-    std::ofstream outFile("screenshot.bmp", std::ios::binary);
+    std::ofstream outFile(IMG_OUT, std::ios::binary);
 
     outFile << "BM"; 
     uint32_t fileSize = 54 + sizeof(Color) * context->width * context->height; 
@@ -238,12 +238,12 @@ WindowManager::~WindowManager(){
 
     delete[] pixels;
 
-    context->loggingService.Write(MessageType::INFO, "Deleting texture buffer...");
+    context->loggingService.Write(MessageType::INFO, "Deleting texture buffer");
 
     glBindTexture(GL_TEXTURE_2D, 0);
     glDeleteTextures(1, &context->textureID);
     
-    context->loggingService.Write(MessageType::INFO, "Destroying window...");
+    context->loggingService.Write(MessageType::INFO, "Destroying window");
 
     glfwDestroyWindow(window);
     glfwTerminate();

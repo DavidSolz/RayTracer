@@ -1,6 +1,8 @@
 #ifndef OPENGLRENDERER_H
 #define OPENGLRENDERER_H
 
+#define IMG_OUT "screenshot.bmp"
+
 #include <stdio.h>
 #include <functional>
 #include <unordered_map>
