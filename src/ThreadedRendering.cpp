@@ -344,7 +344,7 @@ void ThreadedRendering::Render(Color * _pixels){
         });
     }
 
-    ComputeRows((numThreads-1)*rowsPerThread, context->height, _pixels);
+    ComputeRows( (numThreads-1) * rowsPerThread, context->height, _pixels);
 
     for (int i = 0; i < numThreads; ++i){
         threads[i].join();

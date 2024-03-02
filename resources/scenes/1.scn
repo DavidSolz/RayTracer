@@ -1,14 +1,27 @@
 mtllib mat.mtl
 
+!Best experience with resoultion 1000 x 1000
+
 scene
 {
 
-sphere
+disk
 {
 
-position 500 500 500
-radius 100 100 100
-material Stone
+position 500 250 250
+normal 0 1 0
+radius 1000.0
+usemtl Disk
+
+}
+
+disk
+{
+
+position 500 4000 500
+normal 0 -1 0
+radius 500
+usemtl Light
 
 }
 

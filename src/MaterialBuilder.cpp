@@ -214,27 +214,18 @@ MaterialBuilder * MaterialBuilder::AttachTexture( const char * _filepath ){
 }
 
 uint32_t MaterialBuilder::EmplaceMaterial(const Material & material){
-    // uint32_t idx = FindSimilarMaterial();
 
-    // if ( idx == UINT32_MAX){
     context->materials.push_back(material);
     return context->materials.size()-1;
-    // }
 
-    // return idx;
 }
 
 uint32_t MaterialBuilder::Build(){
-    // uint32_t idx = FindSimilarMaterial();
 
-    // if ( idx == UINT32_MAX){
     context->materials.push_back(temporaryMaterial);
-
     ClearMaterial();
     return context->materials.size()-1;
-    // }
 
-    // return idx;
 }
 
 

@@ -2,8 +2,6 @@
 #define BOUNDINGBOX_H
 
 #include "Vector3.h"
-#include <stack>
-#include <algorithm>
 #include <stdint.h>
 
 struct BoundingBox{

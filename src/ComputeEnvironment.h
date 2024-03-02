@@ -47,6 +47,8 @@ private:
 
 public:
 
+
+    /// @brief Binds current rendering context 
     static void SetContext(RenderingContext * _context);
 
     /// @brief Creates context within defualt device

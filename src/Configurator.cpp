@@ -15,10 +15,38 @@ Configurator::Configurator(RenderingContext * _context){
     ComputeEnvironment::SetContext( _context );
 
     this->serializer = new SceneSerializer(context);
+    this->tree = new BVHTree(context);
+
+    Initialize();
+}
+
+void Configurator::Initialize(){
+    Material material;
     
+    material.albedo = {1.0f, 1.0f, 1.0f, 1.0f};
+    material.tint = {1.0f,1.0f,1.0f,1.0f};
+    material.specular = {1.0f, 1.0f, 1.0f, 1.0f};
+    material.specularIntensity = 1.0f;
+    material.indexOfRefraction = 1.0f; 
+    material.roughness = 0.5f;
+    material.tintRoughness = 0.5f;
+    material.textureID = 0;
+
+    context->materials.emplace_back(material);
+
+    Texture info;
+
+    info.width = 1;
+    info.height = 1;
+    info.offset = 0;
+
+    context->textureInfo.emplace_back(info);
+    context->textureData.emplace_back(UINT32_MAX);
+
 }
 
 Configurator::~Configurator(){
+    delete tree;
     delete serializer;
 }
 
@@ -38,18 +66,18 @@ void Configurator::ShowHelp(){
 
 void Configurator::ParseArgs(const size_t & size, char **args){
 
-    const char * filepath = nullptr;
+    const char * filepath = NULL;
 
     for (int i = 1; i < size; ++i) {
         const char* arg = args[i];
 
         if(arg[0] != '-'){
             fprintf(stderr, "Unknown argument: %s\n", arg);
-            return;
-        }else if (arg[1] == 'V' && arg[2] == '\0') {
+            exit(-1);
+        }else if (arg[1] == 'V' && arg[2] == '\0' && context->vSync == false) {
             fprintf(stdout, "VSync enabled.\n");
             context->vSync = true;
-        } else if (arg[1] == 'L' && arg[2] == '\0') {
+        } else if (arg[1] == 'L' && arg[2] == '\0' && filepath == NULL) {
             if (i + 1 < size && args[i + 1][0] != '-') {
                 filepath = args[i + 1];
                 i++;
@@ -73,10 +101,10 @@ void Configurator::ParseArgs(const size_t & size, char **args){
                 fprintf(stderr, "Error: -h flag requires requires window height\n");
                 exit(-1);
             }
-        }else if (arg[1] == 'S' && arg[2] == '\0') {
+        }else if (arg[1] == 'S' && arg[2] == '\0' && context->memorySharing == false) {
             fprintf(stdout, "Memory sharing enabled.\n");
             context->memorySharing = true;
-        } else if (arg[1] == 'B' && arg[2] == '\0') {
+        } else if (arg[1] == 'B' && arg[2] == '\0' && context->bvhAcceleration == false) {
             fprintf(stdout, "BVH tree enabled.\n");
             context->bvhAcceleration = true;
         } else if (arg[1] == 'H' && arg[2] == '\0') {
@@ -85,31 +113,12 @@ void Configurator::ParseArgs(const size_t & size, char **args){
         }
     }
 
-    Material material;
-    
-    material.albedo = {1.0f, 1.0f, 1.0f, 1.0f};
-    material.tint = {1.0f,1.0f,1.0f,1.0f};
-    material.specular = {1.0f, 1.0f, 1.0f, 1.0f};
-    material.specularIntensity = 1.0f;
-    material.indexOfRefraction = 1.0f; 
-    material.roughness = 0.5f;
-    material.tintRoughness = 0.5f;
-    material.textureID = 0;
-
-    context->materials.emplace_back(material);
-
-    Texture info;
-
-    info.width = 1;
-    info.height = 1;
-    info.offset = 0;
-
-    context->textureInfo.emplace_back(info);
-    context->textureData.emplace_back(UINT32_MAX);
-
     context->camera.aspectRatio = context->width/(float)context->height;
 
     if( filepath != NULL )
         serializer->LoadFromFile(filepath);
+
+    if( context->bvhAcceleration == true )
+        tree->BuildBVH();
 
 }

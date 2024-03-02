@@ -55,20 +55,6 @@ BoundingBox BVHTree::CreateLeaf(const uint32_t & objectID){
     return box;
 }
 
-BoundingBox BVHTree::CombineBoxes(const BoundingBox & a, const BoundingBox & b){
-
-    BoundingBox result;
-
-    result.leftID = -1;
-    result.rightID = -1;
-
-    result.minimalPosition = Vector3::Minimal(a.minimalPosition, b.minimalPosition);
-    result.maximalPosition = Vector3::Maximal(a.maximalPosition, b.maximalPosition);
-
-    return result;
-
-}
-
 void BVHTree::BuildBVH(){
 
     std::vector<int32_t> ids;
@@ -79,7 +65,7 @@ void BVHTree::BuildBVH(){
     }
 
     Insert(ids, 0);
-    //BalanceTree(0);
+    CheckBalance(0);
 }
 
 int32_t BVHTree::CalculateDepth(const int32_t & currentNode){
@@ -92,12 +78,12 @@ int32_t BVHTree::CalculateDepth(const int32_t & currentNode){
     return 1 + sizeLeft + sizeRight;
 }
 
-void BVHTree::BalanceTree(const int32_t & currentNode){
+void BVHTree::CheckBalance(const int32_t & currentNode){
     if(currentNode == -1)
         return;
 
-    BalanceTree( context->boxes[currentNode].leftID );
-    BalanceTree( context->boxes[currentNode].rightID );
+    CheckBalance( context->boxes[currentNode].leftID );
+    CheckBalance( context->boxes[currentNode].rightID );
 
     int32_t leftChild = context->boxes[currentNode].leftID;
     int32_t rightChild = context->boxes[currentNode].rightID;
@@ -108,7 +94,7 @@ void BVHTree::BalanceTree(const int32_t & currentNode){
     int32_t threshold = 2;
 
     if( abs(sizeLeft - sizeRight) > threshold){
-        printf("Unbalanced branch.\n");
+        fprintf(stderr, "Unbalanced branch.\n");
     }
 
 }
@@ -139,13 +125,17 @@ int32_t BVHTree::FindBestAxis(const std::vector<int32_t> & ids){
     currentRight.minimalPosition = Vector3(INFINITY, INFINITY, INFINITY);
 
     for (int32_t i = 0; i < ids.size(); ++i) {
+        
         BoundingBox box = CreateLeaf(ids[i]);
+
         currentRight.minimalPosition = Vector3::Minimal(currentRight.minimalPosition, box.minimalPosition);
         currentRight.maximalPosition = Vector3::Maximal(currentRight.maximalPosition, box.maximalPosition);
     }
 
     for (int32_t id = 1; id < ids.size(); ++id) {
+
         BoundingBox box = CreateLeaf(ids[id]);
+
         currentLeft.minimalPosition = Vector3::Minimal(currentLeft.minimalPosition, box.minimalPosition);
         currentLeft.maximalPosition = Vector3::Maximal(currentLeft.maximalPosition, box.maximalPosition);
         currentRight.minimalPosition = Vector3::Minimal(currentRight.minimalPosition, box.minimalPosition);
@@ -204,7 +194,7 @@ int32_t BVHTree::Insert(std::vector<int32_t> & ids, const int32_t & parentID, co
 
     int32_t leftChildID = Insert(left, currentNodeID, depth + 1);
     int32_t rightChildID = Insert(right, currentNodeID, depth + 1);
-    
+
     if( leftChildID > 0)
         context->boxes[currentNodeID].minimalPosition = Vector3::Minimal(context->boxes[leftChildID].minimalPosition, context->boxes[rightChildID].minimalPosition);
     

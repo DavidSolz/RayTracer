@@ -37,8 +37,6 @@ public:
 
     SceneSerializer(RenderingContext * _context);
 
-    void SaveToFile( const char * _filename);
-
     void LoadFromFile(const char * _filename);
 
     ~SceneSerializer();

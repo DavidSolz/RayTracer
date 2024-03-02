@@ -152,8 +152,11 @@ void SceneSerializer::Parse(std::ifstream & file, const char * filename){
 
     while ( std::getline(file, line, '\n') ) {
 
-        if( line.empty() || line[0]=='#')
+        if( line.empty() )
             continue;
+
+        if( line[0]=='!' )
+            fprintf(stdout, "[INFO] : %s\n", line.c_str());
 
         std::vector<std::string> tokens = Tokenize(line);
 
@@ -190,7 +193,7 @@ void SceneSerializer::Parse(std::ifstream & file, const char * filename){
                 if ( tokens[0] == "mesh"){
 
                     if(tokens.size() > 1){
-                        tempPath = directory.string() + "/" + tokens[1];
+                        tempPath = directory.string() + "\\" + tokens[1];
                         meshSerializer->LoadFromFile(tempPath.c_str());
                     }else{
                         fprintf(stderr, "Invalid mesh format.\n");
@@ -210,7 +213,7 @@ void SceneSerializer::Parse(std::ifstream & file, const char * filename){
         } else{
 
             if(tokens[0] == "mtllib"){
-                tempPath = directory.string() + "/" + tokens[1];
+                tempPath = directory.string() + "\\" + tokens[1];
                 materialSerializer->LoadFromFile(tempPath.c_str());    
             }else if(tokens[0]=="scene"){
                 inScene = true;  
@@ -219,21 +222,6 @@ void SceneSerializer::Parse(std::ifstream & file, const char * filename){
         }      
 
     }
-
-}
-
-void SceneSerializer::SaveToFile( const char * _filename){
-
-    std::ofstream file(_filename, std::ios::out);
-
-    if( !file.is_open() ){
-        fprintf(stderr, "File %s can't be opened or does not exist.\n", _filename);
-        exit(-1);
-    }
-
-    // TODO
-
-    file.close();
 
 }
 

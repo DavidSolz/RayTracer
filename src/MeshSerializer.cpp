@@ -189,10 +189,6 @@ void MeshSerializer::Parse(std::ifstream & file, const char * filename){
     
 }
 
-void MeshSerializer::SaveToFile(const char * _filename){
-    // TODO
-}
-
 void MeshSerializer::LoadFromFile(const char * _filename){
 
     std::ifstream file(_filename, std::ios::in);

@@ -95,10 +95,12 @@ void CLShader::Render(Color * _pixels){
 
     raytracingKernel.setArg(1, sizeof(Camera), &context->camera);
     raytracingKernel.setArg(2, sizeof(int), &context->frameCounter);
+    
     texturingKernel.setArg(2, sizeof(Camera), &context->camera);
 
     queue.enqueueNDRangeKernel(raytracingKernel, cl::NullRange, globalRange);
     queue.enqueueNDRangeKernel(texturingKernel, cl::NullRange, globalRange);
+    //TODO : antialiasing
     //queue.enqueueNDRangeKernel(antialiasingKernel, cl::NullRange, globalRange);
 
     queue.finish();

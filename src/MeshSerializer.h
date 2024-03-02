@@ -10,7 +10,7 @@
 class MeshSerializer : public Serializer{
 private:
 
-    struct Face{
+    struct Face {
         int32_t indices[3];
         int32_t texels[3];
         int32_t normals[3];
@@ -37,8 +37,6 @@ private:
 public:
 
     MeshSerializer(RenderingContext * _context, MaterialSerializer * _materalSerializer);
-
-    void SaveToFile(const char * _filename);
 
     void LoadFromFile(const char * _filename);
 

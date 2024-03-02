@@ -158,7 +158,7 @@ float3 Refract(
     float cosT = 1.0f - eta*eta *(1.0f - cosI*cosI);
 
     if( cosT < 0.0f )
-        return 0.0f;
+        return Reflect(incident, normal);
 
     float3 perpendicularRay =  eta * incident;
     float3 parallelRay = eta * cosI - sqrt(fmax(0.0f, 1.0f - cosT)) * normal;
@@ -271,45 +271,32 @@ float4 ComputeLightMap(
 
         float3 diffusionDirection = DiffuseReflect(normal, seed);
         float3 reflectionDirection = Reflect(ray->direction, normal);
-        float3 refractionDirecton = Refract(ray->direction, normal, lastIOR, material.indexOfRefraction);
-
+        float3 refractionDirecton = Refract(-viewVector, normal, lastIOR, material.indexOfRefraction);
         float3 halfVector = normalize(normal + reflectionDirection);
 
-        float cosLight = dot(normal, lightVector);
-        float cosView = dot(normal, viewVector);
-
-        float isMetallic = (Rand(seed) < material.metallic);
-
-        float3 direction = mix(diffusionDirection, reflectionDirection, material.roughness * isMetallic);
+        float3 direction = mix(diffusionDirection, reflectionDirection, material.metallic);
         ray->direction = normalize( mix(direction, refractionDirecton, material.transparency) );
 
-        float4 emission =  material.albedo * material.emmissionIntensity * (cosLight> 0.0f);
-        float4 pbr = PhysicalBRDF(normal, halfVector, lightVector, ray->direction, viewVector, &material);
+        float cosLight = clamp(dot(normal, lightVector), 0.0f, 1.0f);
+        float cosView = dot(normal, viewVector);
+        float cosHalf = dot(normal, halfVector);
+        float cosReflect = clamp(dot(normal, cosHalf), 0.0f, 1.0f);
 
-        accumulatedLight += (emission) * lightColor; 
+        float specularExponent = exp2(material.emmissionIntensity * 6 + 1);
+        float4 specular = material.albedo * pow(cosReflect, specularExponent);
+        float4 diffuse = cosLight * material.albedo;
 
-        lightColor *= 2.0f * cosLight * material.albedo;
+        float F0 = IORToR0(material.indexOfRefraction);
+        float fresnel = F0 + (F0 - 1.0f) * pow(1.0f - cosHalf,  5.0f);
+
+        accumulatedLight += specular * lightColor; 
+
+        lightColor *= diffuse ; 
+        lastIOR = material.indexOfRefraction;
     }
 
     return accumulatedLight;
 }
-
-float3 CalculatePixelPosition(
-    const int x,
-    const int y,
-    const int width,
-    const int height,
-    const struct Camera * camera
-    ){
-
-    float tanHalfFOV = tan(radians(camera->fov) * 0.5f);
-    float pixelXPos = (2.0 * x / width - 1.0f) * camera->aspectRatio  ;
-    float pixelYPos = (2.0 * y / height - 1.0f);
-
-    return camera->position + (camera->front + ( camera->right * pixelXPos + camera->up * pixelYPos) * tanHalfFOV ) * camera->near;
-}
-
-
 
 // Main
 

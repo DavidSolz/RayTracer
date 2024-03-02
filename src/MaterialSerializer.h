@@ -3,12 +3,12 @@
 
 #define DEFAULT_MATERIAL_ID 0
 
+#include <map>
+
 #include "MaterialBuilder.h"
 #include "RenderingContext.h"
 #include "Serializer.h"
 #include "BitmapReader.h"
-
-#include <map>
 
 class MaterialSerializer : public Serializer{
 private:
@@ -25,8 +25,6 @@ public:
     MaterialSerializer(RenderingContext * _context);
     
     uint32_t GetMaterial(const std::string & _materialName);
-
-    void SaveToFile(const char * _filename);
 
     void LoadFromFile(const char * _filename);
 

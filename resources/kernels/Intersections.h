@@ -131,27 +131,27 @@ float IntersectTriangle(const struct Ray * ray, const struct Object * object) {
     float3 e1 = (B - A);
     float3 e2 = (C - A);
 
-    float3 normal = cross(ray->direction, e2);
+    float3 axis = cross(ray->direction, e2);
+    float det = dot(e1, axis);
 
-    float determinant = dot(e1, normal);
-
-    if( fabs(determinant) < 1e-6f)
+    if( fabs(det) < 1e-6f)
         return -1.0f;
 
-    float inverseDeterminant = 1.0f/determinant;
+    float inverseDeterminant = 1.0f / det;
     float3 rayToTriangle = ray->origin - A;
-    float u = inverseDeterminant * dot(rayToTriangle, normal);
+    float u = inverseDeterminant * dot(rayToTriangle, axis);
 
-    if( u < 0.0f || u >1.0f)
+    if( (u < 0.0f) || (u >1.0f) )
         return -1.0f;
 
     float3 q = cross(rayToTriangle, e1);
     float v = inverseDeterminant * dot(ray->direction, q);
 
-    if( v < 0.0f || u+v >1.0f)
+    if( (v < 0.0f) || (u+v >1.0f) )
         return -1.0f;
 
     return inverseDeterminant * dot(e2, q);
+
 }
 
 bool AABBIntersection(const struct Ray * ray, const float3 minimalPosition , const float3 maximalPosition){
@@ -170,6 +170,20 @@ bool AABBIntersection(const struct Ray * ray, const float3 minimalPosition , con
     return tNear <= tFar && tFar > 0.0f;
 }
 
+float3 CalculatePixelPosition(
+    const int x,
+    const int y,
+    const int width,
+    const int height,
+    const struct Camera * camera
+    ){
+
+    float tanHalfFOV = tan(radians(camera->fov) * 0.5f);
+    float pixelXPos = (2.0 * x / width - 1.0f) * camera->aspectRatio  ;
+    float pixelYPos = (2.0 * y / height - 1.0f);
+
+    return camera->position + (camera->front + ( camera->right * pixelXPos + camera->up * pixelYPos) * tanHalfFOV ) * camera->near;
+}
 
 
 #endif

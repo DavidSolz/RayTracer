@@ -215,7 +215,7 @@ void MaterialSerializer::Parse(std::ifstream & file, const char * filename){
         } else if (tokens[0] == "map_Ka"){
             if (tokens.size() > 1) {
                 
-                tempPath = directory.string() + "/" + tokens[1];
+                tempPath = directory.string() + "\\" + tokens[1];
                 builder = builder->AttachTexture(tempPath.c_str());
 
             } else {
@@ -237,10 +237,6 @@ void MaterialSerializer::Parse(std::ifstream & file, const char * filename){
     gatheredMaterials[ materialName ] = builder->Build();
     context->loggingService.Write(MessageType::INFO, "Registering new material : %s", materialName.c_str());
 
-}
-
-void MaterialSerializer::SaveToFile( const char * _filename){
-    //TODO
 }
 
 void MaterialSerializer::LoadFromFile(const char * _filename){

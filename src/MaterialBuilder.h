@@ -9,7 +9,6 @@ private:
 
     uint32_t FindSimilarMaterial();
 
-    // This constant describes maximal material similarity difference
     const float EPSILON = 0.1f;
 
     Material temporaryMaterial;

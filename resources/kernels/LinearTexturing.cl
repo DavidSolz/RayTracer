@@ -94,22 +94,6 @@ float4 GetColorAtPoint(
     return color;
 }
 
-float3 CalculatePixelPosition(
-    const int x,
-    const int y,
-    const int width,
-    const int height,
-    const struct Camera * camera
-    ){
-
-    float tanHalfFOV = tan(radians(camera->fov) * 0.5f);
-    float pixelXPos = (2.0 * x / width - 1.0f) * camera->aspectRatio  ;
-    float pixelYPos = (2.0 * y / height - 1.0f);
-
-    return camera->position + (camera->front + ( camera->right * pixelXPos + camera->up * pixelYPos) * tanHalfFOV ) * camera->near;
-}
-
-
 
 // Main
 

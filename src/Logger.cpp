@@ -47,12 +47,18 @@ void Logger::BindOutput(const char * _filename){
 void Logger::Write(MessageType _type, const char * _format, ...){
 
     std::time_t now = std::time(nullptr);
-    std::tm* localTime = std::localtime(&now);
+    std::tm * localTime = std::localtime(&now);
 
-    std::fprintf(output, "[%04d-%02d-%02d %02d:%02d:%02d] [%s] : ",
-                localTime->tm_year + 1900, localTime->tm_mon + 1, localTime->tm_mday,
-                localTime->tm_hour, localTime->tm_min, localTime->tm_sec,
-                types[ _type ]);
+    std::fprintf(output, 
+                "[%04d-%02d-%02d %02d:%02d:%02d] [%s] : ",
+                localTime->tm_year + 1900, 
+                localTime->tm_mon + 1, 
+                localTime->tm_mday,
+                localTime->tm_hour, 
+                localTime->tm_min, 
+                localTime->tm_sec,
+                types[ _type ]
+                );
 
     va_list args;
     va_start(args, _format);

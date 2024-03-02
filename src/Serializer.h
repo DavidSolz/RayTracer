@@ -37,8 +37,6 @@ protected:
 
 public:
 
-    virtual void SaveToFile(const char * _filename) = 0;
-
     virtual void LoadFromFile(const char * _filename) = 0;
 
 };

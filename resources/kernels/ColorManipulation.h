@@ -87,10 +87,10 @@ float4 GetTexturePixel(
         float3 B = object->verticeB;
         float3 C = object->verticeC;
 
-        float area = fabs((B.x - A.x) * (C.y - A.y) - (B.y - A.y) * (C.x - A.x));
-        float areaPBC = fabs((B.x - localPoint.x) * (C.y - localPoint.y) - (B.y - localPoint.y) * (C.x - localPoint.x));
-        float areaPCA = fabs((C.x - localPoint.x) * (A.y - localPoint.y) - (C.y - localPoint.y) * (A.x - localPoint.x));
-        float areaPAB = fabs((A.x - localPoint.x) * (B.y - localPoint.y) - (A.y - localPoint.y) * (B.x - localPoint.x));
+        float area = ((B.x - A.x) * (C.y - A.y) - (B.y - A.y) * (C.x - A.x)) * 0.5f;
+        float areaPBC = ((B.x - localPoint.x) * (C.y - localPoint.y) - (B.y - localPoint.y) * (C.x - localPoint.x)) * 0.5f;
+        float areaPCA = ((C.x - localPoint.x) * (A.y - localPoint.y) - (C.y - localPoint.y) * (A.x - localPoint.x)) * 0.5f;
+        float areaPAB = ((A.x - localPoint.x) * (B.y - localPoint.y) - (A.y - localPoint.y) * (B.x - localPoint.x)) * 0.5f;
 
         u = clamp(areaPBC / area, 0.0f, 1.0f);
         v = clamp(areaPCA / area, 0.0f, 1.0f);

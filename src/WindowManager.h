@@ -34,7 +34,7 @@ private:
 
 public:
 
-    WindowManager(RenderingContext * _context);
+    WindowManager( RenderingContext * _context );
 
     /// @brief Sets first 9 characters of window title
     /// @param _title 

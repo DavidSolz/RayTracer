@@ -12,7 +12,9 @@ private:
 
     SceneSerializer * serializer;
     
-    // TODO : MOVE BVH HERE
+    BVHTree * tree;
+
+    void Initialize();
 
     void ShowHelp();
 
