@@ -80,7 +80,7 @@ void MaterialSerializer::Parse(std::ifstream & file, const char * filename){
                 temp[2] = atof(tokens[3].c_str());
 
                 builder = builder->SetTintColor(temp[0], temp[1], temp[2]);
-                
+
             } else {
                 fprintf(stderr, "Invalid tint color format\n");
                 return;
@@ -96,7 +96,7 @@ void MaterialSerializer::Parse(std::ifstream & file, const char * filename){
             }
 
         }else if (tokens[0] == "Pm") {
-            
+
             if (tokens.size() > 1) {
                 temp[0] = atof(tokens[1].c_str());
                 builder = builder->SetSmoothness(temp[0]);
@@ -106,7 +106,7 @@ void MaterialSerializer::Parse(std::ifstream & file, const char * filename){
             }
 
         }else if (tokens[0] == "Ps") {
-            
+
             if (tokens.size() > 1) {
                 temp[0] = atof(tokens[1].c_str());
                 builder = builder->SetSheen(temp[0]);
@@ -116,7 +116,7 @@ void MaterialSerializer::Parse(std::ifstream & file, const char * filename){
             }
 
         }else if (tokens[0] == "Pc") {
-            
+
             if (tokens.size() > 1) {
                 temp[0] = atof(tokens[1].c_str());
                 builder = builder->SetClearcoatThickness(temp[0]);
@@ -126,7 +126,7 @@ void MaterialSerializer::Parse(std::ifstream & file, const char * filename){
             }
 
         }else if (tokens[0] == "Pcr") {
-            
+
             if (tokens.size() > 1) {
                 temp[0] = atof(tokens[1].c_str());
                 builder = builder->SetClearcoatRoughness(temp[0]);
@@ -136,7 +136,7 @@ void MaterialSerializer::Parse(std::ifstream & file, const char * filename){
             }
 
         }else if (tokens[0] == "Ke") {
-            
+
             if (tokens.size() > 1) {
                 temp[0] = atof(tokens[1].c_str());
                 builder = builder->SetEmission(temp[0]);
@@ -146,7 +146,7 @@ void MaterialSerializer::Parse(std::ifstream & file, const char * filename){
             }
 
         }else if (tokens[0] == "aniso") {
-            
+
             if (tokens.size() > 1) {
                 temp[0] = atof(tokens[1].c_str());
                 builder = builder->SetAnisotropy(temp[0]);
@@ -156,7 +156,7 @@ void MaterialSerializer::Parse(std::ifstream & file, const char * filename){
             }
 
         }else if (tokens[0] == "anisor") {
-            
+
             if (tokens.size() > 1) {
                 temp[0] = atof(tokens[1].c_str());
                 builder = builder->SetAnisotropyRotation(temp[0]);
@@ -214,8 +214,8 @@ void MaterialSerializer::Parse(std::ifstream & file, const char * filename){
             }
         } else if (tokens[0] == "map_Ka"){
             if (tokens.size() > 1) {
-                
-                tempPath = directory.string() + "\\" + tokens[1];
+
+                tempPath = directory.string() + "/" + tokens[1];
                 builder = builder->AttachTexture(tempPath.c_str());
 
             } else {

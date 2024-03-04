@@ -8,7 +8,7 @@ set(CMAKE_COLOR_DIAGNOSTICS ON)
 
 project(RayTracer VERSION 1.0)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w -Wall")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w -Wal -glldb")
 
 if(WIN32)
 

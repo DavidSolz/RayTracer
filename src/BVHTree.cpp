@@ -65,11 +65,11 @@ void BVHTree::BuildBVH(){
     }
 
     Insert(ids, 0);
-    CheckBalance(0);
+    //CheckBalance(0);
 }
 
 int32_t BVHTree::CalculateDepth(const int32_t & currentNode){
-    if(currentNode == -1)
+    if( currentNode == -1 )
         return 0;
 
     int32_t sizeLeft = CalculateDepth( context->boxes[currentNode].leftID );
@@ -125,7 +125,7 @@ int32_t BVHTree::FindBestAxis(const std::vector<int32_t> & ids){
     currentRight.minimalPosition = Vector3(INFINITY, INFINITY, INFINITY);
 
     for (int32_t i = 0; i < ids.size(); ++i) {
-        
+
         BoundingBox box = CreateLeaf(ids[i]);
 
         currentRight.minimalPosition = Vector3::Minimal(currentRight.minimalPosition, box.minimalPosition);
@@ -172,7 +172,7 @@ int32_t BVHTree::Insert(std::vector<int32_t> & ids, const int32_t & parentID, co
 
     std::vector<Object> & objects = context->objects;
 
-    std::sort(ids.begin(), ids.end(), 
+    std::sort(ids.begin(), ids.end(),
         [splitAxis, &objects](const int32_t & a, const int32_t & b){
             return objects[a].position[splitAxis] < objects[b].position[splitAxis];
         }
@@ -180,8 +180,8 @@ int32_t BVHTree::Insert(std::vector<int32_t> & ids, const int32_t & parentID, co
 
     int32_t bestSplit = ids.size() >> 1;
 
-    std::vector<int32_t> left(ids.begin(), ids.begin() + bestSplit); 
-    std::vector<int32_t> right(ids.begin() + bestSplit, ids.end()); 
+    std::vector<int32_t> left(ids.begin(), ids.begin() + bestSplit);
+    std::vector<int32_t> right(ids.begin() + bestSplit, ids.end());
 
     BoundingBox temp;
     temp.minimalPosition = Vector3(INFINITY, INFINITY, INFINITY);
@@ -197,7 +197,7 @@ int32_t BVHTree::Insert(std::vector<int32_t> & ids, const int32_t & parentID, co
 
     if( leftChildID > 0)
         context->boxes[currentNodeID].minimalPosition = Vector3::Minimal(context->boxes[leftChildID].minimalPosition, context->boxes[rightChildID].minimalPosition);
-    
+
     if( rightChildID > 0)
         context->boxes[currentNodeID].maximalPosition = Vector3::Maximal(context->boxes[leftChildID].maximalPosition, context->boxes[rightChildID].maximalPosition);
 
