@@ -142,7 +142,6 @@ void SceneSerializer::Parse(std::ifstream & file, const char * filename){
 
     bool inScene = false;
 
-    const char * type;
 
     std::filesystem::path filepath(filename);
     std::filesystem::path directory = filepath.parent_path();
@@ -156,7 +155,7 @@ void SceneSerializer::Parse(std::ifstream & file, const char * filename){
             continue;
 
         if( line[0]=='!' )
-            fprintf(stdout, "[INFO] : %s\n", line.c_str());
+            fprintf(stdout, "%s\n", line.c_str());
 
         std::vector<std::string> tokens = Tokenize(line);
 
@@ -169,9 +168,7 @@ void SceneSerializer::Parse(std::ifstream & file, const char * filename){
 
             if( temporaryObject.type != SpatialType::INVALID ){
 
-                type = CheckProperties(tokens[0].c_str());
-
-                if (type != NULL){
+                if ( CheckProperties( tokens[0].c_str() ) != NULL ){
 
                     ParseObject(tokens);
 
@@ -180,7 +177,14 @@ void SceneSerializer::Parse(std::ifstream & file, const char * filename){
                     if( tokens[0] == "}" ){
                         temporaryObject.maxPos = temporaryObject.position + temporaryObject.maxPos;
 
-                        context->objects.emplace_back(temporaryObject);
+                        // if( temporaryObject.type == SpatialType::PLANE){
+
+                        //     ObjectBuilder<PLANE> b(context);
+                        //     b.Build(temporaryObject);
+
+                        // }else{
+                            context->objects.emplace_back(temporaryObject);
+                        // }
 
                         ResetObject();
                     }

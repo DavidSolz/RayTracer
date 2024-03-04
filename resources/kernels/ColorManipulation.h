@@ -61,8 +61,8 @@ float4 GetTexturePixel(
         float theta = atan2(relativePos.z, relativePos.x);
         float radius = length( relativePos );
 
-        u = (theta + M_PI_F) / TWO_PI;
-        v = radius / object->radius;
+        u = clamp((theta + M_PI_F) / TWO_PI, 0.0f, 1.0f);
+        v = clamp(radius / object->radius, 0.0f, 1.0f);
 
     } else if ( object->type == PLANE){
 

@@ -11,7 +11,16 @@ disk
 position 500 250 250
 normal 0 1 0
 radius 1000.0
-usemtl Disk
+material Disk
+
+}
+
+plane
+{
+
+position 500 250 250
+normal 0 1 0
+scale 1000 1000 1000
 
 }
 
@@ -21,7 +30,7 @@ disk
 position 500 4000 500
 normal 0 -1 0
 radius 500
-usemtl Light
+material Light
 
 }
 

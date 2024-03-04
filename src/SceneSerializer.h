@@ -4,6 +4,7 @@
 #include "Serializer.h"
 #include "MaterialSerializer.h"
 #include "MeshSerializer.h"
+#include "ObjectBuiler.h"
 
 #include <fstream>
 #include <cstring>
