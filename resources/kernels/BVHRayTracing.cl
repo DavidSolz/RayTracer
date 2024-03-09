@@ -46,6 +46,7 @@ struct Sample FindClosestIntersection(const struct Resources resources, const st
 
     struct Sample sample = {0};
     sample.length = INFINITY;
+    float length = -1.0f;
 
     int stack[STACK_SIZE];
     int top = 0;
@@ -66,23 +67,10 @@ struct Sample FindClosestIntersection(const struct Resources resources, const st
 
             struct Object object = objects[ box.objectID ];
 
-            float length = -1.0f;
-
-            switch(object.type){
-                case CUBE:
-                    length = IntersectCube(ray, &object);
-                    break;
-                case PLANE:
-                    length = IntersectPlane(ray, &object);
-                    break;
-                case DISK:
-                    length = IntersectDisk(ray, &object);
-                    break;
-                case TRIANGLE:
-                    length = IntersectTriangle(ray, &object);
-                    break;
-                default:
-                    length = IntersectSphere(ray, &object);
+            if ( object.type == TRIANGLE ){
+                length = IntersectTriangle(ray, &object);
+            }else{
+                length = IntersectSphere(ray, &object);
             }
             
             if( (length < sample.length) && (length > 0.01f) ){
@@ -91,19 +79,10 @@ struct Sample FindClosestIntersection(const struct Resources resources, const st
                 sample.point = ray->origin + scaledDir * length ;
                 sample.objectID = box.objectID;
 
-                switch(object.type){
-
-                    case CUBE:
-                        ComputeBoxNormal(&sample, &object);
-                        break;
-
-                    case SPHERE:
-                        sample.normal = normalize(sample.point - object.position);
-                        break;
-
-                    default :
-                        sample.normal = normalize(object.normal);
-                        break;
+                if ( object.type == TRIANGLE ){
+                    sample.normal = normalize(object.normal);
+                }else{
+                    sample.normal = normalize(sample.point - object.position);
                 }
                 
             }
@@ -166,72 +145,6 @@ float3 Refract(
     return normalize(perpendicularRay + parallelRay);
 }
 
-float IORToR0(const float indexOfRefraction){
-    float R0 = (1.0f - indexOfRefraction) / (1.0f + indexOfRefraction);
-    return R0 * R0;
-}
-
-float4 SchlickFresnel(const float cosTheta, const float4 F0){
-    return F0 + (1.0f - F0) * pow(1.0f - cosTheta, 5.0f);
-}
-
-float GGX(const float cosHalf, const float roughness){
-    float alpha = roughness * roughness;
-    float alpha2 = alpha * alpha;
-    float cosHalf4 = cosHalf*cosHalf*cosHalf*cosHalf;
-    return ONE_OVER_PI * alpha2 / (cosHalf4 * (alpha2 - 1.0f) + 1.0f);
-}
-
-float SchlickGGX(const float cosDirection, const float roughness){
-    float alpha = roughness * roughness;
-    float alpha2 = alpha * alpha;
-
-    float nominator = 2.0f * cosDirection;
-    float denominator = cosDirection + sqrt(alpha2 + (1.0f - alpha2) * cosDirection * cosDirection);
-
-    return fmin(nominator / denominator, 1.0f);
-}
-
-float GeometricSmithShlickGGX(
-    const float cosView, 
-    const float cosLight, 
-    const float roughness
-    ){
-
-    float ggx1 = SchlickGGX(cosLight, roughness);
-    float ggx2 = SchlickGGX(cosView, roughness);
-
-    return ggx1*ggx2;
-}
-
-float4 PhysicalBRDF(
-    const float3 normal, 
-    const float3 halfVector, 
-    const float3 lightVector, 
-    const float3 outgoing, 
-    const float3 viewVector, 
-    struct Material * material
-    ){
-
-    float cosIncident = clamp(-dot(viewVector, halfVector), 0.0f, 1.0f);
-    float cosHalf = dot(normal, halfVector);
-
-    float F0 = (material->indexOfRefraction-1.0f)/(material->indexOfRefraction+1.0f);
-    float4 fresnel = SchlickFresnel(cosIncident, F0 * F0);
-
-    float alpha = material->roughness + 2;
-    float alphaSqr = alpha * alpha;
-
-    float specular = ONE_OVER_PI * alphaSqr * exp(-alphaSqr / (2.0f * material->roughness)) * 1.0f/cosHalf;
-
-    float4 reflection = fresnel * specular;
-    float4 refraction = (1.0f - fresnel) * (1.0f - specular);
-
-    float4 final_color = (reflection  + refraction) * material->albedo;
-
-    return final_color;
-}
-
 float4 ComputeLightMap(
     const struct Resources resources, 
     struct Ray * ray, 
@@ -277,21 +190,15 @@ float4 ComputeLightMap(
         float3 direction = mix(diffusionDirection, reflectionDirection, material.metallic);
         ray->direction = normalize( mix(direction, refractionDirecton, material.transparency) );
 
-        float cosLight = clamp(dot(normal, lightVector), 0.0f, 1.0f);
+        float cosLight = dot(normal, lightVector);
         float cosView = dot(normal, viewVector);
         float cosHalf = dot(normal, halfVector);
-        float cosReflect = clamp(dot(normal, cosHalf), 0.0f, 1.0f);
 
-        float specularExponent = exp2(material.emmissionIntensity * 6 + 1);
-        float4 specular = material.albedo * pow(cosReflect, specularExponent);
-        float4 diffuse = cosLight * material.albedo;
+        float4 emission = material.albedo * material.emmissionIntensity;
 
-        float F0 = IORToR0(material.indexOfRefraction);
-        float fresnel = F0 + (F0 - 1.0f) * pow(1.0f - cosHalf,  5.0f);
+        accumulatedLight += emission * lightColor; 
 
-        accumulatedLight += specular * lightColor; 
-
-        lightColor *= diffuse ; 
+        lightColor *= 2.0f * cosLight * material.albedo; 
         lastIOR = material.indexOfRefraction;
     }
 

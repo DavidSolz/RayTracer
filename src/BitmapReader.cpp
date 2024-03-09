@@ -73,6 +73,7 @@ Image BitmapReader::ReadFile(const char * filename){
 
     if(!input){
         fprintf(stderr, "File can't be opened.\n");
+        
         return Image();
     }
 

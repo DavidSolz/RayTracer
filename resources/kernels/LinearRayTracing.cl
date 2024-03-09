@@ -38,54 +38,36 @@ struct Sample FindClosestIntersection(const struct Resources resources, const st
 
     global const struct Object * objects = resources.objects;
     int numObject = resources.numObject;
-
+    
     struct Sample sample = {0};
     sample.length = INFINITY;
+    float length = -1.0f;
+
+    float3 scaledDir = ray->direction * EPSILON;
 
     for (int id = 0; id < numObject; ++id) {
 
         struct Object object = objects[id];
 
-        float length = -1.0f;
-
-        switch(object.type){
-            case CUBE:
-                length = IntersectCube(ray, &object);
-                break;
-            case PLANE:
-                length = IntersectPlane(ray, &object);
-                break;
-            case DISK:
-                length = IntersectDisk(ray, &object);
-                break;
-            case TRIANGLE:
+        if ( object.type == TRIANGLE ){
                 length = IntersectTriangle(ray, &object);
-                break;
-            default:
+            }else{
                 length = IntersectSphere(ray, &object);
-        }
-
-        if( (length < sample.length) && (length > 0.01f) ){
-            sample.length = length ;
-            sample.point = ray->origin + ray->direction * length * EPSILON;
-            sample.objectID = id;
-
-            switch(object.type){
-
-                case CUBE:
-                    ComputeBoxNormal(&sample, &object);
-                    break;
-
-                case SPHERE:
-                    sample.normal = normalize(sample.point - object.position);
-                    break;
-
-                default :
-                    sample.normal = normalize(object.normal);
-                    break;
             }
+            
+            if( (length < sample.length) && (length > 0.01f) ){
 
-        }
+                sample.length = length ;
+                sample.point = ray->origin + scaledDir * length ;
+                sample.objectID = id;
+
+                if ( object.type == TRIANGLE ){
+                    sample.normal = normalize(object.normal);
+                }else{
+                    sample.normal = normalize(sample.point - object.position);
+                }
+                
+            }
 
     }
 

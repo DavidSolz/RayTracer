@@ -7,33 +7,20 @@ scene
 
 disk
 {
-
-position 500 250 250
-normal 0 1 0
-radius 1000.0
-material Disk
-
-}
-
-plane
-{
-
-position 500 250 250
-normal 0 1 0
-scale 1000 1000 1000
-
+    position 500 200 500
+    normal 0 1 0
+    radius 1000
+    material Sand
 }
 
 disk
 {
-
-position 500 4000 500
-normal 0 -1 0
-radius 500
-material Light
-
+    position 500 4000 500
+    normal 0 -1 0
+    radius 1000
+    material Light
 }
 
-mesh dragon.obj
+mesh suzanne.obj
 
 }

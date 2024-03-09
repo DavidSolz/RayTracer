@@ -5,6 +5,8 @@
 #include "ComputeEnvironment.h"
 #include "BVHTree.h"
 
+#include <thread>
+
 class Configurator{
 private:
     

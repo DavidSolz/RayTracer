@@ -47,9 +47,7 @@ class ThreadedRendering : public IFrameRender{
 
     Color ComputeColor(struct Ray& ray, unsigned int& seed);
 
-    void ComputeRows(const int& _startY, const int& _endY, Color* pixels);
-
-    bool CheckForHyperthreading();
+    void ComputeRows(const int& _startY, const int& _endY, Color * pixels);
 
     using IntersectionFunction = float (*)(const Ray &, const Object &);
 

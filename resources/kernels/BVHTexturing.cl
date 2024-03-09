@@ -29,6 +29,7 @@ struct Sample FindClosestIntersection(const struct Resources resources, const st
     int top = 0;
 
     float3 scaledDir = ray->direction * EPSILON;
+    float length = -1.0f;
 
     stack[top++] = 0;
 
@@ -44,18 +45,7 @@ struct Sample FindClosestIntersection(const struct Resources resources, const st
 
             struct Object object = objects[ box.objectID ];
 
-            float length = -1.0f;
-
             switch(object.type){
-                case CUBE:
-                    length = IntersectCube(ray, &object);
-                    break;
-                case PLANE:
-                    length = IntersectPlane(ray, &object);
-                    break;
-                case DISK:
-                    length = IntersectDisk(ray, &object);
-                    break;
                 case TRIANGLE:
                     length = IntersectTriangle(ray, &object);
                     break;
@@ -70,18 +60,13 @@ struct Sample FindClosestIntersection(const struct Resources resources, const st
                 sample.objectID = box.objectID;
 
                 switch(object.type){
+                    case SPHERE:
+                        sample.normal = normalize(sample.point - object.position);
+                        break;
 
-                case CUBE:
-                    ComputeBoxNormal(&sample, &object);
-                    break;
-
-                case SPHERE:
-                    sample.normal = normalize(sample.point - object.position);
-                    break;
-
-                default :
-                    sample.normal = normalize(object.normal);
-                    break;
+                    default :
+                        sample.normal = normalize(object.normal);
+                        break;
                 }
             }
 

@@ -61,12 +61,15 @@ void Configurator::ShowHelp(){
     fprintf(stdout,"  -S              Enable memory sharing\n");
     fprintf(stdout,"  -H              Show help menu\n");
     fprintf(stdout,"  -B              Build BVH tree\n");
+    fprintf(stdout,"  -T <threads>    Set number of threads\n");
 
 }
 
 void Configurator::ParseArgs(const size_t & size, char **args){
 
     const char * filepath = NULL;
+
+    context->numThreads = std::thread::hardware_concurrency();
 
     for (int i = 1; i < size; ++i) {
         const char* arg = args[i];
@@ -101,6 +104,14 @@ void Configurator::ParseArgs(const size_t & size, char **args){
                 fprintf(stderr, "Error: -h flag requires requires window height\n");
                 exit(-1);
             }
+        }else if (arg[1] == 'T' && arg[2] == '\0') {
+            if (i + 1 < size && args[i + 1][0] != '-') {
+                context->numThreads = std::max(atoi(args[i+1]), 1);
+                i++;
+            } else {
+                fprintf(stderr, "Error: -T flag requires requires number of threads\n");
+                exit(-1);
+            }
         }else if (arg[1] == 'S' && arg[2] == '\0' && context->memorySharing == false) {
             fprintf(stdout, "Memory sharing enabled.\n");
             context->memorySharing = true;
@@ -117,6 +128,8 @@ void Configurator::ParseArgs(const size_t & size, char **args){
 
     if( filepath != NULL )
         serializer->LoadFromFile(filepath);
+
+    context->bvhAcceleration = true;
 
     if( context->bvhAcceleration == true )
         tree->BuildBVH();

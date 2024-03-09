@@ -64,7 +64,7 @@ void SceneSerializer::ResetObject(){
 
 void SceneSerializer::ParseObject(const std::vector<std::string> & tokens){
 
-    Vector3 temp;
+    Vector3 temp = {};
 
     if( tokens[0] == "position" ){
 
@@ -97,10 +97,17 @@ void SceneSerializer::ParseObject(const std::vector<std::string> & tokens){
         if( tokens.size() > 1){
 
             temp.x = atof(tokens[1].c_str());
+            temp.y = temp.x;
+            temp.z = temp.z;
 
-            if( tokens.size() > 3 && (temporaryObject.type == SpatialType::CUBE  || temporaryObject.type == SpatialType::PLANE) ){
+            if( tokens.size() > 2 ){
+
                 temp.y = atof(tokens[2].c_str());
-                temp.z = atof(tokens[3].c_str());
+                temp.z = temp.y;
+
+                if( tokens.size() > 3){
+                    temp.z = atof(tokens[3].c_str());
+                }
             }
 
             temporaryObject.maxPos = temp;
@@ -159,10 +166,9 @@ void SceneSerializer::Parse(std::ifstream & file, const char * filename){
 
         std::vector<std::string> tokens = Tokenize(line);
 
-        if (tokens.empty()) {
-            fprintf(stderr, "Invalid file format: empty line\n");
+        if ( tokens.empty() ) 
             continue;
-        }
+        
 
         if(inScene){
 
@@ -175,16 +181,16 @@ void SceneSerializer::Parse(std::ifstream & file, const char * filename){
                 }else{
 
                     if( tokens[0] == "}" ){
-                        temporaryObject.maxPos = temporaryObject.position + temporaryObject.maxPos;
 
-                        // if( temporaryObject.type == SpatialType::PLANE){
-
-                        //     ObjectBuilder<PLANE> b(context);
-                        //     b.Build(temporaryObject);
-
-                        // }else{
+                        if( temporaryObject.type == SpatialType::PLANE){
+                            ObjectBuilder<PLANE>::Build(temporaryObject, context);
+                        }else if( temporaryObject.type == SpatialType::DISK){
+                            ObjectBuilder<DISK>::Build(temporaryObject, context);
+                        }else if( temporaryObject.type == SpatialType::CUBE){
+                            ObjectBuilder<CUBE>::Build(temporaryObject, context);
+                        }else{
                             context->objects.emplace_back(temporaryObject);
-                        // }
+                        }
 
                         ResetObject();
                     }

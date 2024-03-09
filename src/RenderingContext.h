@@ -40,6 +40,8 @@ struct RenderingContext {
     Camera camera;
     uint32_t frameCounter = 0;
 
+    uint32_t numThreads;
+
     // Logging service
     Logger loggingService;
 

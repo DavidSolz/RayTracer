@@ -3,8 +3,6 @@
 #include "PerformanceMonitor.h"
 #include "Configurator.h"
 
-#include "ThreadedRendering.h"
-
 #include "ThreadedShader.h"
 #include "CLShader.h"
 
@@ -29,8 +27,6 @@ int main(int argc, char **argv){
     WindowManager manager(&context);
     PerformanceMonitor monitor;
 
-    ThreadedRendering processor(&context); // TODO : remove 
-
     // Shader setup
 
     ThreadedShader threaded(&context);
@@ -39,7 +35,7 @@ int main(int argc, char **argv){
     // Key binding and service setup
 
     manager.SetRenderingService(&accelerated, "Acc mode");
-    SetupKeyBindings(context, manager, &accelerated, &processor);
+    SetupKeyBindings(context, manager, &accelerated, &threaded);
 
     // Main loop
 
