@@ -43,39 +43,7 @@ float4 GetTexturePixel(
     float v = 0.0f;
     float w = 0.0f;
 
-    float3 relativePos = localPoint - object->position;
-
-    if( object->type == CUBE ){
-
-        float3 boxSize = object->maxPos - object->position;
-        relativePos /= boxSize;
-
-        float conditionU = fabs(normal.x) == 1.0f;
-        float conditionV = fabs(normal.y) == 1.0f;
-
-        u = conditionU * relativePos.y + (1.0f - conditionU) * relativePos.x;
-        v = ( conditionV + conditionU ) * relativePos.z + (1.0f - conditionV - conditionU) * relativePos.y;
-
-    } else if ( object->type == DISK ){
-
-        float theta = atan2(relativePos.z, relativePos.x);
-        float radius = length( relativePos );
-
-        u = clamp((theta + M_PI_F) / TWO_PI, 0.0f, 1.0f);
-        v = clamp(radius / object->radius, 0.0f, 1.0f);
-
-    } else if ( object->type == PLANE){
-
-        float width = object->maxPos.x;
-        float height = object->maxPos.y;
-
-        float3 minPos = (float3)(-width , -height, 0.0f) * 0.5f;
-        float3 localPos = (relativePos - minPos);
-
-        u = localPos.x / width;
-        v = 0.5f + localPos.z / height;
-
-    }else if ( object->type == SPHERE){
+    if ( object->type == SPHERE){
         float theta = atan2(normal.z, normal.x) + PI;
         float phi = acos(normal.y);
 

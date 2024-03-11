@@ -12,7 +12,7 @@ ThreadedShader::ThreadedShader(RenderingContext * _context) : ComputeShader(_con
 
     rowsPerThread = context->height / numThreads;
 
-    if ( context->bvhAcceleration == true){
+    if ( context->bvhAcceleration == true && context->boxes.size() > 0){
         traverse = ThreadedShader::BVHTraverse;
     }else{
         traverse = ThreadedShader::LinearTraverse;
@@ -33,10 +33,22 @@ Vector3 ThreadedShader::RandomDirection(unsigned int& seed){
     };
 }
 
+Vector3 ThreadedShader::RandomReflection(const struct Vector3& normal, unsigned int& seed){
+    Vector3 direction = RandomDirection(seed);
+    float dotProduct = Vector3::DotProduct(normal, direction);
+    int sign = 2*(dotProduct >= 0.0f)-1;
+
+    return direction * sign;
+}
+
+Vector3 ThreadedShader::Reflect(const Vector3& incident, const Vector3& normal) {
+    return incident - (Vector3)normal * (2.0f * Vector3::DotProduct(incident, normal)) ;
+}
+
 Color ThreadedShader::ComputeColor(struct Ray& ray, unsigned int& seed) {
 
-    Color accumulatedColor = {0.0f, 0.0f, 0.0f, 0.0f};
-    Color colorMask = {1.0f, 1.0f, 1.0f, 1.0f};
+    Color accumulatedLight = {0.0f, 0.0f, 0.0f, 0.0f};
+    Color lightColor = {1.0f, 1.0f, 1.0f, 1.0f};
     float intensity = 1.0f;
 
     for(int i = 0; i < 2; ++i){
@@ -48,25 +60,28 @@ Color ThreadedShader::ComputeColor(struct Ray& ray, unsigned int& seed) {
         }
             ray.origin = sample.point;
 
-        //     Material * material = &context->materials[sample.materialID];
+        Material * material = &context->materials[sample.materialID];
 
-        //     Vector3 diffusionDirection = RandomReflection(sample.normal, seed);
-        //     Vector3 specularDirection = Reflect(ray.direction, sample.normal);
+        Vector3 normal = sample.normal;
+        Vector3 lightVector = ray.direction;
+        Vector3 diffusionDirection = RandomReflection(sample.normal, seed);
+        Vector3 reflectionDirection = Reflect(ray.direction, sample.normal);
 
-        //     ray.direction = Vector3::Lerp(diffusionDirection, specularDirection, material->metallic);
+        ray.direction = Vector3::Lerp(diffusionDirection, reflectionDirection, material->metallic).Normalize();
 
-        //     float lightIntensity = Vector3::DotProduct(ray.direction, sample.normal);
-        //     lightIntensity = fmax(0.0f, fmin(lightIntensity, 1.0f));
+        float lightIntensity = Vector3::DotProduct(ray.direction, sample.normal);
+        lightIntensity = fmax(0.0f, fmin(lightIntensity, 1.0f));
 
-        //     Color emmisionComponent = material->albedo * material->emmissionIntensity;
-        //     Color diffuseComponent = material->albedo * 2 * lightIntensity;
+        float cosLight = -Vector3::DotProduct(normal, lightVector);
 
-        //     accumulatedColor += (diffuseComponent + emmisionComponent) * colorMask;
-        //     colorMask *= material->albedo;
-        //     intensity *= lightIntensity * 0.1f;
+        Color emission = material->albedo * material->emmissionIntensity;
+        Color diffuseComponent = material->albedo * 2 * lightIntensity;
+
+        accumulatedLight += (emission + diffuseComponent) * lightColor; 
+        lightColor *= material->albedo * 2.0f * cosLight; 
     }
 
-    return accumulatedColor;
+    return accumulatedLight;
 }
 
 void ThreadedShader::ComputeRows(const int & _startY, const int & _endY, Color * pixels) {
@@ -86,9 +101,9 @@ void ThreadedShader::ComputeRows(const int & _startY, const int & _endY, Color *
 
             struct Color sample = ComputeColor(ray, seed);
 
-            float scale = 1.0f / (context->frameCounter+1);
+            float scale = 1.0f / (context->frameCounter + 1);
 
-            pixels[index] =  pixels[index] +  (sample - pixels[index]) * scale;
+            pixels[index] =  pixels[index] + ( sample - pixels[index] ) * scale;
         }
     }
 }
@@ -99,7 +114,7 @@ void ThreadedShader::Render(Color * _pixels){
         int endY =  startY + rowsPerThread;
 
         threads[i] = std::thread(
-        [this, startY, endY, _pixels](){
+        [this, startY, endY, &_pixels](){
             this->ComputeRows(startY, endY, _pixels);
         }
         );
@@ -119,6 +134,7 @@ Sample ThreadedShader::LinearTraverse(RenderingContext * context, const Ray & ra
     struct Sample sample = {0};
     sample.distance = INFINITY;
     float length = -1.0f;
+    float u,v;
 
     Vector3 scaledDir = ray.direction * EPSILON;
 
@@ -127,24 +143,24 @@ Sample ThreadedShader::LinearTraverse(RenderingContext * context, const Ray & ra
         struct Object object = context->objects[id];
 
         if ( object.type == TRIANGLE ){
-                //length = IntersectTriangle(ray, &object);
-            }else{
-                //length = IntersectSphere(ray, &object);
-            }
+            length = IntersectTriangle(ray, object, u, v);
+        }else{
+            //length = IntersectSphere(ray, &object);
+        }
             
-            if( (length < sample.distance) && (length > 0.01f) ){
+        if( (length < sample.distance) && (length > 0.01f) ){
 
-                sample.distance = length ;
-                sample.point = ray.origin + scaledDir * length ;
-                sample.objectID = id;
+            sample.distance = length ;
+            sample.point = ray.origin + scaledDir * length ;
+            sample.objectID = id;
 
-                if ( object.type == TRIANGLE ){
-                    sample.normal = object.normal.Normalize();
-                }else{
-                    sample.normal = (sample.point - object.position).Normalize();
-                }
-                
+            if ( object.type == TRIANGLE ){
+                sample.normal = object.normal.Normalize();
+            }else{
+                sample.normal = (sample.point - object.position).Normalize();
             }
+                
+        }
 
     }
 
@@ -167,11 +183,44 @@ bool ThreadedShader::AABBIntersection(const Ray & ray, const Vector3 & minimalPo
     return tNear <= tFar && tFar > 0.0f;
 }
 
+float ThreadedShader::IntersectTriangle(const Ray & ray, const Object & object, float & u, float & v){
+    const float epsilon = 1e-6f;
+
+    Vector3 A = object.verticeA;
+    Vector3 B = object.verticeB;
+    Vector3 C = object.verticeC;
+
+    Vector3 e1 = (B - A);
+    Vector3 e2 = (C - A);
+
+    Vector3 normal = Vector3::CrossProduct(ray.direction, e2);
+    float det = Vector3::DotProduct(e1, normal);
+
+    if( fabs(det) < epsilon)
+        return -1.0f;
+
+    float f = 1.0f/det;
+    Vector3 rayToTriangle = ray.origin - A;
+    u = f * Vector3::DotProduct(rayToTriangle, normal);
+
+    if( u < 0.0f || u >1.0f)
+        return -1.0f;
+
+    Vector3 q = Vector3::CrossProduct(rayToTriangle, e1);
+    v = f * Vector3::DotProduct(ray.direction, q);
+
+    if( v < 0.0f || u+v >1.0f)
+        return -1.0f;
+
+    return f * Vector3::DotProduct(e2, q);
+}
+
 Sample ThreadedShader::BVHTraverse(RenderingContext * context, const Ray & ray){
 
     struct Sample sample = {0};
     sample.distance = INFINITY;
     float length = -1.0f;
+    float u, v;
 
     std::stack<int> stack;
 
@@ -183,17 +232,18 @@ Sample ThreadedShader::BVHTraverse(RenderingContext * context, const Ray & ray){
         
         int boxID = stack.top();
         stack.pop();
-        struct BoundingBox box = context->boxes[ boxID ];
+
+        BoundingBox box = context->boxes[ boxID ];
 
         int leftChildIndex = box.leftID;
         int rightChildIndex = box.rightID;
 
         if ( box.objectID != -1 ) {
 
-            struct Object object = context->objects[ box.objectID ];
+            Object object = context->objects[ box.objectID ];
 
             if ( object.type == TRIANGLE ){
-                //length = IntersectTriangle(ray, &object);
+                length = IntersectTriangle(ray, object, u, v);
             }else{
                 //length = IntersectSphere(ray, &object);
             }

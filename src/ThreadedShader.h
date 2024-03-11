@@ -34,9 +34,15 @@ private:
 
     static bool AABBIntersection(const Ray & ray, const Vector3 & minimalPosition , const Vector3 & maximalPosition);
 
+    Vector3 RandomReflection(const struct Vector3& normal, unsigned int& seed);
+
+    Vector3 Reflect(const Vector3& incident, const Vector3& normal);
+
     static Sample LinearTraverse(RenderingContext * context, const Ray & ray);
 
     static Sample BVHTraverse(RenderingContext * context, const Ray & ray);
+
+    static float IntersectTriangle(const Ray & ray, const Object & object, float & u, float & v);
 
     Vector3 RandomDirection(unsigned int& seed);
 

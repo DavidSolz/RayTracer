@@ -128,9 +128,7 @@ void Configurator::ParseArgs(const size_t & size, char **args){
 
     if( filepath != NULL )
         serializer->LoadFromFile(filepath);
-
-    context->bvhAcceleration = true;
-
+        
     if( context->bvhAcceleration == true )
         tree->BuildBVH();
 
