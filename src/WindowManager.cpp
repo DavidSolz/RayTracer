@@ -94,6 +94,7 @@ void WindowManager::ProcessInput(){
         double offsetY = lastMouseY - currentY;
 
         double & deltaTime = timer->GetDeltaFrame();
+        deltaTime = std::fmax(deltaTime, 1.0f/60.0f);
 
         double len = sqrt(offsetX*offsetX + offsetY*offsetY);
         offsetX = (offsetX * deltaTime)/len;

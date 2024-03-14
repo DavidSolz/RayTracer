@@ -3,6 +3,8 @@
 
 #include "ComputeShader.h"
 #include "ComputeEnvironment.h"
+#include "Ray.h"
+#include "Sample.h"
 #include <vector>
 
 class CLShader : public ComputeShader{
@@ -13,10 +15,11 @@ private:
     cl::Context deviceContext;
     cl::CommandQueue queue;
 
-    cl::Kernel raytracingKernel;
+    cl::Kernel rayGenerationKernel;
     cl::Kernel transferKernel;
-    cl::Kernel texturingKernel;
-    cl::Kernel antialiasingKernel;
+    cl::Kernel intersectionKernel;
+    cl::Kernel raytracingKernel;
+    cl::Kernel filterKernel;
 
     std::vector< LocalBuffer* > buffers;
 
@@ -25,6 +28,7 @@ private:
     cl_mem textureBuffer;
 
     cl::NDRange globalRange;
+    cl::NDRange localRange;
 
 public:
 

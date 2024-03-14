@@ -7,6 +7,7 @@
 struct BoundingBox{
     int32_t objectID;
 
+    int32_t parentID;
     int32_t leftID;
     int32_t rightID;
 

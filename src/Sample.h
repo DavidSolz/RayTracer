@@ -7,10 +7,7 @@
 struct Sample{
     float distance;
     struct Vector3 point;
-    struct Vector3 normal;
-    struct Color texel;
     unsigned int objectID;
-    unsigned int materialID;
-};
+} __attribute((aligned((32))));
 
 #endif

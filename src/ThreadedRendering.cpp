@@ -213,14 +213,16 @@ Color ThreadedRendering::ComputeColor(struct Ray& ray, unsigned int& seed) {
         }
             ray.origin = sample.point;
 
-            Material * material = &context->materials[sample.materialID];
+            Object * object = &context->objects[sample.objectID];
 
-            Vector3 diffusionDirection = RandomReflection(sample.normal, seed);
-            Vector3 specularDirection = Reflect(ray.direction, sample.normal);
+            Material * material = &context->materials[object->materialID];
+
+            Vector3 diffusionDirection = RandomReflection(object->normal, seed);
+            Vector3 specularDirection = Reflect(ray.direction, object->normal);
 
             ray.direction = Vector3::Lerp(diffusionDirection, specularDirection, material->metallic);
 
-            float lightIntensity = Vector3::DotProduct(ray.direction, sample.normal);
+            float lightIntensity = Vector3::DotProduct(ray.direction, object->normal);
             lightIntensity = fmax(0.0f, fmin(lightIntensity, 1.0f));
 
             Color emmisionComponent = material->albedo * material->emmissionIntensity;
@@ -251,21 +253,6 @@ Sample ThreadedRendering::FindClosestIntersection(const Ray& ray){
         if(distance < sample.distance && distance > 0.1f){
             sample.distance = distance;
             sample.point = ray.origin + (Vector3)ray.direction * distance;
-            sample.materialID = context->objects[i].materialID;
-
-            switch(context->objects[i].type){
-
-                case CUBE:
-                    sample.normal = ComputeBoxNormal(context->objects[i].position, context->objects[i].maxPos, sample.point);
-                    break;
-
-                case SPHERE:
-                    sample.normal = (sample.point - context->objects[i].position).Normalize();
-                    break;
-
-                default:
-                    sample.normal = context->objects[i].normal;
-            }
 
         }
     }

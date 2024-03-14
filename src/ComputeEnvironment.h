@@ -60,6 +60,13 @@ public:
     /// @return buffer
     static LocalBuffer * CreateBuffer(const cl::Context & deviceContext, const size_t & _size, const cl_mem_flags & flag);
 
+    /// @brief Creates buffer of specified type and size
+    /// @param size 
+    /// @param flag 
+    /// @param data 
+    /// @return buffer
+    static LocalBuffer * CreateBuffer(const cl::Context & deviceContext, const size_t & _size, const cl_mem_flags & flag, const void * data);
+
     /// @brief Creates read only buffer of specified size
     /// @param size 
     /// @param data 

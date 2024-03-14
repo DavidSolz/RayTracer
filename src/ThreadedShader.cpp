@@ -60,16 +60,18 @@ Color ThreadedShader::ComputeColor(struct Ray& ray, unsigned int& seed) {
         }
             ray.origin = sample.point;
 
-        Material * material = &context->materials[sample.materialID];
+        Object * object = &context->objects[sample.objectID];
 
-        Vector3 normal = sample.normal;
+        Material * material = &context->materials[object->materialID];
+
+        Vector3 normal = object->normal;
         Vector3 lightVector = ray.direction;
-        Vector3 diffusionDirection = RandomReflection(sample.normal, seed);
-        Vector3 reflectionDirection = Reflect(ray.direction, sample.normal);
+        Vector3 diffusionDirection = RandomReflection(normal, seed);
+        Vector3 reflectionDirection = Reflect(ray.direction, normal);
 
         ray.direction = Vector3::Lerp(diffusionDirection, reflectionDirection, material->metallic).Normalize();
 
-        float lightIntensity = Vector3::DotProduct(ray.direction, sample.normal);
+        float lightIntensity = Vector3::DotProduct(ray.direction, normal);
         lightIntensity = fmax(0.0f, fmin(lightIntensity, 1.0f));
 
         float cosLight = -Vector3::DotProduct(normal, lightVector);
@@ -153,12 +155,6 @@ Sample ThreadedShader::LinearTraverse(RenderingContext * context, const Ray & ra
             sample.distance = length ;
             sample.point = ray.origin + scaledDir * length ;
             sample.objectID = id;
-
-            if ( object.type == TRIANGLE ){
-                sample.normal = object.normal.Normalize();
-            }else{
-                sample.normal = (sample.point - object.position).Normalize();
-            }
                 
         }
 
@@ -222,16 +218,16 @@ Sample ThreadedShader::BVHTraverse(RenderingContext * context, const Ray & ray){
     float length = -1.0f;
     float u, v;
 
-    std::stack<int> stack;
+    int stack[STACK_SIZE] = {};
+    int size = 0;
 
     Vector3 scaledDir = ray.direction * EPSILON;
 
-    stack.push(0);
+    stack[size++] = 0;
 
-    while ( !stack.empty() ) {
+    while ( size > 0 )  {
         
-        int boxID = stack.top();
-        stack.pop();
+        int boxID = stack[--size];
 
         BoundingBox box = context->boxes[ boxID ];
 
@@ -253,29 +249,23 @@ Sample ThreadedShader::BVHTraverse(RenderingContext * context, const Ray & ray){
                 sample.distance = length ;
                 sample.point = ray.origin + scaledDir * length ;
                 sample.objectID = box.objectID;
-
-                if ( object.type == TRIANGLE ){
-                    sample.normal = object.normal.Normalize();
-                }else{
-                    sample.normal = (sample.point - object.position).Normalize();
-                }
                 
             }
 
         } else {
 
-            if( leftChildIndex > 0){
+            if( leftChildIndex != -1 ){
                 BoundingBox & left = context->boxes[leftChildIndex];
 
                 if( AABBIntersection(ray, left.minimalPosition, left.maximalPosition) )
-                    stack.push(leftChildIndex);
+                    stack[size++] = leftChildIndex;
             }
                 
-            if( rightChildIndex > 0){
+            if( rightChildIndex != -1 ){
                 BoundingBox & right = context->boxes[rightChildIndex];
 
                 if( AABBIntersection(ray, right.minimalPosition, right.maximalPosition) )
-                    stack.push(rightChildIndex);
+                    stack[size++] = rightChildIndex;
             }
 
         }

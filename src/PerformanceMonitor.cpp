@@ -82,7 +82,7 @@ void PerformanceMonitor::CalculateMedian(){
     if(size%2==0){
         median.fpsCount = ( samples[ size>>1 ].fpsCount + samples[ size>>1 + 1 ].fpsCount)/2.0f;
     }else{
-        median.fpsCount = samples[ size>>1 + 1].fpsCount;
+        median.fpsCount = samples[ size>>1 ].fpsCount;
     }
 
     std::sort(samples.begin(), samples.end(), [](PerformanceSample & a, PerformanceSample & b){ return a.frameTime>b.frameTime; });
@@ -90,7 +90,7 @@ void PerformanceMonitor::CalculateMedian(){
     if(size%2==0){
         median.frameTime = ( samples[ size>>1 ].frameTime + samples[ size>>1 + 1 ].frameTime)/2.0f;
     }else{
-        median.frameTime = samples[ size>>1 + 1].frameTime;
+        median.frameTime = samples[ size>>1 ].frameTime;
     }
 
 }

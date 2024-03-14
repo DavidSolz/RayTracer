@@ -27,16 +27,6 @@ float3 RandomDirection(uint * seed){
     ));
 }
 
-
-void ComputeBoxNormal(struct Sample * sample,const struct Object * object){
-
-    float3 boxCenter = (object->maxPos + object->position) * 0.5f;
-    float3 radius = (object->maxPos - object->position) * 0.5f;
-    float3 pointToCenter = sample->point - boxCenter;
-
-    sample->normal = normalize(sign(pointToCenter) * step(fabs(fabs(pointToCenter) - radius), EPSILON));
-}
-
 struct Sample FindClosestIntersection(const struct Resources resources, const struct Ray * ray){
 
     global const struct BoundingBox * boxes = resources.boxes;
@@ -55,7 +45,7 @@ struct Sample FindClosestIntersection(const struct Resources resources, const st
 
     stack[top++] = 0;
 
-    while (top > 0) {
+    while ( top > 0 ) {
         
         int boxID = stack[--top];
         struct BoundingBox box = boxes[boxID];
@@ -78,12 +68,6 @@ struct Sample FindClosestIntersection(const struct Resources resources, const st
                 sample.length = length ;
                 sample.point = ray->origin + scaledDir * length ;
                 sample.objectID = box.objectID;
-
-                if ( object.type == TRIANGLE ){
-                    sample.normal = normalize(object.normal);
-                }else{
-                    sample.normal = normalize(sample.point - object.position);
-                }
                 
             }
 
@@ -92,8 +76,9 @@ struct Sample FindClosestIntersection(const struct Resources resources, const st
             if( leftChildIndex > 0){
                 struct BoundingBox left = boxes[leftChildIndex];
 
-                if( AABBIntersection(ray, left.minimalPosition, left.maximalPosition) )
+                if( AABBIntersection(ray, left.minimalPosition, left.maximalPosition) ){
                     stack[top++] = leftChildIndex;
+                }
             }
                 
             if( rightChildIndex > 0){
@@ -104,6 +89,7 @@ struct Sample FindClosestIntersection(const struct Resources resources, const st
             }
 
         }
+
     }
 
     return sample;
@@ -149,6 +135,7 @@ float4 ComputeLightMap(
     const struct Resources resources, 
     struct Ray * ray, 
     const struct Camera * camera, 
+    const struct Sample * ext_sample,
     uint * seed
     ){
 
@@ -176,8 +163,8 @@ float4 ComputeLightMap(
         struct Object object = objects[ sample.objectID ];
         struct Material material =  materials[ object.materialID ];
         struct Texture info = infos[ material.textureID ];
-
-        float3 normal = sample.normal;
+        
+        float3 normal = object.normal;
 
         float3 lightVector = normalize(-ray->direction);
         float3 viewVector = normalize(camera->position - sample.point);
@@ -195,10 +182,11 @@ float4 ComputeLightMap(
         float cosHalf = dot(normal, halfVector);
 
         float4 emission = material.albedo * material.emmissionIntensity;
+        float4 color = GetTexturePixel(textureData, &object, info, sample.point, normal);
 
         accumulatedLight += emission * lightColor; 
 
-        lightColor *= 2.0f * cosLight * material.albedo; 
+        lightColor *= 2.0f * cosLight * material.albedo * color; 
         lastIOR = material.indexOfRefraction;
     }
 
@@ -210,8 +198,7 @@ float4 ComputeLightMap(
 void kernel ComputeLight(
     global struct Resources * resources, 
     const struct Camera camera, 
-    const int numFrames,
-    global float4 * scratch 
+    const int numFrames
     ){
 
     local struct Resources localResources;
@@ -226,16 +213,14 @@ void kernel ComputeLight(
     uint index = y * width + x;
     uint seed = (numFrames<<16) ^ (numFrames >>13) + index;
 
-    float3 offset = RandomDirection(&seed);
-    float3 pixelPosition = CalculatePixelPosition(x + offset.x + 0.5f, y + offset.y + 0.5f, width, height, &camera);
+    struct Ray ray = localResources.rays[index];
+    struct Sample sample = localResources.samples[index];
 
-    struct Ray ray;
-    ray.origin = camera.position;
-    ray.direction = normalize(pixelPosition - ray.origin);
-
-    float4 ligthSample = ComputeLightMap(localResources, &ray, &camera, &seed);
+    float4 ligthSample = ComputeLightMap(localResources, &ray, &camera, &sample, &seed);
 
     float scale = 1.0f/(1+ numFrames);
-    scratch[index] = mix(scratch[index], ligthSample, scale);
+    float4 pixel = mix(localResources.colors[index], ligthSample, scale);
 
+    localResources.rays[index] = ray;
+    localResources.colors[index] = pixel;
 }

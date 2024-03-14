@@ -203,6 +203,7 @@ float4 ComputeLightMap(
         struct Object object = objects[ sample.objectID ];
         struct Material material =  materials[ object.materialID ];
         struct Texture info = infos[ material.textureID ];
+        float4 color = GetTexturePixel(textureData, &object, info, sample.point, sample.normal);
 
         float3 normal = sample.normal;
 
@@ -230,7 +231,7 @@ float4 ComputeLightMap(
 
         accumulatedColor += emission * lightColor; 
 
-        lightColor *= 2.0f * cosLight * material.albedo;
+        lightColor *= 2.0f * cosLight * material.albedo * color;
         lastIOR = material.indexOfRefraction;
     }
 
@@ -243,12 +244,11 @@ float4 ComputeLightMap(
 void kernel ComputeLight(
     global struct Resources * resources, 
     const struct Camera camera, 
-    const int numFrames,
-    global float4 * scratch 
+    const int numFrames
     ){
 
     local struct Resources localResources;
-    localResources = *resources;
+    local struct Ray ray;
 
     uint x = get_global_id(0);
     uint y = get_global_id(1);
@@ -259,16 +259,12 @@ void kernel ComputeLight(
     uint index = y * width + x;
     uint seed = (numFrames<<16) ^ (numFrames >>13) + index;
 
-    float3 offset = RandomDirection(&seed);
-    float3 pixelPosition = CalculatePixelPosition(x + offset.x + 0.5f, y + offset.y + 0.5f, width, height, &camera);
-
-    struct Ray ray;
-    ray.origin = camera.position;
-    ray.direction = normalize(pixelPosition - ray.origin);
+    localResources = *resources;
+    ray = localResources.rays[index];
 
     float4 ligthSample = ComputeLightMap(localResources, &ray, &camera, &seed);
 
     float scale = 1.0f/(1+ numFrames);
-    scratch[index] = mix(scratch[index], ligthSample, scale);
-
+    float4 pixel = mix(localResources.colors[index], ligthSample, scale);
+    localResources.colors[index] = pixel;
 }

@@ -21,6 +21,6 @@ disk
     material Light
 }
 
-mesh suzanne.obj
+mesh dragon.obj
 
 }

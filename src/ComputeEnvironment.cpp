@@ -48,6 +48,29 @@ LocalBuffer * ComputeEnvironment::CreateBuffer(const cl::Context & deviceContext
     return localBuffer;
 }
 
+LocalBuffer * ComputeEnvironment::CreateBuffer(const cl::Context & deviceContext, const size_t & _size, const cl_mem_flags & flag, const void * data){
+    cl_int status;
+    LocalBuffer * localBuffer = new LocalBuffer{};
+
+    context->loggingService.Write(MessageType::INFO, "Allocating new data filled buffer with flag");
+
+    if( _size > 0){
+        localBuffer->size = _size;
+        localBuffer->buffer = cl::Buffer(deviceContext, flag, _size, (void*)data, &status);
+    }else{
+        localBuffer->size = 1;
+        localBuffer->buffer = cl::Buffer(deviceContext, CL_MEM_READ_WRITE, 1, nullptr, &status);
+    }
+
+    if(status != 0){
+        context->loggingService.Write(MessageType::ISSUE,"Error during buffer allocation");
+        delete localBuffer;
+        return NULL;
+    }
+
+    return localBuffer;
+}
+
 void ComputeEnvironment::SetContext(RenderingContext * _context){
     context = _context;
 }

@@ -23,12 +23,7 @@ BoundingBox BVHTree::CreateLeaf(const uint32_t & objectID){
         box.minimalPosition = object.position-radiusVector;
         box.maximalPosition = object.position+radiusVector;
 
-    }else if ( object.type == CUBE ){
-
-        box.minimalPosition = Vector3::Minimal(object.position, object.maxPos);
-        box.maximalPosition = Vector3::Maximal(object.position, object.maxPos);
-
-    }else if( object.type == TRIANGLE ){
+    }else {
 
         Vector3 A = object.verticeA;
         Vector3 B = object.verticeB;
@@ -42,13 +37,6 @@ BoundingBox BVHTree::CreateLeaf(const uint32_t & objectID){
 
         box.minimalPosition = min;
         box.maximalPosition = max;
-
-    }else if( (object.type == DISK) || (object.type == PLANE) ){
-
-        // TODO
-
-        box.minimalPosition = object.position - radiusVector;
-        box.maximalPosition = object.position + radiusVector;
 
     }
 
@@ -64,7 +52,7 @@ void BVHTree::BuildBVH(){
         ids.emplace_back(id);
     }
 
-    Insert(ids, 0);
+    Insert(ids);
     //CheckBalance(0);
 }
 
@@ -186,6 +174,7 @@ int32_t BVHTree::Insert(std::vector<int32_t> & ids, const int32_t & parentID, co
     BoundingBox temp;
     temp.minimalPosition = Vector3(INFINITY, INFINITY, INFINITY);
     temp.maximalPosition = Vector3(-INFINITY, -INFINITY, -INFINITY);
+    temp.parentID = parentID;
     temp.leftID = -1;
     temp.rightID = -1;
     temp.objectID = -1;

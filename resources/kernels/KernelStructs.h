@@ -52,7 +52,6 @@ struct Object{
 struct Sample{
     float length;
     float3 point;
-    float3 normal;
     unsigned int objectID;
 };
 
@@ -77,6 +76,7 @@ struct Camera{
 struct BoundingBox{
     int objectID;
 
+    int parentID;
     int leftID;
     int rightID;
 
@@ -87,11 +87,21 @@ struct BoundingBox{
 struct Resources{
     global const struct Object * objects;
     global const struct Material * materials;
+
     global const struct Texture * textureInfo;
     global const unsigned int * textureData;
+
     global const struct BoundingBox * boxes;
+    global struct Ray * rays;
+
+    global float4 * colors;
+    global struct Sample * samples;
+
+    int width;
+    int height;
+
     int numObject;
     int numMaterials;
-} __attribute((aligned(64)));
+} __attribute((aligned(128)));
 
 #endif

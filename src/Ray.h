@@ -6,6 +6,6 @@
 struct Ray {
     Vector3 origin;
     Vector3 direction;
-};
+} __attribute__((aligned(32)));
 
 #endif
