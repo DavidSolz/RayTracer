@@ -207,7 +207,7 @@ Color ThreadedRendering::ComputeColor(struct Ray& ray, unsigned int& seed) {
     for(int i = 0; i < 2; ++i){
         Sample sample = FindClosestIntersection(ray);
 
-        if(sample.distance == INFINITY){
+        if( sample.objectID < 0){
             accumulatedColor += GetSkyBoxColor(intensity, ray);
             break;
         }
@@ -237,22 +237,23 @@ Color ThreadedRendering::ComputeColor(struct Ray& ray, unsigned int& seed) {
 }
 
 Sample ThreadedRendering::FindClosestIntersection(const Ray& ray){
-    Sample sample = {0};
-    sample.distance = INFINITY;
+    Sample sample = {};
+    float minLength = INFINITY;
+
 
     for (int i = 0; i < context->objects.size(); i++) {
-        float distance = -1.0f;
+        float length = -1.0f;
 
         IntersectionFunction function = intersectionFunctions[ context->objects[i].type ];
 
         if(function==NULL)
             continue;
 
-        distance = function(ray, context->objects[i]);
+        length = function(ray, context->objects[i]);
 
-        if(distance < sample.distance && distance > 0.1f){
-            sample.distance = distance;
-            sample.point = ray.origin + (Vector3)ray.direction * distance;
+        if(length < minLength && length > 0.1f){
+            minLength = length;
+            sample.point = ray.origin + (Vector3)ray.direction * length;
 
         }
     }

@@ -41,6 +41,7 @@ struct RenderingContext {
     uint32_t frameCounter = 0;
 
     uint32_t numThreads;
+    float gamma = 2.2f;
 
     // Logging service
     Logger loggingService;

@@ -52,6 +52,14 @@ CLShader::CLShader(RenderingContext * _context) : ComputeShader(_context){
     LocalBuffer * rayBuffer = ComputeEnvironment::CreateBuffer(deviceContext, tempSize, CL_MEM_READ_WRITE);
     buffers.emplace_back(rayBuffer);
 
+    tempSize = sizeof(Color) * context->width * context->height;
+    LocalBuffer * lightBuffer = ComputeEnvironment::CreateBuffer(deviceContext, tempSize, CL_MEM_READ_WRITE);
+    buffers.emplace_back(lightBuffer);
+
+    tempSize = sizeof(Color) * context->width * context->height;
+    LocalBuffer * accumulatorBuffer = ComputeEnvironment::CreateBuffer(deviceContext, tempSize, CL_MEM_READ_WRITE);
+    buffers.emplace_back(accumulatorBuffer);
+
     size_t maxWorkItemSizes[3];
     clGetDeviceInfo(device(), CL_DEVICE_MAX_WORK_ITEM_SIZES, sizeof(size_t) * 3, &maxWorkItemSizes, NULL);
 
@@ -81,13 +89,14 @@ CLShader::CLShader(RenderingContext * _context) : ComputeShader(_context){
 
     transferKernel = ComputeEnvironment::CreateKernel(deviceContext, device, "resources/kernels/Transfer.cl", "Transfer");
     rayGenerationKernel = ComputeEnvironment::CreateKernel(deviceContext, device, "resources/kernels/CastRays.cl", "CastRays");
+    raytracingKernel = ComputeEnvironment::CreateKernel(deviceContext, device, "resources/kernels/RayTrace.cl", "RayTrace");
 
     if( context->bvhAcceleration ){
-        context->loggingService.Write(MessageType::INFO, "Enabling BVH accelerated kernels");
-        raytracingKernel = ComputeEnvironment::CreateKernel(deviceContext, device, "resources/kernels/BVHRayTracing.cl", "ComputeLight");
+        context->loggingService.Write(MessageType::INFO, "Enabling BVH accelerated traversal kernel");
+        intersectionKernel = ComputeEnvironment::CreateKernel(deviceContext, device, "resources/kernels/BVHTraverse.cl", "Traverse");
     }else{
-        context->loggingService.Write(MessageType::INFO, "Enabling standard accelerated kernels");
-        raytracingKernel = ComputeEnvironment::CreateKernel(deviceContext, device, "resources/kernels/LinearRayTracing.cl", "ComputeLight");
+        context->loggingService.Write(MessageType::INFO, "Enabling linear traversal kernel");
+        intersectionKernel = ComputeEnvironment::CreateKernel(deviceContext, device, "resources/kernels/LinearTraverse.cl", "Traverse");
     }
     
     transferKernel.setArg(0, resources->buffer);
@@ -98,11 +107,15 @@ CLShader::CLShader(RenderingContext * _context) : ComputeShader(_context){
     transferKernel.setArg(5, boxBuffer->buffer);
     transferKernel.setArg(6, rayBuffer->buffer);
     transferKernel.setArg(7, sampleBuffer->buffer);
-    transferKernel.setArg(8, colorsBuffer->buffer);
-    transferKernel.setArg(9, numObjects);
-    transferKernel.setArg(10, numMaterials);
-    transferKernel.setArg(11, sizeof(uint32_t), &context->width);
-    transferKernel.setArg(12, sizeof(uint32_t), &context->height);
+    transferKernel.setArg(8, lightBuffer->buffer);
+    transferKernel.setArg(9, accumulatorBuffer->buffer);
+    transferKernel.setArg(10, colorsBuffer->buffer);
+    transferKernel.setArg(11, numObjects);
+    transferKernel.setArg(12, numMaterials);
+    transferKernel.setArg(13, sizeof(uint32_t), &context->width);
+    transferKernel.setArg(14, sizeof(uint32_t), &context->height);
+
+    intersectionKernel.setArg(0, resources->buffer);
 
     rayGenerationKernel.setArg(0, resources->buffer);
     rayGenerationKernel.setArg(1, sizeof(Camera), &context->camera);
@@ -116,12 +129,13 @@ CLShader::CLShader(RenderingContext * _context) : ComputeShader(_context){
     queue.enqueueNDRangeKernel(transferKernel, cl::NullRange, cl::NDRange(1), cl::NDRange(1));    
     queue.finish();
 
-    filterKernel = ComputeEnvironment::CreateKernel(deviceContext, device, "resources/kernels/Filter.cl", "Filter");
-    filterKernel.setArg(0, sizeof(cl_mem), &textureBuffer);
-    filterKernel.setArg(1, resources->buffer);
+    correctionKernel = ComputeEnvironment::CreateKernel(deviceContext, device, "resources/kernels/ImageCorrection.cl", "ImageCorrection");
+    correctionKernel.setArg(0, sizeof(cl_mem), &textureBuffer);
+    correctionKernel.setArg(1, resources->buffer);
+    correctionKernel.setArg(2, sizeof(int), &context->frameCounter);
+    correctionKernel.setArg(3, sizeof(float), &context->gamma);
 
-    intersectionKernel = ComputeEnvironment::CreateKernel(deviceContext, device, "resources/kernels/Traverse.cl", "Traverse");
-    intersectionKernel.setArg(0, resources->buffer);
+    
 }
 
 void CLShader::Render(Color * _pixels){
@@ -132,12 +146,16 @@ void CLShader::Render(Color * _pixels){
     raytracingKernel.setArg(1, sizeof(Camera), &context->camera);
     raytracingKernel.setArg(2, sizeof(int), &context->frameCounter);
     
+    correctionKernel.setArg(2, sizeof(int), &context->frameCounter);
+    
     queue.enqueueNDRangeKernel(rayGenerationKernel, cl::NullRange, globalRange);
 
-    queue.enqueueNDRangeKernel(intersectionKernel, cl::NullRange, globalRange);
-    queue.enqueueNDRangeKernel(raytracingKernel, cl::NullRange, globalRange);
+    for(int i=0; i<4; ++i){
+        queue.enqueueNDRangeKernel(intersectionKernel, cl::NullRange, globalRange);
+        queue.enqueueNDRangeKernel(raytracingKernel, cl::NullRange, globalRange);
+    }
     
-    queue.enqueueNDRangeKernel(filterKernel, cl::NullRange, globalRange);
+    queue.enqueueNDRangeKernel(correctionKernel, cl::NullRange, globalRange);
 
     queue.finish();
 

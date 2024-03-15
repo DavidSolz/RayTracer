@@ -54,7 +54,7 @@ Color ThreadedShader::ComputeColor(struct Ray& ray, unsigned int& seed) {
     for(int i = 0; i < 2; ++i){
         Sample sample = traverse(context, ray);
 
-        if(sample.distance == INFINITY){
+        if( sample.objectID < 0){
             //accumulatedColor += GetSkyBoxColor(intensity, ray);
             break;
         }
@@ -133,8 +133,8 @@ void ThreadedShader::Render(Color * _pixels){
 
 Sample ThreadedShader::LinearTraverse(RenderingContext * context, const Ray & ray){
 
-    struct Sample sample = {0};
-    sample.distance = INFINITY;
+    struct Sample sample = {};
+    float minLength = INFINITY;
     float length = -1.0f;
     float u,v;
 
@@ -150,9 +150,9 @@ Sample ThreadedShader::LinearTraverse(RenderingContext * context, const Ray & ra
             //length = IntersectSphere(ray, &object);
         }
             
-        if( (length < sample.distance) && (length > 0.01f) ){
+        if( (length < minLength) && (length > 0.01f) ){
 
-            sample.distance = length ;
+            minLength = length ;
             sample.point = ray.origin + scaledDir * length ;
             sample.objectID = id;
                 
@@ -213,8 +213,8 @@ float ThreadedShader::IntersectTriangle(const Ray & ray, const Object & object, 
 
 Sample ThreadedShader::BVHTraverse(RenderingContext * context, const Ray & ray){
 
-    struct Sample sample = {0};
-    sample.distance = INFINITY;
+    struct Sample sample = {};
+    float minLength = INFINITY;
     float length = -1.0f;
     float u, v;
 
@@ -244,9 +244,9 @@ Sample ThreadedShader::BVHTraverse(RenderingContext * context, const Ray & ray){
                 //length = IntersectSphere(ray, &object);
             }
             
-            if( (length < sample.distance) && (length > 0.01f) ){
+            if( (length < minLength) && (length > 0.01f) ){
 
-                sample.distance = length ;
+                minLength = length ;
                 sample.point = ray.origin + scaledDir * length ;
                 sample.objectID = box.objectID;
                 

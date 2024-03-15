@@ -19,7 +19,7 @@ private:
     cl::Kernel transferKernel;
     cl::Kernel intersectionKernel;
     cl::Kernel raytracingKernel;
-    cl::Kernel filterKernel;
+    cl::Kernel correctionKernel;
 
     std::vector< LocalBuffer* > buffers;
 

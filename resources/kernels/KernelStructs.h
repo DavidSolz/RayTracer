@@ -50,10 +50,9 @@ struct Object{
 } __attribute((aligned(128)));
 
 struct Sample{
-    float length;
     float3 point;
-    unsigned int objectID;
-};
+    int objectID;
+} __attribute((aligned(32)));
 
 struct Camera{
     float3 front;
@@ -93,6 +92,9 @@ struct Resources{
 
     global const struct BoundingBox * boxes;
     global struct Ray * rays;
+
+    global float4 * light;
+    global float4 * accumulator;
 
     global float4 * colors;
     global struct Sample * samples;

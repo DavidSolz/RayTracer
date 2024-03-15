@@ -24,6 +24,7 @@ kernel void Traverse(global struct Resources * resources){
     int numObject = localResources.numObject;
 
     struct Sample sample = {0};
+    sample.objectID = -1;
     float minLength = INFINITY;
     float length = -1.0f;
 
@@ -42,7 +43,7 @@ kernel void Traverse(global struct Resources * resources){
         int leftChildIndex = box.leftID;
         int rightChildIndex = box.rightID;
 
-        if ( box.objectID != -1 ) {
+        if ( box.objectID >= 0 ) {
 
             struct Object object = objects[ box.objectID ];
 

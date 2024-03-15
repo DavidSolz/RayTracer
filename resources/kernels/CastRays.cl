@@ -51,5 +51,6 @@ kernel void CastRays(
     ray.direction = normalize(pixelPosition - ray.origin);
 
     localResources.rays[index] = ray;
-
+    localResources.light[index] = 1.0f;
+    localResources.accumulator[index] = 0.0f;
 }

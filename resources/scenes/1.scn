@@ -5,12 +5,12 @@ mtllib mat.mtl
 scene
 {
 
-disk
+
+sphere
 {
-    position 500 200 500
-    normal 0 1 0
-    radius 1000
-    material Sand
+    position 500 500 240
+    radius 1100
+    material Glass
 }
 
 disk
