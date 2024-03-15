@@ -150,7 +150,7 @@ void CLShader::Render(Color * _pixels){
     
     queue.enqueueNDRangeKernel(rayGenerationKernel, cl::NullRange, globalRange);
 
-    for(int i=0; i<4; ++i){
+    for(int i=0; i < 4; ++i){
         queue.enqueueNDRangeKernel(intersectionKernel, cl::NullRange, globalRange);
         queue.enqueueNDRangeKernel(raytracingKernel, cl::NullRange, globalRange);
     }
