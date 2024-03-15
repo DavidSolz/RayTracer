@@ -5,15 +5,11 @@ file_path = 'Performance_log.csv'
 data = []
 
 with open(file_path, 'r') as file:
-
     next(file)
-    next(file)
-
+    
     for line in file:
         fps, frametime = map(float, line.strip().split(';'))
         data.append((fps, frametime))
-
-data = data[1::]
 
 fps, frametime = zip(*data)
 

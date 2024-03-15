@@ -33,10 +33,10 @@ void PerformanceMonitor::GatherInformation(){
 void PerformanceMonitor::CalculateMean(){
     PerformanceSample& mean = statistics.mean;
 
-    uint32_t samplesCount = samples.size()-1;
+    uint32_t samplesCount = samples.size();
     samplesCount = std::max((uint32_t)1, samplesCount);
 
-    for(uint32_t id = 1; id < samples.size(); ++id){
+    for(uint32_t id = 0; id < samples.size(); ++id){
         mean.fpsCount += samples[id].fpsCount;
         mean.frameTime += samples[id].frameTime;
     }
@@ -48,10 +48,10 @@ void PerformanceMonitor::CalculateMean(){
 void PerformanceMonitor::CalculateVariance(){
     PerformanceSample& variance = statistics.variance;
 
-    uint32_t samplesCount = samples.size()-1;
+    uint32_t samplesCount = samples.size();
     samplesCount = std::max((uint32_t)1, samplesCount);
 
-    for(uint32_t id = 1; id < samples.size(); ++id){
+    for(uint32_t id = 0; id < samples.size(); ++id){
         float deltaFps =  ( statistics.mean.fpsCount - samples[id].fpsCount );
         float deltaFrametime =  ( statistics.mean.frameTime - samples[id].frameTime );
 

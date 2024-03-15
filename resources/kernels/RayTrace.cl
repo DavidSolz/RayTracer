@@ -52,16 +52,89 @@ float3 Refract(
 
     float eta = n1 / n2;
     float cosI = -dot(incident, normal);
-    float cosT = 1.0f - eta*eta *(1.0f - cosI*cosI);
+    float cosT =  1.0f - eta * eta * (1.0f - cosI*cosI);
 
     if( cosT < 0.0f )
         return Reflect(incident, normal);
 
     float3 perpendicularRay =  eta * incident;
-    float3 parallelRay = eta * cosI - sqrt(fmax(0.0f, 1.0f - cosT)) * normal;
+    float3 parallelRay = eta * cosI - sqrt(1.0f - cosT ) * normal;
 
     return normalize(perpendicularRay + parallelRay);
 }
+
+float SchlickFresnel(const float value){
+    float temp = 1.0f - value;
+    return temp * temp * temp * temp * temp;
+}
+
+float GTR(const float cosHalf, const float factor){
+
+    if(factor >= 1.0f)
+        return ONE_OVER_PI;
+
+    float factorSqr = factor * factor;
+    float temp = 1.0f + ( factorSqr - 1.0f)*cosHalf*cosHalf;
+    return ONE_OVER_PI * (factorSqr - 1.0f)/(log(factorSqr)*temp);
+}
+
+
+float4 MetallicBRDF(const float cosView, const float cosLight, const float cosHalf, const float cosLightHalf, const struct Material material){
+
+    float F0 = (material.indexOfRefraction - 1.0f)/ (material.indexOfRefraction + 1.0f);
+    F0*=F0;
+
+    float4 diffuse = material.albedo * ONE_OVER_PI;
+
+    float alpha = material.specularIntensity;
+
+    float4 specular = ONE_OVER_2_PI * alpha + 2.0f/ (4.0f * pow(fmax(cosHalf, 1e-6f),alpha));
+
+    float fresnel = F0 + (1.0f - F0) * SchlickFresnel(cosLightHalf);
+
+    return diffuse + specular*fresnel;
+}
+
+
+float4 DielectricBRDF(const float cosView, const float cosLight, const float cosHalf, const struct Material material){
+
+    float4 lambert = material.albedo * ONE_OVER_PI;
+    
+    float FL = pow(1.0f - cosLight, 5);
+    float FV = pow(1.0f - cosView, 5);
+
+    float cosD = cosHalf * cosHalf;
+
+    float R = 2.0f * material.roughness * cosD;
+
+    float4 retro = lambert * R * (FL + FV + FL*FV*(R - 1.0f));
+
+    return lambert * (1.0f - 0.5f * FL) * (1.0f - 0.5f * FV) + retro;
+}
+
+float4 SpecularBRDF(const float cosView, const float cosLight, const float cosHalf, const float cosLightHalf, const struct Material material){
+
+    float aspect = sqrt(1.0f - 0.9f * material.anisotropy);
+
+    float roughnessSqr = material.roughness * material.roughness;
+
+    float alphaX = roughnessSqr / aspect;
+    float alphaY = roughnessSqr * aspect;
+
+    // TODO 
+
+    float4 anisotropy = ONE_OVER_PI * 1.0f/(alphaX * alphaY);
+
+    return anisotropy;
+}
+
+float4 Sheen(const float cosLightHalf, const struct Material material){
+    
+    float fresnel = SchlickFresnel(cosLightHalf);
+    
+    return fresnel * material.tint * material.tintWeight;
+}
+
 
 float4 ComputeColorSample(
     const struct Resources resources, 
@@ -89,26 +162,38 @@ float4 ComputeColorSample(
     struct Texture info = infos[ material.textureID ];
         
     float3 normal = object.normal;
+    float3 tangent = normalize(cross(normal, camera.up));
+    float3 bitangent = normalize(cross(normal, tangent));
 
     float3 lightVector = normalize(-ray->direction);
     float3 viewVector = normalize(camera.position - sample.point);
 
     float3 diffusionDirection = DiffuseReflect(normal, seed);
     float3 reflectionDirection = Reflect(ray->direction, normal);
-    float3 refractionDirecton = Refract(-viewVector, normal, 1.0f, material.indexOfRefraction);
+    float3 refractionDirecton = Refract(lightVector, normal, 1.45f, material.indexOfRefraction);
     float3 halfVector = normalize(normal + reflectionDirection);
 
     float3 direction = mix(diffusionDirection, reflectionDirection, material.metallic);
     ray->direction = normalize( mix(direction, refractionDirecton, material.transparency) );
 
-    float cosLight = dot(normal, lightVector);
-    float cosView = dot(normal, viewVector);
+    float cosLight = fmax(0.0f, dot(normal, lightVector));
+    float cosView = fmax(0.0f, dot(normal, viewVector));
     float cosHalf = dot(normal, halfVector);
+    float cosLightHalf = fmax(0.0f, dot(lightVector, halfVector));
 
     float4 emission = material.albedo * material.emmissionIntensity;
+    float4 dielectric = DielectricBRDF(cosView, cosLight, cosHalf, material);
+    float4 metallic = MetallicBRDF(cosView, cosLight, cosHalf, cosLightHalf, material);
+    float4 specular = SpecularBRDF(cosView, cosLight, cosHalf, cosLightHalf, material);
+    // TODO : float4 clearcoat;
+    float4 sheen = Sheen(cosLightHalf, material);
+
     float4 color = GetTexturePixel(textureData, &object, info, sample.point, normal);
 
-    float4 colorSample = emission * (*lightSample); 
+    float4 ambient = mix(dielectric, specular, material.transparency);
+    ambient = mix(ambient, metallic, material.metallic);
+
+    float4 colorSample = (emission + ambient + sheen /* + clearcoat */) * (*lightSample) * color; 
     (*lightSample) *= 2.0f * cosLight * material.albedo * color; 
 
     return colorSample;
