@@ -13,6 +13,14 @@ disk
     material Light
 }
 
+disk
+{
+    position 500 300 500
+    normal 0 1 0
+    radius 3000
+    material Sand
+}
+
 mesh dragon.obj
 
 }

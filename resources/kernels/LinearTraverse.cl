@@ -45,7 +45,7 @@ kernel void Traverse(global struct Resources * resources){
             minLength = length ;
             sample.point = ray.origin + scaledDir * length ;
             sample.objectID = id;
-                
+
         }
 
     }
