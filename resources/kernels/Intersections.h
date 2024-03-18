@@ -134,7 +134,7 @@ float IntersectTriangle(const struct Ray * ray, const struct Object * object) {
     float3 axis = cross(ray->direction, e2);
     float det = dot(e1, axis);
 
-    if( fabs(det) < 1e-6f)
+    if( det < 1e-6f)
         return -1.0f;
 
     float inverseDeterminant = 1.0f / det;
