@@ -2,7 +2,9 @@
 
 void kernel ImageCorrection(
     write_only image2d_t image,
-    global struct Resources * resources, 
+    global struct Resources * resources,
+    global float4 * accumulator,
+    global float4 * colors,
     const int numFrames,
     const float gamma
     ){
@@ -18,9 +20,9 @@ void kernel ImageCorrection(
     float scale = 1.0f / (1.0f + numFrames);
     int index = coord.y * width + coord.x;
 
-    localResources.colors[index] = mix(localResources.colors[index], localResources.accumulator[index], scale);
-    float4 color = localResources.colors[index];
-    
+    colors[index] = mix(colors[index], accumulator[index], scale);
+    float4 color = colors[index];
+
     color = pow(color, gamma);
 
     write_imagef(image, coord, color);

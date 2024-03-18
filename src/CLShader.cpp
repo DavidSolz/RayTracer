@@ -74,7 +74,7 @@ CLShader::CLShader(RenderingContext * _context) : ComputeShader(_context){
 
     while( context->width % localX != 0)
         localX--;
-    
+
     while( context->height % localY != 0)
         localY--;
 
@@ -98,63 +98,69 @@ CLShader::CLShader(RenderingContext * _context) : ComputeShader(_context){
         context->loggingService.Write(MessageType::INFO, "Enabling linear traversal kernel");
         intersectionKernel = ComputeEnvironment::CreateKernel(deviceContext, device, "resources/kernels/LinearTraverse.cl", "Traverse");
     }
-    
+
     transferKernel.setArg(0, resources->buffer);
     transferKernel.setArg(1, objects->buffer);
     transferKernel.setArg(2, materials->buffer);
     transferKernel.setArg(3, textureInfo->buffer);
     transferKernel.setArg(4, textureData->buffer);
     transferKernel.setArg(5, boxBuffer->buffer);
-    transferKernel.setArg(6, rayBuffer->buffer);
-    transferKernel.setArg(7, sampleBuffer->buffer);
-    transferKernel.setArg(8, lightBuffer->buffer);
-    transferKernel.setArg(9, accumulatorBuffer->buffer);
-    transferKernel.setArg(10, colorsBuffer->buffer);
-    transferKernel.setArg(11, numObjects);
-    transferKernel.setArg(12, numMaterials);
-    transferKernel.setArg(13, sizeof(uint32_t), &context->width);
-    transferKernel.setArg(14, sizeof(uint32_t), &context->height);
+    transferKernel.setArg(6, numObjects);
+    transferKernel.setArg(7, numMaterials);
+    transferKernel.setArg(8, sizeof(uint32_t), &context->width);
+    transferKernel.setArg(9, sizeof(uint32_t), &context->height);
 
     intersectionKernel.setArg(0, resources->buffer);
+    intersectionKernel.setArg(1, rayBuffer->buffer);
+    intersectionKernel.setArg(2, sampleBuffer->buffer);
 
     rayGenerationKernel.setArg(0, resources->buffer);
-    rayGenerationKernel.setArg(1, sizeof(Camera), &context->camera);
-    rayGenerationKernel.setArg(2, sizeof(int), &context->frameCounter);
+    rayGenerationKernel.setArg(1, rayBuffer->buffer);
+    rayGenerationKernel.setArg(2, lightBuffer->buffer);
+    rayGenerationKernel.setArg(3, accumulatorBuffer->buffer);
+    rayGenerationKernel.setArg(4, sizeof(Camera), &context->camera);
+    rayGenerationKernel.setArg(5, sizeof(uint32_t), &context->frameCounter);
 
     raytracingKernel.setArg(0, resources->buffer);
-    raytracingKernel.setArg(1, sizeof(Camera), &context->camera);
-    raytracingKernel.setArg(2, sizeof(int), &context->frameCounter);
+    raytracingKernel.setArg(1, rayBuffer->buffer);
+    raytracingKernel.setArg(2, sampleBuffer->buffer);
+    raytracingKernel.setArg(3, lightBuffer->buffer);
+    raytracingKernel.setArg(4, accumulatorBuffer->buffer);
+    raytracingKernel.setArg(5, sizeof(Camera), &context->camera);
+    raytracingKernel.setArg(6, sizeof(uint32_t), &context->frameCounter);
 
     context->loggingService.Write(MessageType::INFO, "Transfering data to accelerator");
-    queue.enqueueNDRangeKernel(transferKernel, cl::NullRange, cl::NDRange(1), cl::NDRange(1));    
+    queue.enqueueNDRangeKernel(transferKernel, cl::NullRange, cl::NDRange(1), cl::NDRange(1));
     queue.finish();
 
     correctionKernel = ComputeEnvironment::CreateKernel(deviceContext, device, "resources/kernels/ImageCorrection.cl", "ImageCorrection");
     correctionKernel.setArg(0, sizeof(cl_mem), &textureBuffer);
     correctionKernel.setArg(1, resources->buffer);
-    correctionKernel.setArg(2, sizeof(int), &context->frameCounter);
-    correctionKernel.setArg(3, sizeof(float), &context->gamma);
+    correctionKernel.setArg(2, accumulatorBuffer->buffer);
+    correctionKernel.setArg(3, colorsBuffer->buffer);
+    correctionKernel.setArg(4, sizeof(uint32_t), &context->frameCounter);
+    correctionKernel.setArg(5, sizeof(float), &context->gamma);
 
-    
+
 }
 
 void CLShader::Render(Color * _pixels){
 
-    rayGenerationKernel.setArg(1, sizeof(Camera), &context->camera);
-    rayGenerationKernel.setArg(2, sizeof(int), &context->frameCounter);
+    rayGenerationKernel.setArg(4, sizeof(Camera), &context->camera);
+    rayGenerationKernel.setArg(5, sizeof(uint32_t), &context->frameCounter);
 
-    raytracingKernel.setArg(1, sizeof(Camera), &context->camera);
-    raytracingKernel.setArg(2, sizeof(int), &context->frameCounter);
-    
-    correctionKernel.setArg(2, sizeof(int), &context->frameCounter);
-    
+    raytracingKernel.setArg(5, sizeof(Camera), &context->camera);
+    raytracingKernel.setArg(6, sizeof(uint32_t), &context->frameCounter);
+
+    correctionKernel.setArg(4, sizeof(uint32_t), &context->frameCounter);
+
     queue.enqueueNDRangeKernel(rayGenerationKernel, cl::NullRange, globalRange);
 
     for(int i=0; i < 4; ++i){
         queue.enqueueNDRangeKernel(intersectionKernel, cl::NullRange, globalRange);
         queue.enqueueNDRangeKernel(raytracingKernel, cl::NullRange, globalRange);
     }
-    
+
     queue.enqueueNDRangeKernel(correctionKernel, cl::NullRange, globalRange);
 
     queue.finish();

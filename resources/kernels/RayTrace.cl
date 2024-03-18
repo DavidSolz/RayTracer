@@ -44,9 +44,9 @@ float3 DiffuseReflect(const float3 normal, uint * seed){
 }
 
 float3 Refract(
-    const float3 incident, 
-    float3 normal, 
-    const float n1, 
+    const float3 incident,
+    float3 normal,
+    const float n1,
     const float n2
     ){
 
@@ -88,7 +88,7 @@ float4 MetallicBRDF(const float cosView, const float cosLight, const float cosHa
 float4 DielectricBRDF(const float cosView, const float cosLight, const float cosHalf, const float cosReflection, const struct Material material){
 
     float4 lambert = material.albedo * ONE_OVER_PI;
-    
+
     float FL = pow(1.0f - cosLight, 5);
     float FV = pow(1.0f - cosView, 5);
 
@@ -134,7 +134,7 @@ float4 SpecularBRDF(const float cosView, const float cosLight, const float cosHa
     float denominator = factorA * factorA + factorB * factorB + cosHalf * cosHalf;
 
     float D = ONE_OVER_PI * (1.0f / (alphaX * alphaY * denominator * denominator));
-    
+
     float fresnel = SchlickFresnel(0.0f, cosHalf);
 
     float4 C = mix( material.specularIntensity, material.albedo, material.metallic);
@@ -148,17 +148,17 @@ float4 SpecularBRDF(const float cosView, const float cosLight, const float cosHa
 }
 
 float4 Sheen(const float cosLightHalf, const struct Material material){
-    
+
     float fresnel = SchlickFresnel(0.0f, cosLightHalf);
-    
+
     return fresnel * material.tint * material.tintWeight;
 }
 
 
 float4 ComputeColorSample(
-    const struct Resources resources, 
-    struct Ray * ray, 
-    const struct Camera camera, 
+    const struct Resources resources,
+    struct Ray * ray,
+    const struct Camera camera,
     const struct Sample sample,
     float4 * lightSample,
     uint * seed
@@ -172,14 +172,14 @@ float4 ComputeColorSample(
     const float4 skyColor = (float4)(0.529f, 0.807f, 0.921f, 1.0f);
 
     if( sample.objectID < 0 )
-        return *lightSample * skyColor;
+        return 0.0f;//*lightSample * skyColor;
 
     ray->origin = sample.point;
 
     struct Object object = objects[ sample.objectID ];
     struct Material material =  materials[ object.materialID ];
     struct Texture info = infos[ material.textureID ];
-        
+
     float3 normal = object.normal;
     float3 tangent = normalize(cross(normal, camera.up));
     float3 bitangent = normalize(cross(normal, tangent));
@@ -212,8 +212,8 @@ float4 ComputeColorSample(
     float4 ambient = mix(dielectric, specular, material.transparency);
     ambient = mix(ambient, metallic, material.metallic);
 
-    float4 colorSample = (emission + ambient + sheen /* + clearcoat */) * (*lightSample) * color; 
-    (*lightSample) *= 2.0f * cosLight * material.albedo; 
+    float4 colorSample = (emission + ambient + sheen /* + clearcoat */) * (*lightSample) * color;
+    (*lightSample) *= 2.0f * cosLight * material.albedo;
 
     return colorSample;
 }
@@ -221,8 +221,12 @@ float4 ComputeColorSample(
 // Main
 
 void kernel RayTrace(
-    global struct Resources * resources, 
-    const struct Camera camera, 
+    global struct Resources * resources,
+    global struct Ray * rays,
+    global struct Sample * samples,
+    global float4 * light,
+    global float4 * accumulator,
+    const struct Camera camera,
     const int numFrames
     ){
 
@@ -238,13 +242,13 @@ void kernel RayTrace(
     uint index = y * width + x;
     uint seed = (numFrames<<16) ^ (numFrames >>13) + index;
 
-    struct Ray ray = localResources.rays[index];
-    struct Sample sample = localResources.samples[index];
-    float4 lightSample = localResources.light[index];
+    struct Ray ray = rays[index];
+    struct Sample sample = samples[index];
+    float4 lightSample = light[index];
 
     float4 colorSample = ComputeColorSample(localResources, &ray, camera, sample, &lightSample, &seed);
 
-    localResources.rays[index] = ray;
-    localResources.light[index] = lightSample;
-    localResources.accumulator[index] += colorSample;
+    rays[index] = ray;
+    light[index] = lightSample;
+    accumulator[index] += colorSample;
 }

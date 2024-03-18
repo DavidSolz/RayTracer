@@ -3,7 +3,11 @@
 
 #define STACK_SIZE 32
 
-kernel void Traverse(global struct Resources * resources){
+kernel void Traverse(
+    global struct Resources * resources,
+    global struct Ray * rays,
+    global struct Sample * samples
+    ){
 
     local struct Resources localResources;
     localResources = *resources;
@@ -16,7 +20,7 @@ kernel void Traverse(global struct Resources * resources){
 
     uint index = y * width + x;
 
-    struct Ray ray = localResources.rays[index];
+    struct Ray ray = rays[index];
 
     global const struct BoundingBox * boxes = localResources.boxes;
 
@@ -39,7 +43,7 @@ kernel void Traverse(global struct Resources * resources){
         }else{
             length = IntersectSphere(&ray, &object);
         }
-            
+
         if( (length < minLength) && (length > 0.01f) ){
 
             minLength = length ;
@@ -50,5 +54,5 @@ kernel void Traverse(global struct Resources * resources){
 
     }
 
-    localResources.samples[index] = sample;
+    samples[index] = sample;
 }

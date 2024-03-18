@@ -91,13 +91,6 @@ struct Resources{
     global const unsigned int * textureData;
 
     global const struct BoundingBox * boxes;
-    global struct Ray * rays;
-
-    global float4 * light;
-    global float4 * accumulator;
-
-    global float4 * colors;
-    global struct Sample * samples;
 
     int width;
     int height;

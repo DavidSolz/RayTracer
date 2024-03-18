@@ -6,7 +6,8 @@ data = []
 
 with open(file_path, 'r') as file:
     next(file)
-    
+    next(file)
+
     for line in file:
         fps, frametime = map(float, line.strip().split(';'))
         data.append((fps, frametime))

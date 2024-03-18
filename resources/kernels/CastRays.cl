@@ -20,8 +20,11 @@ float3 RandomDirection(uint * seed){
 }
 
 kernel void CastRays(
-    global struct Resources * resources, 
-    const struct Camera camera, 
+    global struct Resources * resources,
+    global struct Ray * rays,
+    global float4 * light,
+    global float4 * accumulator,
+    const struct Camera camera,
     const int numFrames
     ){
 
@@ -50,7 +53,7 @@ kernel void CastRays(
     ray.origin = camera.position;
     ray.direction = normalize(pixelPosition - ray.origin);
 
-    localResources.rays[index] = ray;
-    localResources.light[index] = 1.0f;
-    localResources.accumulator[index] = 0.0f;
+    rays[index] = ray;
+    light[index] = 1.0f;
+    accumulator[index] = 0.0f;
 }
