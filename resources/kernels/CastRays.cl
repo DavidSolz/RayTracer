@@ -29,16 +29,21 @@ kernel void CastRays(
     ){
 
     local struct Resources localResources;
-
     localResources = *resources;
 
-    uint x = get_global_id(0);
-    uint y = get_global_id(1);
+    uint idx = get_global_id(0);
 
     uint width = localResources.width;
     uint height = localResources.height;
 
-    uint index = y * width + x;
+    if( idx >= width * height)
+        return;
+
+    uint index = idx;
+
+    uint x = idx % width;
+    uint y = idx / width;
+
     uint seed = (numFrames<<16) ^ (numFrames >>13) + index;
 
     float3 offset = RandomDirection(&seed);

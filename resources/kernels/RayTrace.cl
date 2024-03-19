@@ -233,13 +233,15 @@ void kernel RayTrace(
     local struct Resources localResources;
     localResources = *resources;
 
-    uint x = get_global_id(0);
-    uint y = get_global_id(1);
+    uint idx = get_global_id(0);
 
     uint width = get_global_size(0);
     uint height = get_global_size(1);
 
-    uint index = y * width + x;
+    if( idx >= width * height)
+        return;
+
+    uint index = idx;
     uint seed = (numFrames<<16) ^ (numFrames >>13) + index;
 
     struct Ray ray = rays[index];

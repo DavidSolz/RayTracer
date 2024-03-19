@@ -63,26 +63,11 @@ CLShader::CLShader(RenderingContext * _context) : ComputeShader(_context){
     size_t maxWorkItemSizes[3];
     clGetDeviceInfo(device(), CL_DEVICE_MAX_WORK_ITEM_SIZES, sizeof(size_t) * 3, &maxWorkItemSizes, NULL);
 
-    size_t localX, localY;
-    size_t globalX, globalY;
+    size_t localSize;
+    size_t globalSize;
 
-    localX = std::min(maxWorkItemSizes[0], (size_t)context->width);
-    localY = std::min(maxWorkItemSizes[1], (size_t)context->height);
-
-    localX = std::max(localX, static_cast<size_t>(1));
-    localY = std::max(localY, static_cast<size_t>(1));
-
-    while( context->width % localX != 0)
-        localX--;
-
-    while( context->height % localY != 0)
-        localY--;
-
-    globalX = ceil(context->width / (float)localX) * localX;
-    globalY = ceil(context->height / (float)localY) * localY;
-
-    globalRange = cl::NDRange(globalX, globalY);
-    localRange = cl::NDRange(localX, localY);
+    globalRange = cl::NDRange(context->width * context->height);
+    localRange = cl::NDRange(16);
 
     int numObjects = context->objects.size();
     int numMaterials = context->materials.size();
@@ -154,14 +139,14 @@ void CLShader::Render(Color * _pixels){
 
     correctionKernel.setArg(4, sizeof(uint32_t), &context->frameCounter);
 
-    queue.enqueueNDRangeKernel(rayGenerationKernel, cl::NullRange, globalRange);
+    queue.enqueueNDRangeKernel(rayGenerationKernel, cl::NullRange, globalRange, localRange);
 
     for(int i=0; i < 4; ++i){
-        queue.enqueueNDRangeKernel(intersectionKernel, cl::NullRange, globalRange);
-        queue.enqueueNDRangeKernel(raytracingKernel, cl::NullRange, globalRange);
+        queue.enqueueNDRangeKernel(intersectionKernel, cl::NullRange, globalRange, localRange);
+        queue.enqueueNDRangeKernel(raytracingKernel, cl::NullRange, globalRange, localRange);
     }
 
-    queue.enqueueNDRangeKernel(correctionKernel, cl::NullRange, globalRange);
+    queue.enqueueNDRangeKernel(correctionKernel, cl::NullRange, globalRange, localRange);
 
     queue.finish();
 

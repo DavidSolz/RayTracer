@@ -12,15 +12,20 @@ void kernel ImageCorrection(
     local struct Resources localResources;
     localResources = *resources;
 
-    int2 coord = (int2)(get_global_id(0), get_global_id(1));
+    int idx = get_global_id(0);
 
     int width = localResources.width;
     int height = localResources.height;
 
-    float scale = 1.0f / (1.0f + numFrames);
-    int index = coord.y * width + coord.x;
+    if( idx >= width * height)
+        return;
 
-    colors[index] = mix(colors[index], accumulator[index], scale);
+    int2 coord = (int2)(idx%width, idx/width);
+
+    float scale = 1.0f / (1.0f + numFrames);
+    int index = idx;
+
+    colors[index] =  mix(colors[index], accumulator[index], scale);
     float4 color = colors[index];
 
     color = pow(color, gamma);
