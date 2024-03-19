@@ -1,12 +1,6 @@
 
 #include "resources/kernels/KernelStructs.h"
 #include "resources/kernels/ColorManipulation.h"
-#include "resources/kernels/Intersections.h"
-
-// Defines
-
-#define NUM_BOUNCES 8
-#define STACK_SIZE 32
 
 float Rand(uint * seed){
     *seed = *seed * 747796405u + 2891336453u;
@@ -169,11 +163,6 @@ float4 ComputeColorSample(
     global const struct Object * objects = resources.objects;
     global const struct Texture * infos = resources.textureInfo;
 
-    const float4 skyColor = (float4)(0.529f, 0.807f, 0.921f, 1.0f);
-
-    if( sample.objectID < 0 )
-        return 0.0f;//*lightSample * skyColor;
-
     ray->origin = sample.point;
 
     struct Object object = objects[ sample.objectID ];
@@ -201,7 +190,7 @@ float4 ComputeColorSample(
     float cosReflection = dot(normal, ray->direction);
     float cosLightHalf = dot(lightVector, halfVector);
 
-    float4 emission = material.albedo * material.emmissionIntensity * (cosLight > 0.0f);
+    float4 emission = material.albedo * material.emmissionIntensity;
     float4 dielectric = DielectricBRDF(cosView, cosLight, cosHalf, cosReflection, material);
     float4 metallic = MetallicBRDF(cosView, cosLight, cosHalf, cosLightHalf, material);
     float4 specular = SpecularBRDF(cosView, cosLight, cosHalf, cosLightHalf, lightVector, viewVector, halfVector, tangent, bitangent, material);
@@ -212,8 +201,14 @@ float4 ComputeColorSample(
     float4 ambient = mix(dielectric, specular, material.transparency);
     ambient = mix(ambient, metallic, material.metallic);
 
-    float4 colorSample = (emission + ambient + sheen /* + clearcoat */) * (*lightSample) * color;
-    (*lightSample) *= 2.0f * cosLight * material.albedo;
+    float4 colorSample = 0.0f;
+
+    float isEmissive = (dot(emission.xyz, (float3)(1.0f, 1.0f, 1.0f)) > 0.0f);
+    colorSample += *lightSample * emission * isEmissive;
+    
+
+    colorSample += (ambient + sheen /* + clearcoat */) * (*lightSample);
+    (*lightSample) *= 2.0f * cosLight * material.albedo * color;
 
     return colorSample;
 }
@@ -236,14 +231,15 @@ void kernel RayTrace(
     uint x = get_global_id(0);
     uint y = get_global_id(1);
 
-    uint width = get_global_size(0);
-    uint height = get_global_size(1);
-
-    uint index = y * width + x;
+    uint index = y * localResources.width + x;
     uint seed = (numFrames<<16) ^ (numFrames >>13) + index;
 
-    struct Ray ray = rays[index];
     struct Sample sample = samples[index];
+
+    if( sample.objectID < 0)
+        return;
+    
+    struct Ray ray = rays[index];
     float4 lightSample = light[index];
 
     float4 colorSample = ComputeColorSample(localResources, &ray, camera, sample, &lightSample, &seed);

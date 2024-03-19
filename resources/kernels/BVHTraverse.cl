@@ -12,6 +12,11 @@ kernel void Traverse(
     local struct Resources localResources;
     localResources = *resources;
 
+    global const struct BoundingBox * boxes = localResources.boxes;
+    global const struct Object * objects = localResources.objects;
+
+    int numObject = localResources.numObject;
+
     uint x = get_global_id(0);
     uint y = get_global_id(1);
 
@@ -22,11 +27,6 @@ kernel void Traverse(
 
     struct Ray ray = rays[index];
 
-    global const struct BoundingBox * boxes = localResources.boxes;
-
-    global const struct Object * objects = localResources.objects;
-    int numObject = localResources.numObject;
-
     struct Sample sample = {0};
     sample.objectID = -1;
     float minLength = INFINITY;
@@ -34,8 +34,6 @@ kernel void Traverse(
 
     int stack[ STACK_SIZE ];
     int top = 0;
-
-    float3 scaledDir = ray.direction * EPSILON;
 
     stack[top++] = 0;
 
@@ -60,7 +58,7 @@ kernel void Traverse(
             if( (length < minLength) && (length > 0.01f) ){
 
                 minLength = length;
-                sample.point = ray.origin + scaledDir * length;
+                sample.point = ray.origin + ray.direction * length;
                 sample.objectID = box.objectID;
 
             }

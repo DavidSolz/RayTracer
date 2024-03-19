@@ -18,6 +18,7 @@ private:
     cl::Kernel rayGenerationKernel;
     cl::Kernel transferKernel;
     cl::Kernel intersectionKernel;
+    cl::Kernel depthKernel;
     cl::Kernel raytracingKernel;
     cl::Kernel correctionKernel;
 

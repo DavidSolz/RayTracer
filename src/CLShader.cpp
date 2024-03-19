@@ -60,6 +60,10 @@ CLShader::CLShader(RenderingContext * _context) : ComputeShader(_context){
     LocalBuffer * accumulatorBuffer = ComputeEnvironment::CreateBuffer(deviceContext, tempSize, CL_MEM_READ_WRITE);
     buffers.emplace_back(accumulatorBuffer);
 
+    tempSize = sizeof(float) * context->width * context->height;
+    LocalBuffer * depthBuffer = ComputeEnvironment::CreateBuffer(deviceContext, tempSize, CL_MEM_READ_WRITE);
+    buffers.emplace_back(depthBuffer);
+
     size_t maxWorkItemSizes[3];
     clGetDeviceInfo(device(), CL_DEVICE_MAX_WORK_ITEM_SIZES, sizeof(size_t) * 3, &maxWorkItemSizes, NULL);
 
@@ -118,8 +122,9 @@ CLShader::CLShader(RenderingContext * _context) : ComputeShader(_context){
     rayGenerationKernel.setArg(1, rayBuffer->buffer);
     rayGenerationKernel.setArg(2, lightBuffer->buffer);
     rayGenerationKernel.setArg(3, accumulatorBuffer->buffer);
-    rayGenerationKernel.setArg(4, sizeof(Camera), &context->camera);
-    rayGenerationKernel.setArg(5, sizeof(uint32_t), &context->frameCounter);
+    rayGenerationKernel.setArg(4, depthBuffer->buffer);
+    rayGenerationKernel.setArg(5, sizeof(Camera), &context->camera);
+    rayGenerationKernel.setArg(6, sizeof(uint32_t), &context->frameCounter);
 
     raytracingKernel.setArg(0, resources->buffer);
     raytracingKernel.setArg(1, rayBuffer->buffer);
@@ -140,14 +145,19 @@ CLShader::CLShader(RenderingContext * _context) : ComputeShader(_context){
     correctionKernel.setArg(3, colorsBuffer->buffer);
     correctionKernel.setArg(4, sizeof(uint32_t), &context->frameCounter);
     correctionKernel.setArg(5, sizeof(float), &context->gamma);
+    correctionKernel.setArg(6, depthBuffer->buffer);
 
-
+    depthKernel = ComputeEnvironment::CreateKernel(deviceContext, device, "resources/kernels/DepthMapping.cl", "DepthMapping");
+    depthKernel.setArg(0, resources->buffer);
+    depthKernel.setArg(1, rayBuffer->buffer);
+    depthKernel.setArg(2, sampleBuffer->buffer);
+    depthKernel.setArg(3, depthBuffer->buffer);
 }
 
 void CLShader::Render(Color * _pixels){
 
-    rayGenerationKernel.setArg(4, sizeof(Camera), &context->camera);
-    rayGenerationKernel.setArg(5, sizeof(uint32_t), &context->frameCounter);
+    rayGenerationKernel.setArg(5, sizeof(Camera), &context->camera);
+    rayGenerationKernel.setArg(6, sizeof(uint32_t), &context->frameCounter);
 
     raytracingKernel.setArg(5, sizeof(Camera), &context->camera);
     raytracingKernel.setArg(6, sizeof(uint32_t), &context->frameCounter);
@@ -156,8 +166,12 @@ void CLShader::Render(Color * _pixels){
 
     queue.enqueueNDRangeKernel(rayGenerationKernel, cl::NullRange, globalRange);
 
-    for(int i=0; i < 4; ++i){
+    for(int i = 0; i < 4; ++i){
         queue.enqueueNDRangeKernel(intersectionKernel, cl::NullRange, globalRange);
+
+        if( i==0 )
+            queue.enqueueNDRangeKernel(depthKernel, cl::NullRange, globalRange);
+
         queue.enqueueNDRangeKernel(raytracingKernel, cl::NullRange, globalRange);
     }
 

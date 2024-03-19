@@ -24,6 +24,7 @@ kernel void CastRays(
     global struct Ray * rays,
     global float4 * light,
     global float4 * accumulator,
+    global float * depth,
     const struct Camera camera,
     const int numFrames
     ){
@@ -44,8 +45,8 @@ kernel void CastRays(
     float3 offset = RandomDirection(&seed);
 
     float tanHalfFOV = tan(radians(camera.fov) * 0.5f);
-    float pixelXPos = (2.0f * (x + offset.x + 0.5f) / width - 1.0f) * camera.aspectRatio;
-    float pixelYPos = (2.0f * (y + offset.y + 0.5f) / height - 1.0f);
+    float pixelXPos = (2.0f * (x + offset.x) / width - 1.0f) * camera.aspectRatio;
+    float pixelYPos = (2.0f * (y + offset.y) / height - 1.0f);
 
     float3 pixelPosition = camera.position + (camera.front + ( camera.right * pixelXPos + camera.up * pixelYPos) * tanHalfFOV ) * camera.near;
 
@@ -54,6 +55,7 @@ kernel void CastRays(
     ray.direction = normalize(pixelPosition - ray.origin);
 
     rays[index] = ray;
-    light[index] = 1.0f;
-    accumulator[index] = 0.0f;
+    light[index] = (float4)(1.0f, 1.0f, 1.0f, 0.0f);
+    accumulator[index] = (float4)(0.0f, 0.0f, 0.0f, 0.0f);
+    depth[index] = INFINITY;
 }
