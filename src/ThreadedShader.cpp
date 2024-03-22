@@ -64,7 +64,7 @@ Color ThreadedShader::ComputeColor(struct Ray& ray, unsigned int& seed) {
 
         Material * material = &context->materials[object->materialID];
 
-        Vector3 normal = object->normal;
+        Vector3 normal = object->normals[0];
         Vector3 lightVector = ray.direction;
         Vector3 diffusionDirection = RandomReflection(normal, seed);
         Vector3 reflectionDirection = Reflect(ray.direction, normal);
@@ -182,9 +182,9 @@ bool ThreadedShader::AABBIntersection(const Ray & ray, const Vector3 & minimalPo
 float ThreadedShader::IntersectTriangle(const Ray & ray, const Object & object, float & u, float & v){
     const float epsilon = 1e-6f;
 
-    Vector3 A = object.verticeA;
-    Vector3 B = object.verticeB;
-    Vector3 C = object.verticeC;
+    Vector3 A = object.vertices[0];
+    Vector3 B = object.vertices[1];
+    Vector3 C = object.vertices[2];
 
     Vector3 e1 = (B - A);
     Vector3 e2 = (C - A);

@@ -23,11 +23,12 @@ Configurator::Configurator(RenderingContext * _context){
 void Configurator::Initialize(){
     Material material;
     
-    material.albedo = {1.0f, 1.0f, 1.0f, 1.0f};
-    material.tint = {1.0f,1.0f,1.0f,1.0f};
-    material.specular = {1.0f, 1.0f, 1.0f, 1.0f};
-    material.specularIntensity = 1.0f;
-    material.indexOfRefraction = 1.0f; 
+    material.albedo = {0.5f, 0.5f, 0.5f, 1.0f};
+    material.tint = {};
+    material.specular = {};
+    material.emmissionIntensity = 0.0f;
+    material.specularIntensity = 0.0f;
+    material.indexOfRefraction = 1.45f; 
     material.roughness = 0.5f;
     material.tintRoughness = 0.5f;
     material.textureID = 0;
@@ -39,6 +40,7 @@ void Configurator::Initialize(){
     info.width = 1;
     info.height = 1;
     info.offset = 0;
+    info.checksum = UINT32_MAX;
 
     context->textureInfo.emplace_back(info);
     context->textureData.emplace_back(UINT32_MAX);

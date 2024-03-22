@@ -8,13 +8,13 @@ MaterialBuilder::MaterialBuilder(const RenderingContext * _context){
 }       
 
 void MaterialBuilder::ClearMaterial(){
-    temporaryMaterial.albedo = {1.0f, 1.0f, 1.0f, 1.0f};
-    temporaryMaterial.tint = {1.0f,1.0f,1.0f,1.0f};
-    temporaryMaterial.specular = {1.0f, 1.0f, 1.0f, 1.0f};
+    temporaryMaterial.albedo = {0.5f, 0.5f, 0.5f, 1.0f};
+    temporaryMaterial.tint = {0};
+    temporaryMaterial.specular = {0};
     temporaryMaterial.transmissionFilter = {0};
-    temporaryMaterial.specularIntensity = 1.0f;
+    temporaryMaterial.specularIntensity = 0.0f;
     temporaryMaterial.transparency = 0.0f;
-    temporaryMaterial.indexOfRefraction = 1.0f; 
+    temporaryMaterial.indexOfRefraction = 1.45f; 
     temporaryMaterial.roughness = 0.5f;
     temporaryMaterial.metallic = 0.0f;
     temporaryMaterial.sheen = 0.0f;
@@ -29,6 +29,7 @@ void MaterialBuilder::ClearMaterial(){
     info.width = 1;
     info.height = 1;
     info.offset = 0;
+    info.checksum = UINT32_MAX;
 }
 
 MaterialBuilder * MaterialBuilder::SetBaseColor(const Color & _color){

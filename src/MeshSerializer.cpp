@@ -6,48 +6,65 @@ MeshSerializer::MeshSerializer(RenderingContext * _context, MaterialSerializer *
     this->currentMaterial = 0;
 }
 
-void MeshSerializer::ParseFace(const  std::vector<std::string> & tokens){
+int32_t FindAndCopy(char * buffer, const char * source, const char delimiter){
 
-    char * data = NULL;
-    char * token = NULL;
+    int32_t position = -1;
+    int32_t i = 0;
+
+    while ( source[i] != '\0' ) {
+
+        if (source[i] == delimiter) {
+            position = i;
+            break;
+        }
+
+        buffer[i] = source[i];
+        i++;
+    }
+
+    buffer[i] = '\0';
+
+    return position;
+}
+
+void MeshSerializer::ParseFace(const  std::vector<std::string> & tokens){
 
     Face face;
 
     face.materialID = currentMaterial;
 
+    char temp[ BUFFER_SIZE ];
+    int32_t pos = 0;
+    int32_t offset;
+
     for(uint32_t id = 1; id < 4; ++id){
+        const char * data = tokens[id].c_str();
 
-        data = new char[ tokens[id].size() + 1];
-        data[ tokens[id].size() ] = '\0';
+        offset = FindAndCopy(temp, data, '/');
+        face.indices[ id - 1 ] = std::atoi(temp) - 1;
 
-        memcpy(data, tokens[id].c_str(), tokens[id].size());
+        pos = offset + 1;
 
-        token = strtok(data, "/");
-
-        if (token == NULL) {
-            delete[] data;
+        if( data[ pos ] == '/' ){
+            FindAndCopy(temp, data+pos+1, '/');
+            face.normals[ id - 1 ] = std::atoi(temp) - 1;
+            face.uv[id - 1 ] = -1;
             continue;
         }
 
-        face.indices[id-1] = atoi(token) - 1;
+        offset = FindAndCopy(temp, data + pos, '/');
 
-        token = strtok(NULL, "/");
-
-        if(token != NULL){
-            face.texels[id - 1] = atoi(token) - 1;
-        }else{
-            face.texels[id - 1] = -1;
+        if( offset == -1 ){
+            face.normals[ id - 1 ] = std::atoi(temp) - 1;
+            face.uv[id - 1 ] = -1;
+            continue;
         }
 
-        token = strtok(NULL, "/");
+        face.uv[id - 1 ] = std::atoi(temp) - 1;
 
-        if(token != NULL){
-            face.normals[id - 1] = atoi(token) - 1;
-        }else{
-            face.normals[id - 1] = -1;
-        }
+        FindAndCopy(temp, data + pos + offset + 1, '/');
+        face.normals[ id - 1 ] = std::atoi(temp) - 1;
 
-        delete[] data;
     }
     
     faces.emplace_back(face);
@@ -91,25 +108,27 @@ void MeshSerializer::BuildTriangles(){
         uint32_t indiceB = faces[id].indices[1];
         uint32_t indiceC = faces[id].indices[2];
 
-        temp.verticeA = vertices[ indiceA ] * scale + offset;
-        temp.verticeB = vertices[ indiceB ] * scale + offset;
-        temp.verticeC = vertices[ indiceC ] * scale + offset;
+        temp.vertices[0] = vertices[ indiceA ] * scale + offset;
+        temp.vertices[1] = vertices[ indiceB ] * scale + offset;
+        temp.vertices[2] = vertices[ indiceC ] * scale + offset;
 
-        temp.position = (temp.verticeA + temp.verticeB + temp.verticeC)/3.0f;
-
-        Vector3 normal = normals[id];
+        temp.position = (temp.vertices[0] + temp.vertices[1] + temp.vertices[2])/3.0f;
 
         if( faces[id].normals[0] != -1){
 
-            Vector3 normalA = normals[ faces[id].normals[0] ];
-            Vector3 normalB = normals[ faces[id].normals[1] ];
-            Vector3 normalC = normals[ faces[id].normals[2] ];
+            temp.normals[0] = normals[ faces[id].normals[0] ];
+            temp.normals[1] = normals[ faces[id].normals[1] ];
+            temp.normals[2] = normals[ faces[id].normals[2] ];
 
-            normal = (normalA + normalB + normalC).Normalize();
+        }else{
+
+            Vector3 normal = normals[id];
+
+            temp.normals[0] = normal;
+            temp.normals[1] = normal;
+            temp.normals[2] = normal;
 
         }
-
-        temp.normal = normal;
 
         temp.materialID = faces[id].materialID;
 
@@ -148,6 +167,40 @@ void MeshSerializer::Parse(std::ifstream & file, const char * filename){
 
             }else{
                 fprintf(stderr, "Invalid vertice format.\n");
+                return;
+            }
+
+
+        }else if( tokens[0] == "vn"){
+
+            if(tokens.size() > 3){
+
+                tempVector.x = atof(tokens[1].c_str());
+                tempVector.y = atof(tokens[2].c_str());
+                tempVector.z = atof(tokens[3].c_str());
+
+                normals.emplace_back(tempVector);
+
+            }else{
+                fprintf(stderr, "Invalid normal format.\n");
+                return;
+            }
+
+
+        }else if( tokens[0] == "vt"){
+
+            if(tokens.size() > 2){
+
+                tempVector.x = atof(tokens[1].c_str());
+                tempVector.y = atof(tokens[2].c_str());
+
+                if(tokens.size() > 3)
+                    tempVector.z = atof(tokens[3].c_str());
+
+                uvs.emplace_back(tempVector);
+
+            }else{
+                fprintf(stderr, "Invalid texture coordinate format.\n");
                 return;
             }
 

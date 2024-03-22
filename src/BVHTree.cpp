@@ -25,9 +25,9 @@ BoundingBox BVHTree::CreateLeaf(const uint32_t & objectID){
 
     }else {
 
-        Vector3 A = object.verticeA;
-        Vector3 B = object.verticeB;
-        Vector3 C = object.verticeC;
+        Vector3 A = object.vertices[0];
+        Vector3 B = object.vertices[1];
+        Vector3 C = object.vertices[2];
 
         Vector3 min = Vector3::Minimal(A, B);
         min = Vector3::Minimal(min, C);
@@ -157,16 +157,15 @@ int32_t BVHTree::Insert(std::vector<int32_t> & ids, const int32_t & parentID, co
     int32_t currentNodeID = context->boxes.size();
 
     int32_t splitAxis = depth%3;
+    int32_t bestSplit = ids.size() >> 1;
 
     std::vector<Object> & objects = context->objects;
 
-    std::sort(ids.begin(), ids.end(),
+    std::nth_element(ids.begin(), ids.begin() + bestSplit, ids.end(),
         [splitAxis, &objects](const int32_t & a, const int32_t & b){
             return objects[a].position[splitAxis] < objects[b].position[splitAxis];
         }
     );
-
-    int32_t bestSplit = ids.size() >> 1;
 
     std::vector<int32_t> left(ids.begin(), ids.begin() + bestSplit);
     std::vector<int32_t> right(ids.begin() + bestSplit, ids.end());

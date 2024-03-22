@@ -1,4 +1,5 @@
 mtllib mat.mtl
+mtllib face.mtl
 
 !Best experience with resoultion 1000 x 1000
 
@@ -7,8 +8,8 @@ scene
 
 disk
 {
-    position 500 4000 500
-    normal 0 -1 0
+    position 500 2000 500
+    normal 0 1 0
     radius 1000
     material Light
 }
@@ -18,9 +19,16 @@ plane
     position 500 300 500
     normal 0 1 0
     scale 5000 5000 5000
-    material Sand
+    material Default
 }
 
-mesh dragon.obj
+sphere
+{
+    position 500 500 500
+    radius 100
+    material Glass
+}
+
+mesh face.obj
 
 }

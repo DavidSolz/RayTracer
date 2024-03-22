@@ -12,6 +12,6 @@ enum SpatialType{
     TRIANGLE,
     INVALID,
     NUM_SPATIALS
-};
+} __attribute((aligned(1)));
 
 #endif

@@ -1,7 +1,7 @@
 #ifndef MESHREADER_H
 #define MESHREADER_H
 
-#define BUFFER_SIZE 100
+#define BUFFER_SIZE 16
 
 #include "Serializer.h"
 #include "RenderingContext.h"
@@ -12,7 +12,7 @@ private:
 
     struct Face {
         int32_t indices[3];
-        int32_t texels[3];
+        int32_t uv[3];
         int32_t normals[3];
         uint32_t materialID;
     };
@@ -20,8 +20,10 @@ private:
     uint32_t currentMaterial;
 
     std::vector<Face> faces;
+
     std::vector<Vector3> vertices;
     std::vector<Vector3> normals;
+    std::vector<Vector3> uvs;
 
     RenderingContext * context;
     MaterialSerializer * materialSerializer;

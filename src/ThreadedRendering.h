@@ -32,13 +32,6 @@ class ThreadedRendering : public IFrameRender{
     Vector3 Reflect(const Vector3& incident, const Vector3& normal);
 
     static float IntersectSphere(const Ray &ray, const Object &object);
-
-    static float IntersectPlane(const Ray& ray, const Object& object);
-
-    static float IntersectDisk(const Ray & ray, const Object & object);
-
-    static float IntersectCube(const Ray & ray, const Object & object);
-
     static float IntersectTriangle(const Ray & ray, const Object & object);
 
     Sample FindClosestIntersection(const struct Ray& ray);
@@ -53,9 +46,6 @@ class ThreadedRendering : public IFrameRender{
 
     IntersectionFunction intersectionFunctions[6] = {
         &ThreadedRendering::IntersectSphere,
-        &ThreadedRendering::IntersectPlane,
-        &ThreadedRendering::IntersectDisk,
-        &ThreadedRendering::IntersectCube,
         &ThreadedRendering::IntersectTriangle,
         NULL
     };

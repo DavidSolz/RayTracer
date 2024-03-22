@@ -57,5 +57,5 @@ kernel void CastRays(
     rays[index] = ray;
     light[index] = (float4)(1.0f, 1.0f, 1.0f, 0.0f);
     accumulator[index] = (float4)(0.0f, 0.0f, 0.0f, 0.0f);
-    depth[index] = INFINITY;
+    depth[index] = 10000.0f;
 }

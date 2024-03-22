@@ -4,7 +4,7 @@
 #include "Serializer.h"
 #include "MaterialSerializer.h"
 #include "MeshSerializer.h"
-#include "ObjectBuiler.h"
+#include "ObjectBuilder.h"
 
 #include <fstream>
 #include <cstring>
@@ -14,6 +14,8 @@
 
 class SceneSerializer : public Serializer{
 private:
+
+    Vector3 scales;
 
     const char * properties[OBJECT_PROPERTIES_SIZE] = OBJECT_PROPERTIES;
     const char * types[SPATIAL_TYPE_SIZE] = SPATIAL_TYPES;

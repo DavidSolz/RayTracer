@@ -52,7 +52,7 @@ WindowManager::WindowManager(RenderingContext * _context){
     }
 
     context->loggingService.Write(MessageType::INFO, "Creating texture buffer...");
-
+    
     glGenTextures(1, &context->textureID);
     glBindTexture(GL_TEXTURE_2D, context->textureID);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -149,15 +149,17 @@ void WindowManager::UpdateWindow(){
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, context->width, context->height, GL_RGBA, GL_FLOAT, pixels);
 
     glEnable(GL_TEXTURE_2D);
+    
     glBegin(GL_QUADS);
          glTexCoord2f(0.0f, 0.0f); glVertex2f(0.0f, 0.0f);
          glTexCoord2f(1.0f, 0.0f); glVertex2f(context->width, 0.0f);
          glTexCoord2f(1.0f, 1.0f); glVertex2f(context->width, context->height);
          glTexCoord2f(0.0f, 1.0f); glVertex2f(0.0f, context->height);
     glEnd();
+
     glDisable(GL_TEXTURE_2D);
 
-    if( timer->GetAccumulatedTime() >= 1.0f){
+    if( timer->GetAccumulatedTime() >= 1.0f ){
         uint32_t & fps = timer->GetFrameCount();
         double & deltaTime = timer->GetDeltaTime();
         sprintf(windowTitle+8, " | FPS : %d | Frametime : %5.3f ms\0", fps, deltaTime);

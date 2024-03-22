@@ -56,8 +56,10 @@ SpatialType SceneSerializer::CheckTypes(const char * data){
 
 void SceneSerializer::ResetObject(){
     temporaryObject = Object();
-    temporaryObject.maxPos = Vector3(1.0f, 1.0f, 1.0f);
-    temporaryObject.normal = Vector3(0.0f, 1.0f, 0.0f);
+    temporaryObject.normals[0] = Vector3(0.0f, 1.0f, 0.0f);
+    temporaryObject.normals[1] = Vector3(0.0f, 1.0f, 0.0f);
+    temporaryObject.normals[2] = Vector3(0.0f, 1.0f, 0.0f);
+    scales = Vector3(1.0f, 1.0f, 1.0f);
     temporaryObject.type = SpatialType::INVALID;
     temporaryObject.materialID = 0;
 }
@@ -110,7 +112,7 @@ void SceneSerializer::ParseObject(const std::vector<std::string> & tokens){
                 }
             }
 
-            temporaryObject.maxPos = temp;
+            scales = temp;
         }else{
             fprintf(stderr, "Invalid scale format\n");
             return;
@@ -134,7 +136,7 @@ void SceneSerializer::ParseObject(const std::vector<std::string> & tokens){
             temp.y = atof(tokens[2].c_str());
             temp.z = atof(tokens[3].c_str());
 
-            temporaryObject.normal = temp;
+            temporaryObject.normals[0] = temp;
 
         }else{
             fprintf(stderr, "Invalid normal format\n");
@@ -183,11 +185,11 @@ void SceneSerializer::Parse(std::ifstream & file, const char * filename){
                     if( tokens[0] == "}" ){
 
                         if( temporaryObject.type == SpatialType::PLANE){
-                            ObjectBuilder<PLANE>::Build(temporaryObject, context);
+                            ObjectBuilder<PLANE>::Build(temporaryObject, context, scales);
                         }else if( temporaryObject.type == SpatialType::DISK){
                             ObjectBuilder<DISK>::Build(temporaryObject, context);
                         }else if( temporaryObject.type == SpatialType::CUBE){
-                            ObjectBuilder<CUBE>::Build(temporaryObject, context);
+                            ObjectBuilder<CUBE>::Build(temporaryObject, context, scales);
                         }else{
                             context->objects.emplace_back(temporaryObject);
                         }

@@ -5,7 +5,7 @@
 
 struct Material {
     float4 albedo;
-    float4 tint;
+    float4 diffuse;
     float4 specular;
     float4 transmissionFilter;
     float specularIntensity;
@@ -29,7 +29,7 @@ enum SpatialType{
     DISK,
     CUBE,
     TRIANGLE
-};
+} __attribute((aligned(1)));
 
 struct Ray{
     float3 origin;
@@ -40,14 +40,17 @@ struct Object{
     enum SpatialType type;
     float radius;
     float3 position;
-    float3 normal;
-    float3 maxPos;
+    float3 normalA;
+    float3 normalB;
+    float3 normalC;
     float3 verticeA;
     float3 verticeB;
     float3 verticeC;
-    float3 uv;
-    unsigned int materialID;
-} __attribute((aligned(128)));
+    float3 uvA;
+    float3 uvB;
+    float3 uvC;
+    int materialID;
+} __attribute((aligned(256)));
 
 struct Sample{
     float3 point;
@@ -97,6 +100,6 @@ struct Resources{
 
     int numObject;
     int numMaterials;
-} __attribute((aligned(128)));
+} __attribute((aligned(64)));
 
 #endif

@@ -13,6 +13,7 @@ private:
 
     Material temporaryMaterial;
     Texture info;
+    
     RenderingContext * context;
 
     void ClearMaterial();

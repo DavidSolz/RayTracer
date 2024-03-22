@@ -3,7 +3,7 @@
 
 #include "resources/kernels/KernelStructs.h"
 
-#define EPSILON 1.0000001f
+#define EPSILON 1.000001f
 
 #define PI 3.1415626535f
 #define TWO_PI 2.0f * PI
@@ -26,102 +26,6 @@ float IntersectSphere(const struct Ray * ray, const struct Object * object) {
     return fmin(t1, t2);
 }
 
-float FlatIntersection(const struct Ray * ray, const float3 position, const float3 normal){
-
-    float d = dot(position, normal);
-    float rayToPlane = dot(ray->origin, normal);
-
-    return (rayToPlane - d) / dot(-ray->direction, normal);
-}
-
-float IntersectPlane(const struct Ray * ray, const struct Object * object) {
-
-    float length = FlatIntersection(ray, object->position, object->normal);
-    float3 intersection = ray->origin + ray->direction * length;
-
-    float halfWidth = object->maxPos.x * 0.5f;
-    float halfHeight = object->maxPos.y * 0.5f;
-
-    float condition = intersection.x < (object->position.x - halfWidth) ||
-        intersection.x > (object->position.x + halfWidth) ||
-        intersection.z < (object->position.z - halfHeight) ||
-        intersection.z > (object->position.z + halfHeight);
-
-    return (1.0f - condition) * length;
-}
-
-float IntersectDisk(const struct Ray * ray, const struct Object * object) {
-
-    float length = FlatIntersection(ray, object->position, object->normal);
-    float3 intersection = ray->origin + ray->direction * length * EPSILON;
-
-    float3 delta = intersection - object->position;
-    float distance = dot(delta, delta);
-    float condition = distance <= (object->radius * object->radius);
-
-    return condition * length;
-
-}
-
-float IntersectCube(const struct Ray * ray, const struct Object * object) {
-
-    float3 dirs = sign(ray->direction);
-    float3 values = fabs(ray->direction);
-
-    const float3 minimalBias = 1e-6f;
-
-    values = fmax(values, minimalBias);
-
-    float3 direction = 1.0f/(values * dirs);
-
-    float tMin = (object->position.x - ray->origin.x) * direction.x;
-    float tMax = (object->maxPos.x - ray->origin.x) * direction.x;
-
-    float min = fmin(tMin, tMax);
-    float max = fmax(tMin, tMax);
-
-    tMin = min;
-    tMax = max;
-
-    float tyMin = (object->position.y - ray->origin.y) * direction.y;
-    float tyMax = (object->maxPos.y - ray->origin.y) * direction.y;
-
-    min = fmin(tyMin, tyMax);
-    max = fmax(tyMin, tyMax);
-
-    tyMin = min;
-    tyMax = max;
-
-    if ( isgreater(tMin, tyMax) || isgreater(tyMin, tMax)) {
-        return -1.0f;
-    }
-
-    tMin = fmax(tMin, tyMin);
-    tMax = fmin(tMax, tyMax);
-
-    float tzMin = (object->position.z - ray->origin.z) * direction.z;
-    float tzMax = (object->maxPos.z - ray->origin.z) * direction.z;
-
-    min = fmin(tzMin, tzMax);
-    max = fmax(tzMin, tzMax);
-
-    tzMin = min;
-    tzMax = max;
-
-    if ( tMin > tzMax || tzMin > tMax) {
-        return -1.0f;
-    }
-
-    tMin = fmax(tMin, tzMin);
-    tMax = fmin(tMax, tzMax);
-
-    if ( tMin > 0.0f ) {
-        return tMin;
-    }
-
-    return -1.0f;
-}
-
 float IntersectTriangle(const struct Ray * ray, const struct Object * object) {
 
     float3 A = object->verticeA;
@@ -134,7 +38,7 @@ float IntersectTriangle(const struct Ray * ray, const struct Object * object) {
     float3 axis = cross(ray->direction, e2);
     float det = dot(e1, axis);
 
-    if( det < 1e-6f)
+    if( fabs(det) < 1e-6f) 
         return -1.0f;
 
     float inverseDeterminant = 1.0f / det;

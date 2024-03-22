@@ -25,7 +25,7 @@ CLShader::CLShader(RenderingContext * _context) : ComputeShader(_context){
     LocalBuffer * materials = ComputeEnvironment::CreateBuffer(deviceContext, tempSize, context->materials.data());
     buffers.emplace_back(materials);
 
-    LocalBuffer * resources = ComputeEnvironment::CreateBuffer(deviceContext, 128, CL_MEM_READ_WRITE);
+    LocalBuffer * resources = ComputeEnvironment::CreateBuffer(deviceContext, 64, CL_MEM_READ_WRITE);
     buffers.emplace_back(resources);
 
     tempSize = sizeof(Color) * context->width * context->height;
@@ -63,6 +63,10 @@ CLShader::CLShader(RenderingContext * _context) : ComputeShader(_context){
     tempSize = sizeof(float) * context->width * context->height;
     LocalBuffer * depthBuffer = ComputeEnvironment::CreateBuffer(deviceContext, tempSize, CL_MEM_READ_WRITE);
     buffers.emplace_back(depthBuffer);
+
+    tempSize = sizeof(Vector3) * context->width * context->height;
+    LocalBuffer * normalBuffer = ComputeEnvironment::CreateBuffer(deviceContext, tempSize, CL_MEM_READ_WRITE);
+    buffers.emplace_back(normalBuffer);
 
     size_t maxWorkItemSizes[3];
     clGetDeviceInfo(device(), CL_DEVICE_MAX_WORK_ITEM_SIZES, sizeof(size_t) * 3, &maxWorkItemSizes, NULL);
@@ -117,6 +121,7 @@ CLShader::CLShader(RenderingContext * _context) : ComputeShader(_context){
     intersectionKernel.setArg(0, resources->buffer);
     intersectionKernel.setArg(1, rayBuffer->buffer);
     intersectionKernel.setArg(2, sampleBuffer->buffer);
+    intersectionKernel.setArg(3, normalBuffer->buffer);
 
     rayGenerationKernel.setArg(0, resources->buffer);
     rayGenerationKernel.setArg(1, rayBuffer->buffer);
@@ -131,8 +136,10 @@ CLShader::CLShader(RenderingContext * _context) : ComputeShader(_context){
     raytracingKernel.setArg(2, sampleBuffer->buffer);
     raytracingKernel.setArg(3, lightBuffer->buffer);
     raytracingKernel.setArg(4, accumulatorBuffer->buffer);
-    raytracingKernel.setArg(5, sizeof(Camera), &context->camera);
-    raytracingKernel.setArg(6, sizeof(uint32_t), &context->frameCounter);
+    raytracingKernel.setArg(5, colorsBuffer->buffer);
+    raytracingKernel.setArg(6, normalBuffer->buffer);
+    raytracingKernel.setArg(7, sizeof(Camera), &context->camera);
+    raytracingKernel.setArg(8, sizeof(uint32_t), &context->frameCounter);
 
     context->loggingService.Write(MessageType::INFO, "Transfering data to accelerator");
     queue.enqueueNDRangeKernel(transferKernel, cl::NullRange, cl::NDRange(1), cl::NDRange(1));
@@ -146,6 +153,7 @@ CLShader::CLShader(RenderingContext * _context) : ComputeShader(_context){
     correctionKernel.setArg(4, sizeof(uint32_t), &context->frameCounter);
     correctionKernel.setArg(5, sizeof(float), &context->gamma);
     correctionKernel.setArg(6, depthBuffer->buffer);
+    correctionKernel.setArg(7, normalBuffer->buffer);
 
     depthKernel = ComputeEnvironment::CreateKernel(deviceContext, device, "resources/kernels/DepthMapping.cl", "DepthMapping");
     depthKernel.setArg(0, resources->buffer);
@@ -159,19 +167,19 @@ void CLShader::Render(Color * _pixels){
     rayGenerationKernel.setArg(5, sizeof(Camera), &context->camera);
     rayGenerationKernel.setArg(6, sizeof(uint32_t), &context->frameCounter);
 
-    raytracingKernel.setArg(5, sizeof(Camera), &context->camera);
-    raytracingKernel.setArg(6, sizeof(uint32_t), &context->frameCounter);
+    raytracingKernel.setArg(7, sizeof(Camera), &context->camera);
+    raytracingKernel.setArg(8, sizeof(uint32_t), &context->frameCounter);
 
     correctionKernel.setArg(4, sizeof(uint32_t), &context->frameCounter);
 
     queue.enqueueNDRangeKernel(rayGenerationKernel, cl::NullRange, globalRange);
 
-    for(int i = 0; i < 4; ++i){
+    queue.enqueueNDRangeKernel(intersectionKernel, cl::NullRange, globalRange);
+    queue.enqueueNDRangeKernel(depthKernel, cl::NullRange, globalRange);
+    queue.enqueueNDRangeKernel(raytracingKernel, cl::NullRange, globalRange);
+
+    for(int i = 1; i < 4; ++i){
         queue.enqueueNDRangeKernel(intersectionKernel, cl::NullRange, globalRange);
-
-        if( i==0 )
-            queue.enqueueNDRangeKernel(depthKernel, cl::NullRange, globalRange);
-
         queue.enqueueNDRangeKernel(raytracingKernel, cl::NullRange, globalRange);
     }
 

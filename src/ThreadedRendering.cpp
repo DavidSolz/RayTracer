@@ -56,33 +56,12 @@ float ThreadedRendering::IntersectSphere(const Ray &ray, const Object &object) {
     return fmin(t1, t2);
 }
 
-float ThreadedRendering::IntersectPlane(const Ray & ray, const Object & object) {
-    float d = Vector3::DotProduct(object.position, object.normal);
-    float rayToPlane = Vector3::DotProduct(ray.origin, object.normal);
-    float temp = -Vector3::DotProduct(ray.direction, object.normal);
-
-    return (rayToPlane-d) / temp;
-}
-
-float ThreadedRendering::IntersectDisk(const Ray & ray, const Object & object) {
-
-    float t = IntersectPlane(ray, object);
-
-    Vector3 p = ray.origin + ray.direction * t * 1.000005f;
-    Vector3 v = p - object.position;
-    float d2 = Vector3::DotProduct(v, v);
-
-    bool condition = (d2 <= object.radius * object.radius);
-
-    return t * condition - 1 + condition;
-}
-
 float ThreadedRendering::IntersectTriangle(const Ray & ray, const Object & object){
     const float epsilon = 1e-6f;
 
-    Vector3 A = object.verticeA;
-    Vector3 B = object.verticeB;
-    Vector3 C = object.verticeC;
+    Vector3 A = object.vertices[0];
+    Vector3 B = object.vertices[1];
+    Vector3 C = object.vertices[2];
 
 
     Vector3 e1 = (B - A);
@@ -108,70 +87,6 @@ float ThreadedRendering::IntersectTriangle(const Ray & ray, const Object & objec
         return -1.0f;
 
     return f * Vector3::DotProduct(e2, q);
-}
-
-float ThreadedRendering::IntersectCube(const Ray & ray, const Object & object) {
-
-    Vector3 dirs = ((Vector3)ray.direction).Directions();
-    Vector3 values = ((Vector3)ray.direction).Absolute();
-
-    float minimalBias = 1e-6f;
-
-    values.x = fmax(values.x, minimalBias);
-    values.y = fmax(values.y, minimalBias);
-    values.z = fmax(values.z, minimalBias);
-
-    Vector3 direction = values * dirs;
-    direction.x = 1.0f/direction.x;
-    direction.y = 1.0f/direction.y;
-    direction.z = 1.0f/direction.z;
-
-    float tMin = (object.position.x - ray.origin.x) * direction.x;
-    float tMax = (object.maxPos.x - ray.origin.x) * direction.x;
-
-    float min = fmin(tMin, tMax);
-    float max = fmax(tMin, tMax);
-
-    tMin = min;
-    tMax = max;
-
-    float tyMin = (object.position.y - ray.origin.y) * direction.y;
-    float tyMax = (object.maxPos.y - ray.origin.y) * direction.y;
-
-    min = fmin(tyMin, tyMax);
-    max = fmax(tyMin, tyMax);
-
-    tyMin = min;
-    tyMax = max;
-
-    if ( (tMin > tyMax) || (tyMin > tMax)) {
-        return -1.0f;
-    }
-
-    tMin = fmax(tMin, tyMin);
-    tMax = fmin(tMax, tyMax);
-
-    float tzMin = (object.position.z - ray.origin.z) * direction.z;
-    float tzMax = (object.maxPos.z - ray.origin.z) * direction.z;
-
-    min = fmin(tzMin, tzMax);
-    max = fmax(tzMin, tzMax);
-
-    tzMin = min;
-    tzMax = max;
-
-    if ( (tMin > tzMax) || (tzMin > tMax)) {
-        return -1.0f;
-    }
-
-    tMin = fmax(tMin, tzMin);
-    tMax = fmin(tMax, tzMax);
-
-    if ( (tMin > 0.0f) ) {
-        return tMin;
-    }
-
-    return -1.0f;
 }
 
 Vector3 ComputeBoxNormal(const Vector3 & nearVertice, const Vector3 & farVertice, const Vector3 & intersectionPoint){
@@ -211,26 +126,26 @@ Color ThreadedRendering::ComputeColor(struct Ray& ray, unsigned int& seed) {
             accumulatedColor += GetSkyBoxColor(intensity, ray);
             break;
         }
-            ray.origin = sample.point;
+            // ray.origin = sample.point;
 
-            Object * object = &context->objects[sample.objectID];
+            // Object * object = &context->objects[sample.objectID];
 
-            Material * material = &context->materials[object->materialID];
+            // Material * material = &context->materials[object->materialID];
 
-            Vector3 diffusionDirection = RandomReflection(object->normal, seed);
-            Vector3 specularDirection = Reflect(ray.direction, object->normal);
+            // Vector3 diffusionDirection = RandomReflection(object->normal, seed);
+            // Vector3 specularDirection = Reflect(ray.direction, object->normal);
 
-            ray.direction = Vector3::Lerp(diffusionDirection, specularDirection, material->metallic);
+            // ray.direction = Vector3::Lerp(diffusionDirection, specularDirection, material->metallic);
 
-            float lightIntensity = Vector3::DotProduct(ray.direction, object->normal);
-            lightIntensity = fmax(0.0f, fmin(lightIntensity, 1.0f));
+            // float lightIntensity = Vector3::DotProduct(ray.direction, object->normal);
+            // lightIntensity = fmax(0.0f, fmin(lightIntensity, 1.0f));
 
-            Color emmisionComponent = material->albedo * material->emmissionIntensity;
-            Color diffuseComponent = material->albedo * 2 * lightIntensity;
+            // Color emmisionComponent = material->albedo * material->emmissionIntensity;
+            // Color diffuseComponent = material->albedo * 2 * lightIntensity;
 
-            accumulatedColor += (diffuseComponent + emmisionComponent) * colorMask;
-            colorMask *= material->albedo;
-            intensity *= lightIntensity * 0.1f;
+            // accumulatedColor += (diffuseComponent + emmisionComponent) * colorMask;
+            // colorMask *= material->albedo;
+            // intensity *= lightIntensity * 0.1f;
     }
 
     return accumulatedColor;

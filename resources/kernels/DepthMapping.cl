@@ -23,6 +23,6 @@ kernel void DepthMapping(
 
     struct Ray ray = rays[index];
 
-    depth[index] = length(ray.origin - sample.point);
+    depth[index] = length(sample.point - ray.origin);
 
 }

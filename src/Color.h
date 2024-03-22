@@ -103,9 +103,9 @@ struct Color {
     /// @param _color 
     /// @param _array inout array of colors
     static void Unpack(const unsigned int & _color, float _array[3]){
-        _array[0] = (_color>>24 && 255)/ 255.0f;
-        _array[1] = (_color>>16 && 255)/ 255.0f;
-        _array[2] = (_color>>8 && 255)/ 255.0f;
+        _array[0] = (_color>>24 & 255)/ 255.0f;
+        _array[1] = (_color>>16 & 255)/ 255.0f;
+        _array[2] = (_color>>8 & 255)/ 255.0f;
     }
 
     /// @brief Determines similarity between two colors
