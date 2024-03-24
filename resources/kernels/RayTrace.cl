@@ -75,7 +75,7 @@ float4 MetallicBRDF(const float cosView, const float cosLight, const float cosHa
     float h2 = cosHalf * cosHalf;
 
     float F = 0.04f + 0.96f * SchlickFresnel(cosLightHalf);
-    float G = min(2.0 * cosLight * cosView / cosViewHalf, 1.0);
+    float G = min(2.0f * cosLight * cosView / cosViewHalf, 1.0f);
     float D = ONE_OVER_PI * exp( -pow( tan( acos(cosHalf) ), 2.0f) / alpha) / ( alpha * h2 * h2 );
 
     return (F * G * D )/ (4.0f * cosLight * cosView) + diffuse;
@@ -116,7 +116,7 @@ float DiffuseFresnel(const float NdotL, const float NdotV, const float roughness
 }
 
 float SeparableSmithGGXG1BSDF(const float3 vector, const float3 halfVector, const float ax, const float ay){
-    
+
     float cosVectorHalf = fmax(0.0f, dot(vector, halfVector));
 
     float theta = fabs(tan(acos(halfVector.y)));
@@ -162,7 +162,8 @@ float4 SpecularBSDF(const float cosView, const float cosLight, const float cosLi
 
 float4 Tint(const float4 albedo){
     float luminance = albedo.x * 0.3f + albedo.y * 0.6f + albedo.z;
-    return mix(1.0f, albedo/luminance , luminance>0.0f);
+    float condition = luminance > 0.0f;
+    return mix(1.0f, albedo/luminance , condition);
 }
 
 float4 Sheen(const float cosLightHalf, const struct Material material){
@@ -225,7 +226,7 @@ float4 ComputeColorSample(
     float3 diffusionDirection = DiffuseReflect(normal, seed);
     float3 reflectionDirection = Reflect(viewVector, normal);
     float3 refractionDirecton = Refract(viewVector, normal, 1.45f, material.indexOfRefraction);
-    
+
     float3 direction = mix(diffusionDirection, reflectionDirection, material.metallic);
     ray->direction = normalize( mix(direction, refractionDirecton, material.transparency) );
 
@@ -235,12 +236,12 @@ float4 ComputeColorSample(
     float cosView = fmax(1e-6f, dot(normal, viewVector));
     float cosHalf = dot(normal, halfVector);
     float cosReflection = dot(normal, ray->direction);
-    float cosLightHalf = dot(lightVector, halfVector);
+    float cosLightHalf = fmax(0.0f, dot(lightVector, halfVector));
     float cosViewHalf = dot(viewVector, halfVector);
 
     float4 emission = material.albedo * material.emmissionIntensity;
     float isEmissive = dot(emission.xyz, (float3)(1.0f, 1.0f, 1.0f)) > 0.0f ;
-    
+
     float4 colorSample = 0.0f;
     float diffuse = (1.0f - material.metallic) * (1.0f - material.transparency);
     float transparency = (1.0f - material.metallic) * material.transparency;
@@ -248,7 +249,7 @@ float4 ComputeColorSample(
     float4 dielectric = DielectricBRDF(cosView, cosLight, cosHalf, cosReflection, material);
     float4 metallic = MetallicBRDF(cosView, cosLight, cosHalf, cosLightHalf, cosViewHalf, material);
     float4 specular = SpecularBSDF(cosView, cosLight, cosLightHalf, lightVector, ray->direction, viewVector, halfVector, material);
-    
+
     float4 clearcoat = ClearcoatBRDF(cosView, cosLight, cosHalf, material);
     float isClearcoatPresent = cosLight > 0.0f;
 
@@ -297,11 +298,11 @@ void kernel RayTrace(
     struct Ray ray = rays[index];
     float4 lightSample = light[index];
     float3 normal = normals[index];
-        
+
     float4 colorSample = ComputeColorSample(localResources, &ray, camera, sample, &lightSample, normal, &seed);
 
     rays[index] = ray;
     light[index] = lightSample;
     accumulator[index] = clamp(accumulator[index] + colorSample, 0.0f, 1.0f);
-    
+
 }
