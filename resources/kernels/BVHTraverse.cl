@@ -24,7 +24,7 @@ kernel void Traverse(
     uint width = get_global_size(0);
     uint height = get_global_size(1);
 
-    uint index = y * width + x;
+    int index = y * width + x;
 
     struct Ray ray = rays[index];
 

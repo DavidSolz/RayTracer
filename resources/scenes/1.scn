@@ -29,6 +29,20 @@ sphere
     material Glass
 }
 
+sphere
+{
+    position 300 500 500
+    radius 100
+    material Stone
+}
+
+sphere
+{
+    position 100 500 500
+    radius 100
+    material Copper
+}
+
 mesh face.obj
 
 }
