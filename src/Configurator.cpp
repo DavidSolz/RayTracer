@@ -126,6 +126,11 @@ void Configurator::ParseArgs(const size_t & size, char **args){
         }
     }
 
+    context->width = std::max((uint32_t)32, (context->width+16)/32 * 32);
+    context->height = std::max((uint32_t)32, (context->height+16)/32 * 32);
+
+    printf("Resolution : %d x %d\n", context->width, context->height);
+
     context->camera.aspectRatio = context->width/(float)context->height;
 
     if( filepath != NULL )

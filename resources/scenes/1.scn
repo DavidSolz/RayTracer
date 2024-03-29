@@ -8,8 +8,8 @@ scene
 
 disk
 {
-    position 500 2000 500
-    normal 0 1 0
+    position 500 3000 500
+    normal 0 -1 0
     radius 1000
     material Light
 }

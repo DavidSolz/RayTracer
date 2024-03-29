@@ -54,26 +54,19 @@ float3 Refract(
     const float n2
     ){
 
-    float cosI = -dot(incident, normal);
+    float cosI = dot(-incident, normal);
+    float sinR2 = (1.0f - cosI * cosI);
 
-    if( cosI < 0.0f){
-        cosI *= -1.0f;
-        QSwap((int*)&n1, (int*)&n2);
-    }
+    float eta = n1/n2;
 
-    float eta = n1 / n2;
-    float sinI = sqrt(1.0f - cosI*cosI);
-    float sinT = eta * sinI;
+    if( eta * sinR2 > 1.0f)
+        return Reflect(incident, -normal);
 
-    if( sinT >= 1.0f )
-        return Reflect(incident, normal);
+    float cosR2 = sqrt(1.0f - sinR2 * sinR2);
 
-    float cosT = sqrt(1.0f - sinT);
+    float3 direction = incident * eta + normal * (eta * cosI - cosR2);
 
-    float3 perpendicularRay =  eta * incident;
-    float3 parallelRay = eta * cosI - cosT * normal;
-
-    return normalize(perpendicularRay + parallelRay);
+    return normalize(direction);
 }
 
 float SchlickFresnel(const float value){
@@ -110,7 +103,7 @@ float SeparableSmithGGXG1BSDF(const float3 vector, const float3 halfVector, cons
     float cos2Theta = halfVector.y * halfVector.y;
     float sin2Theta = 1.0f - cos2Theta;
 
-    float tanTheta = sqrt(sin2Theta/cos2Theta);
+    float tanTheta = sqrt( sin2Theta/cos2Theta );
 
     float cos2Phi = vector.x * vector.x;
     float sin2Phi = 1.0f - cos2Phi;
@@ -118,7 +111,7 @@ float SeparableSmithGGXG1BSDF(const float3 vector, const float3 halfVector, cons
     float a = sqrt( cos2Phi * ax * ax + sin2Phi * ay * ay);
     float a2Tan2Theta = a * a * tanTheta * tanTheta;
 
-    float lambda = 0.5f * (-1.0f + sqrt(1.0f + a2Tan2Theta));
+    float lambda = 0.5f * (-1.0f + sqrt( 1.0f + a2Tan2Theta ));
     return 1.0f / (1.0f + lambda);
 
 }
@@ -132,10 +125,10 @@ float4 SpecularBSDF(const float3 normal, const float3 lightVector, const float3 
     float ax = fmax(ALPHA_MIN, roughnessSqr / aspect);
     float ay = fmax(ALPHA_MIN, roughnessSqr * aspect);
 
-    float cosLight = fmax(0.0f, dot(normal, lightVector));
-    float cosView = fmax(0.0f, dot(normal, viewVector));
+    float cosLight = dot(normal, lightVector);
+    float cosView = dot(normal, viewVector);
 
-    float cosLightHalf = fmax(0.0f, dot(lightVector, halfVector));
+    float cosLightHalf = dot(lightVector, halfVector);
 
     float D = GgxAnisotropic(halfVector, ax, ay);
     float Gl = SeparableSmithGGXG1BSDF(lightVector, halfVector, ax, ay);
@@ -155,13 +148,14 @@ float4 SpecularTransmissionBSDF(const float3 lightVector, const float3 viewVecto
 
     float cosViewHalf = dot(viewVector, halfVector);
 
-    cosViewHalf *= mix(1.0f, -1.0f, halfVector.y < 0.0f);
+    cosViewHalf *= halfVector.y;
 
     float eta = 1.0f / material.indexOfRefraction;
 
+    float Gl = SeparableSmithGGXG1BSDF(lightVector, halfVector, ax, ay);
     float Gv = SeparableSmithGGXG1BSDF(viewVector, halfVector, ax, ay);
 
-    return Gv;
+    return Gl*Gv;
 }
 
 float4 Tint(const float4 albedo){
@@ -262,8 +256,8 @@ float4 ComputeColorSample(
     float cosLight = fmax(0.0f, dot(normal, lightVector));
     float cosView = fmax(0.0f, dot(normal, viewVector));
 
-    float cosHalf = dot(normal, halfVector);
-    float cosLightHalf = dot(lightVector, halfVector);
+    float cosHalf = fmax(0.0f, dot(normal, halfVector));
+    float cosLightHalf = fmax(0.0f, dot(lightVector, halfVector));
 
     float4 emission = material.albedo * material.emmissionIntensity;
     float isEmissive = dot(emission.xyz, (float3)(1.0f, 1.0f, 1.0f)) > 0.0f ;
@@ -276,7 +270,7 @@ float4 ComputeColorSample(
 
     float4 diffuseComponent = material.albedo * texture * DiffuseBRDF(cosView, cosLight, cosHalf, cosLightHalf, material);
     float4 specularComponent = weights.x * SpecularBSDF(normal, lightVector, viewVector, halfVector, material);
-    float4 transmissionComponent = weights.y * material.albedo * SpecularTransmissionBSDF(lightVector, viewVector, halfVector, material);
+    float4 transmissionComponent = weights.y * SpecularTransmissionBSDF(lightVector, viewVector, halfVector, material);
     float4 clearcoatComponent = weights.w * ClearcoatBRDF(viewVector, lightVector, halfVector, material);
 
     float4 sheen = Sheen(cosLightHalf, material);
@@ -284,9 +278,9 @@ float4 ComputeColorSample(
 
     colorSample += emission * isEmissive;
     colorSample +=  (diffuseComponent + sheen) * weights.z + clearcoatComponent + specularComponent + transmissionComponent;
-    colorSample *=  *lightSample;
+    colorSample *=  *lightSample * (cosLight > 0.0f);
 
-    (*lightSample) *= texture * 2.0f * cosLight;
+    (*lightSample) *= material.albedo * texture * 2.0f * cosLight;
 
     return colorSample;
 }
@@ -326,7 +320,7 @@ void kernel RayTrace(
     float4 colorSample = ComputeColorSample(localResources, &ray, camera, sample, &lightSample, normal, &seed);
 
     rays[index] = ray;
-    light[index] = lightSample;
-    accumulator[index] = clamp(accumulator[index] + colorSample, 0.0f, 1.0f);
+    light[index] = clamp(lightSample, 0.0f, 1.0f);
+    accumulator[index] += clamp(accumulator[index] + colorSample, 0.0f, 1.0f);
 
 }

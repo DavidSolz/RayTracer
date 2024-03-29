@@ -176,7 +176,7 @@ MaterialBuilder * MaterialBuilder::AttachTexture( const char * _filepath ){
     Image image = BitmapReader::ReadFile(_filepath);
 
     if( image.data == NULL ){
-        fprintf(stderr, "Texture can't be loaded");
+        fprintf(stderr, "Texture %s can't be loaded\n", _filepath);
         return this;
     }
 
