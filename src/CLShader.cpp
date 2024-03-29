@@ -68,29 +68,21 @@ CLShader::CLShader(RenderingContext * _context) : ComputeShader(_context){
     LocalBuffer * normalBuffer = ComputeEnvironment::CreateBuffer(deviceContext, tempSize, CL_MEM_READ_WRITE);
     buffers.emplace_back(normalBuffer);
 
-    size_t maxWorkItemSizes[3];
-    clGetDeviceInfo(device(), CL_DEVICE_MAX_WORK_ITEM_SIZES, sizeof(size_t) * 3, &maxWorkItemSizes, NULL);
+    globalRange = cl::NDRange(context->width, context->height, 1);
 
-    size_t localX, localY;
-    size_t globalX, globalY;
+    cl_device_type type;
+    clGetDeviceInfo(device(), CL_DEVICE_TYPE, sizeof(cl_device_type), &type, NULL);
 
-    localX = std::min(maxWorkItemSizes[0], (size_t)context->width);
-    localY = std::min(maxWorkItemSizes[1], (size_t)context->height);
+    cl_uint preferredWorkGroupSizeMultiple;
+    clGetDeviceInfo(device(), CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE , sizeof(cl_uint), &preferredWorkGroupSizeMultiple, NULL);
 
-    localX = std::max(localX, static_cast<size_t>(1));
-    localY = std::max(localY, static_cast<size_t>(1));
+    context->loggingService.Write(MessageType::INFO, "Preferred warp size : %d", preferredWorkGroupSizeMultiple);
 
-    while( context->width % localX != 0)
-        localX--;
-
-    while( context->height % localY != 0)
-        localY--;
-
-    globalX = ceil(context->width / (float)localX) * localX;
-    globalY = ceil(context->height / (float)localY) * localY;
-
-    globalRange = cl::NDRange(globalX, globalY);
-    localRange = cl::NDRange(localX, localY);
+    if( type == CL_DEVICE_TYPE_CPU){
+        localRange = cl::NDRange(1, 1, 1);
+    }else{
+        localRange = cl::NDRange(8, 4, 1);
+    }   
 
     int numObjects = context->objects.size();
     int numMaterials = context->materials.size();
@@ -172,18 +164,18 @@ void CLShader::Render(Color * _pixels){
 
     correctionKernel.setArg(4, sizeof(uint32_t), &context->frameCounter);
 
-    queue.enqueueNDRangeKernel(rayGenerationKernel, cl::NullRange, globalRange);
+    queue.enqueueNDRangeKernel(rayGenerationKernel, cl::NullRange, globalRange, localRange);
 
-    queue.enqueueNDRangeKernel(intersectionKernel, cl::NullRange, globalRange);
-    queue.enqueueNDRangeKernel(depthKernel, cl::NullRange, globalRange);
-    queue.enqueueNDRangeKernel(raytracingKernel, cl::NullRange, globalRange);
+    queue.enqueueNDRangeKernel(intersectionKernel, cl::NullRange, globalRange, localRange);
+    queue.enqueueNDRangeKernel(depthKernel, cl::NullRange, globalRange, localRange);
+    queue.enqueueNDRangeKernel(raytracingKernel, cl::NullRange, globalRange, localRange);
 
     for(int i = 1; i < 4; ++i){
-        queue.enqueueNDRangeKernel(intersectionKernel, cl::NullRange, globalRange);
-        queue.enqueueNDRangeKernel(raytracingKernel, cl::NullRange, globalRange);
+        queue.enqueueNDRangeKernel(intersectionKernel, cl::NullRange, globalRange, localRange);
+        queue.enqueueNDRangeKernel(raytracingKernel, cl::NullRange, globalRange, localRange);
     }
 
-    queue.enqueueNDRangeKernel(correctionKernel, cl::NullRange, globalRange);
+    queue.enqueueNDRangeKernel(correctionKernel, cl::NullRange, globalRange, localRange);
 
     queue.finish();
 

@@ -152,10 +152,12 @@ float4 SpecularTransmissionBSDF(const float3 lightVector, const float3 viewVecto
 
     float eta = 1.0f / material.indexOfRefraction;
 
+    float D = GgxAnisotropic(halfVector, ax, ay);
     float Gl = SeparableSmithGGXG1BSDF(lightVector, halfVector, ax, ay);
     float Gv = SeparableSmithGGXG1BSDF(viewVector, halfVector, ax, ay);
+    float F = eta + (1.0f - eta) * SchlickFresnel(cosViewHalf);
 
-    return Gl*Gv;
+    return D* F;
 }
 
 float4 Tint(const float4 albedo){
@@ -260,7 +262,7 @@ float4 ComputeColorSample(
     float cosLightHalf = fmax(0.0f, dot(lightVector, halfVector));
 
     float4 emission = material.albedo * material.emmissionIntensity;
-    float isEmissive = dot(emission.xyz, (float3)(1.0f, 1.0f, 1.0f)) > 0.0f ;
+    float isEmissive = dot(emission.xyz, (float3)(1.0f, 1.0f, 1.0f));
 
     float4 weights = CalculateWeights(material);
 
@@ -309,13 +311,24 @@ void kernel RayTrace(
     uint seed = (numFrames<<16) ^ (numFrames >>13) + index;
 
     struct Sample sample = samples[index];
-
-    if( sample.objectID < 0)
-        return;
-
     struct Ray ray = rays[index];
     float4 lightSample = light[index];
     float3 normal = normals[index];
+
+    if( sample.objectID < 0){
+
+        const struct Texture info = localResources.textureInfo[1];
+        const global unsigned int * textureData = localResources.textureData;
+
+        float u = ( atan2(ray.direction.x, ray.direction.z) + PI ) * ONE_OVER_PI;
+        float v = acos(-ray.direction.y) * ONE_OVER_PI;
+
+        float4 texel = ColorSample(textureData, u, v, info.width, info.height, info.offset);
+
+        accumulator[index] += texel * lightSample * 0.25f;
+        return;
+    }
+    
 
     float4 colorSample = ComputeColorSample(localResources, &ray, camera, sample, &lightSample, normal, &seed);
 

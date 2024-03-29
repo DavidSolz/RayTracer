@@ -14,6 +14,34 @@ float4 Unpack(const unsigned int color){
     return (float4)(byte[0], byte[1], byte[2], byte[3]) * ONE_OVER_MAX_CHAR;
 }
 
+float4 BilinearFilter(
+    global const unsigned int * texture, 
+    const float u, 
+    const float v, 
+    const int width, 
+    const int height,
+    const int offset
+) {
+    
+    float2 texCoord = (float2)(u * (width - 1), v * (height - 1));
+
+    float2 texel = (float2)(floor(texCoord.x), floor(texCoord.y));
+    float2 frac = texCoord - texel;
+
+    float4 texelColor00 = Unpack(texture[offset + (int)texel.y * width + (int)texel.x]);
+    float4 texelColor10 = Unpack(texture[offset + (int)texel.y * width + (int)texel.x + 1]);
+    float4 texelColor01 = Unpack(texture[offset + ((int)texel.y + 1) * width + (int)texel.x]);
+    float4 texelColor11 = Unpack(texture[offset + ((int)texel.y + 1) * width + (int)texel.x + 1]);
+
+    float4 color = 
+        texelColor00 * (1.0f - frac.x) * (1.0f - frac.y) +
+        texelColor10 * frac.x * (1.0f - frac.y) +
+        texelColor01 * (1.0f - frac.x) * frac.y +
+        texelColor11 * frac.x * frac.y;
+
+    return color;
+}
+
 float4 ColorSample(
     global const unsigned int * texture, 
     const float u, 
@@ -22,13 +50,7 @@ float4 ColorSample(
     const int height, 
     const float offset
     ){
-
-    int texelX = floor( u * (width - 1) );
-    int texelY = floor( v * (height - 1) );
-
-    int idx = offset + texelY * width + texelX;
-
-    return Unpack(texture[ idx ]);
+    return BilinearFilter(texture, u, v, width, height, offset);
 }
 
 float4 GetTexturePixel(

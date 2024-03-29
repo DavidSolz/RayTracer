@@ -5,6 +5,7 @@
 #include <math.h>
 
 #define DISK_VERTICES 32
+#define M_PI 3.1415926535f
 
 template<SpatialType T>
 class ObjectBuilder{};
@@ -36,8 +37,8 @@ public:
             Vector3(0, 2, 3),
             Vector3(1, 2, 5),
             Vector3(1, 5, 6),
-            Vector3(6, 5, 4),
-            Vector3(6, 4, 7),
+            Vector3(7, 6, 5),
+            Vector3(7, 5, 4),
             Vector3(0, 3, 4),
             Vector3(0, 4, 7),
             Vector3(3, 2, 5),
@@ -60,12 +61,12 @@ public:
             p.vertices[1] = cube.position + B;
             p.vertices[2] = cube.position + C;
 
-            Vector3 u = (B - A).Normalize();
-            Vector3 v = (C - A).Normalize();
+            Vector3 u = (B - A);
+            Vector3 v = (C - A);
 
             Vector3 normal = Vector3::CrossProduct(u, v).Normalize();
 
-            if (Vector3::DotProduct(normal, (A - cube.position).Normalize() ) < 0.0f)
+            if (Vector3::DotProduct(normal, A.Normalize() ) < 0.0f)
                 normal = normal * -1.0f;
 
             p.normals[0] = normal;
@@ -95,7 +96,7 @@ public:
 
         points.emplace_back();
 
-        constexpr float delta = 2.0f * M_PI / DISK_VERTICES;
+        const float delta = 2.0f * M_PI / DISK_VERTICES;
 
         for(int32_t i = 0; i < DISK_VERTICES; ++i){
 
@@ -109,9 +110,11 @@ public:
 
         Object p = {};
         p.type = TRIANGLE;
+
         p.normals[0] = disk.normals[0];
-        p.normals[1] = disk.normals[1];
-        p.normals[2] = disk.normals[2];
+        p.normals[1] = disk.normals[0];
+        p.normals[2] = disk.normals[0];
+
         p.materialID = disk.materialID;
 
         for(int32_t i = 1; i <= DISK_VERTICES; ++i){

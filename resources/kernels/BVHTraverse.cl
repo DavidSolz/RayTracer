@@ -116,7 +116,8 @@ kernel void Traverse(
         float invDenom = 1.0f / (dot00 * dot11 - dot01 * dot01);
         float u = (dot11 * dot02 - dot01 * dot12) * invDenom;
         float v = (dot00 * dot12 - dot01 * dot02) * invDenom;
-
-        normals[index] = object.normalA * (1.0f - u - v) + object.normalB * u + object.normalC * v;
+        float w = 1.0f - u - v;
+        
+        normals[index] = normalize(object.normalA * w + object.normalB * u + object.normalC * v);
     }
 }

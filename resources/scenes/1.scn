@@ -14,6 +14,13 @@ disk
     material Light
 }
 
+cube
+{
+    position -100 500 800
+    scale 200 200 200
+    material Blackbox
+}
+
 plane
 {
     position 500 300 500
@@ -43,6 +50,6 @@ sphere
     material Copper
 }
 
-mesh face.obj
+mesh dragon.obj
 
 }
