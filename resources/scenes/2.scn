@@ -20,13 +20,6 @@ plane
     scale 5000 5000 5000
 }
 
-plane
-{
-    position 500 4001 500
-    normal 0 -1 0
-    scale 5000 5000 5000
-}
-
 sphere
 {
     position 500 1000 500

@@ -64,6 +64,7 @@ void Configurator::ShowHelp(){
     fprintf(stdout,"  -H              Show help menu\n");
     fprintf(stdout,"  -B              Build BVH tree\n");
     fprintf(stdout,"  -T <threads>    Set number of threads\n");
+    fprintf(stdout,"  -F <frames>     Set number of frames to render\n");
 
 }
 
@@ -112,6 +113,15 @@ void Configurator::ParseArgs(const size_t & size, char **args){
                 i++;
             } else {
                 fprintf(stderr, "Error: -T flag requires requires number of threads\n");
+                exit(-1);
+            }
+        }else if (arg[1] == 'F' && arg[2] == '\0') {
+            if (i + 1 < size && args[i + 1][0] != '-') {
+                context->numBoundedFrames = std::max(atoi(args[i+1]), 1);
+                context->boundedFrames = true;
+                i++;
+            } else {
+                fprintf(stderr, "Error: -F flag requires requires number of frames\n");
                 exit(-1);
             }
         }else if (arg[1] == 'S' && arg[2] == '\0' && context->memorySharing == false) {

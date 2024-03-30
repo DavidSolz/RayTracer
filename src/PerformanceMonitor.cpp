@@ -12,9 +12,6 @@ PerformanceMonitor::PerformanceMonitor(){
 
 void PerformanceMonitor::GatherInformation(){
 
-    if( timer->GetAccumulatedTime() < 1.0f)
-        return;
-
     PerformanceSample sample = {0};
 
     uint32_t frameCount = timer->GetFrameCount();
@@ -52,6 +49,7 @@ void PerformanceMonitor::CalculateVariance(){
     samplesCount = std::max((uint32_t)1, samplesCount);
 
     for(uint32_t id = 0; id < samples.size(); ++id){
+        
         float deltaFps =  ( statistics.mean.fpsCount - samples[id].fpsCount );
         float deltaFrametime =  ( statistics.mean.frameTime - samples[id].frameTime );
 

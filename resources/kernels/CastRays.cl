@@ -25,6 +25,7 @@ kernel void CastRays(
     global float4 * light,
     global float4 * accumulator,
     global float * depth,
+    global float4 * normals,
     const struct Camera camera,
     const int numFrames
     ){
@@ -58,4 +59,5 @@ kernel void CastRays(
     light[index] = (float4)(1.0f, 1.0f, 1.0f, 0.0f);
     accumulator[index] = (float4)(0.0f, 0.0f, 0.0f, 0.0f);
     depth[index] = 10000.0f;
+    normals[index] = 0.0f;
 }

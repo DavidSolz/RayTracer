@@ -1,5 +1,7 @@
 #include "resources/kernels/KernelStructs.h"
 
+#define BATCH_SIZE 32
+
 void kernel ImageCorrection(
     write_only image2d_t image,
     global struct Resources * resources,
@@ -12,19 +14,23 @@ void kernel ImageCorrection(
     ){
 
     local struct Resources localResources;
+
     localResources = *resources;
 
     int2 coord = (int2)(get_global_id(0), get_global_id(1));
+    int2 lcoord = (int2)(get_local_id(0), get_local_id(1));
 
-    int width = localResources.width;
-    int height = localResources.height;
+    int width = get_global_size(0);
+    int height = get_global_size(1);
+
+    int globalIndex = coord.y * width + coord.x;
+    int localIndex = lcoord.y * get_local_size(0) + lcoord.x; 
 
     float scale = 1.0f / (1.0f + numFrames);
-    int index = coord.y * width + coord.x;
 
-    float4 color = colors[index];
-    color = mix(color, accumulator[index], scale);
-    colors[index] = color;
+    float4 color = colors[globalIndex];
+    color = mix(color, accumulator[globalIndex], scale);
+    colors[globalIndex] = color;
     
     write_imagef(image, coord, color);
 }

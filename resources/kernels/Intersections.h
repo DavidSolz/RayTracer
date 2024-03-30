@@ -71,7 +71,7 @@ bool AABBIntersection(const struct Ray * ray, const float3 minimalPosition , con
     float tNear = fmax(t1.x, fmax(t1.y, t1.z));
     float tFar = fmin(t2.x, fmin(t2.y, t2.z));
 
-    return tNear <= tFar && tFar > 0.0f;
+    return tNear <= tFar && tFar >= 0.0f;
 }
 
 #endif

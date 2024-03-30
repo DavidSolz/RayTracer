@@ -54,6 +54,7 @@ struct Object{
 
 struct Sample{
     float3 point;
+    float len;
     int objectID;
 } __attribute((aligned(32)));
 

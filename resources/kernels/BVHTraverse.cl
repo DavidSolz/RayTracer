@@ -11,6 +11,7 @@ kernel void Traverse(
     ){
 
     local struct Resources localResources;
+
     localResources = *resources;
 
     global const struct BoundingBox * boxes = localResources.boxes;
@@ -18,30 +19,40 @@ kernel void Traverse(
 
     int numObject = localResources.numObject;
 
-    uint x = get_global_id(0);
-    uint y = get_global_id(1);
+    int gx = get_global_id(0);
+    int gy = get_global_id(1);
 
-    uint width = get_global_size(0);
-    uint height = get_global_size(1);
+    int width = get_global_size(0);
 
-    int index = y * width + x;
+    int globalIndex = gy * width + gx;
 
-    struct Ray ray = rays[index];
+    int lx = get_local_id(0);
+    int ly = get_local_id(1);
+
+    int lwidth = get_local_size(0);
+
+    int localIndex = ly * lwidth + lx;
+
+    struct Ray ray = rays[globalIndex];
 
     struct Sample sample = {0};
     sample.objectID = -1;
+
     float minLength = INFINITY;
     float length = -1.0f;
 
-    int stack[ STACK_SIZE ];
+
+    int stack[ STACK_SIZE ] = {};
     int top = 0;
 
     stack[top++] = 0;
 
+
+
     while ( top > 0 ) {
 
         int boxID = stack[--top];
-        struct BoundingBox box = boxes[boxID];
+        struct BoundingBox box = boxes[ boxID ];
 
         int leftChildIndex = box.leftID;
         int rightChildIndex = box.rightID;
@@ -67,15 +78,16 @@ kernel void Traverse(
         } else {
 
             if( leftChildIndex > 0){
-                struct BoundingBox left = boxes[leftChildIndex];
+                struct BoundingBox left = boxes[ leftChildIndex ];
 
-                if( AABBIntersection(&ray, left.minimalPosition, left.maximalPosition) ){
+                if( AABBIntersection(&ray, left.minimalPosition, left.maximalPosition) )
                     stack[top++] = leftChildIndex;
-                }
+                
             }
 
             if( rightChildIndex > 0){
-                struct BoundingBox right = boxes[rightChildIndex];
+
+                struct BoundingBox right = boxes[ rightChildIndex ];
 
                 if( AABBIntersection(&ray, right.minimalPosition, right.maximalPosition) )
                     stack[top++] = rightChildIndex;
@@ -85,7 +97,7 @@ kernel void Traverse(
 
     }
 
-    samples[index] = sample;
+    samples[globalIndex] = sample;
 
     
     if( sample.objectID == -1 )
@@ -95,7 +107,7 @@ kernel void Traverse(
 
     if ( object.type == SPHERE){
                 
-        normals[index] = normalize( sample.point - object.position);
+        normals[globalIndex] = normalize( sample.point - object.position);
 
     }else if( object.type == TRIANGLE ){
 
@@ -118,6 +130,6 @@ kernel void Traverse(
         float v = (dot00 * dot12 - dot01 * dot02) * invDenom;
         float w = 1.0f - u - v;
         
-        normals[index] = normalize(object.normalA * w + object.normalB * u + object.normalC * v);
+        normals[globalIndex] = normalize(object.normalA * w + object.normalB * u + object.normalC * v);
     }
 }

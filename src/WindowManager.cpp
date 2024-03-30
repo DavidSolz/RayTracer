@@ -24,7 +24,11 @@ WindowManager::WindowManager(RenderingContext * _context){
     glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_FALSE);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
-    window = glfwCreateWindow(context->width, context->height, "RayTracer", NULL, NULL);
+    float apsect = context->camera.aspectRatio;
+    int windowWidth = WINDOW_WIDTH;
+    int windowHeigth = WINDOW_HEIGHT * 1.0f/apsect;
+
+    window = glfwCreateWindow(windowWidth, windowHeigth, "RayTracer", NULL, NULL);
 
     if(!window){
         glfwTerminate();

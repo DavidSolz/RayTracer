@@ -120,8 +120,9 @@ CLShader::CLShader(RenderingContext * _context) : ComputeShader(_context){
     rayGenerationKernel.setArg(2, lightBuffer->buffer);
     rayGenerationKernel.setArg(3, accumulatorBuffer->buffer);
     rayGenerationKernel.setArg(4, depthBuffer->buffer);
-    rayGenerationKernel.setArg(5, sizeof(Camera), &context->camera);
-    rayGenerationKernel.setArg(6, sizeof(uint32_t), &context->frameCounter);
+    rayGenerationKernel.setArg(5, normalBuffer->buffer);
+    rayGenerationKernel.setArg(6, sizeof(Camera), &context->camera);
+    rayGenerationKernel.setArg(7, sizeof(uint32_t), &context->frameCounter);
 
     raytracingKernel.setArg(0, resources->buffer);
     raytracingKernel.setArg(1, rayBuffer->buffer);
@@ -156,8 +157,8 @@ CLShader::CLShader(RenderingContext * _context) : ComputeShader(_context){
 
 void CLShader::Render(Color * _pixels){
 
-    rayGenerationKernel.setArg(5, sizeof(Camera), &context->camera);
-    rayGenerationKernel.setArg(6, sizeof(uint32_t), &context->frameCounter);
+    rayGenerationKernel.setArg(6, sizeof(Camera), &context->camera);
+    rayGenerationKernel.setArg(7, sizeof(uint32_t), &context->frameCounter);
 
     raytracingKernel.setArg(7, sizeof(Camera), &context->camera);
     raytracingKernel.setArg(8, sizeof(uint32_t), &context->frameCounter);

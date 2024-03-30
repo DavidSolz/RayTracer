@@ -21,6 +21,7 @@ struct RenderingContext {
     bool vSync = false;
     bool memorySharing = false;
     bool bvhAcceleration = false;
+    bool boundedFrames = false;
 
     // Texture transfer object
     GLuint textureID;
@@ -40,6 +41,7 @@ struct RenderingContext {
     Camera camera;
     uint32_t frameCounter = 0;
 
+    uint32_t numBoundedFrames;
     uint32_t numThreads;
     float gamma = 2.2f;
 

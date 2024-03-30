@@ -2,6 +2,8 @@
 #define OPENGLRENDERER_H
 
 #define IMG_OUT "screenshot.bmp"
+#define WINDOW_WIDTH 1000
+#define WINDOW_HEIGHT 1000
 
 #include <stdio.h>
 #include <functional>

@@ -60,7 +60,7 @@ float3 Refract(
     float eta = n1/n2;
 
     if( eta * sinR2 > 1.0f)
-        return Reflect(incident, -normal);
+        return 0.0f;//Reflect(incident, -normal);
 
     float cosR2 = sqrt(1.0f - sinR2 * sinR2);
 
@@ -74,7 +74,7 @@ float SchlickFresnel(const float value){
     return temp * temp * temp * temp * temp;
 }
 
-float4 DiffuseBRDF(const float cosView, const float cosLight, const float cosHalf, const float cosLightHalf, const struct Material material){
+float4 DiffuseBRDF(const float cosView, const float cosLight, const struct Material material){
 
     float FL = SchlickFresnel(cosLight);
     float FV = SchlickFresnel(cosView);
@@ -127,15 +127,13 @@ float4 SpecularBSDF(const float3 normal, const float3 lightVector, const float3 
 
     float cosLight = dot(normal, lightVector);
     float cosView = dot(normal, viewVector);
-
     float cosLightHalf = dot(lightVector, halfVector);
 
     float D = GgxAnisotropic(halfVector, ax, ay);
     float Gl = SeparableSmithGGXG1BSDF(lightVector, halfVector, ax, ay);
     float Gv = SeparableSmithGGXG1BSDF(viewVector, halfVector, ax, ay);
-    float F = SchlickFresnel(cosLightHalf);
 
-    return D * Gl * Gv * F / (4.0f * cosLight * cosView);
+    return D * Gl * Gv / (4.0f * cosLight * cosView);
 }
 
 float4 SpecularTransmissionBSDF(const float3 lightVector, const float3 viewVector, const float3 halfVector, const struct Material material){
@@ -157,7 +155,7 @@ float4 SpecularTransmissionBSDF(const float3 lightVector, const float3 viewVecto
     float Gv = SeparableSmithGGXG1BSDF(viewVector, halfVector, ax, ay);
     float F = eta + (1.0f - eta) * SchlickFresnel(cosViewHalf);
 
-    return D* F;
+    return D * F;
 }
 
 float4 Tint(const float4 albedo){
@@ -250,39 +248,41 @@ float4 ComputeColorSample(
     float3 reflectionDirection = Reflect(ray->direction, normal);
     float3 refractionDirecton = Refract(viewVector, normal, INPUT_IOR, material.indexOfRefraction);
 
-    float3 direction = mix(diffusionDirection, reflectionDirection, material.metallic);
-    ray->direction = normalize( mix(direction, refractionDirecton, material.transparency) );
+    float3 outgoing = mix(diffusionDirection, reflectionDirection, material.metallic);
+    ray->direction = normalize( mix(outgoing, refractionDirecton, material.transparency) );
 
     float3 halfVector = normalize(lightVector + viewVector);
-
-    float cosLight = fmax(0.0f, dot(normal, lightVector));
-    float cosView = fmax(0.0f, dot(normal, viewVector));
-
-    float cosHalf = fmax(0.0f, dot(normal, halfVector));
-    float cosLightHalf = fmax(0.0f, dot(lightVector, halfVector));
+    float cosLight = fmax(1e-6f, dot(normal, lightVector));
+    float cosView = fmax(1e-6f, dot(normal, viewVector));
+    float cosHalf = fmax(1e-6f, dot(normal, halfVector));
+    float cosLightHalf = fmax(1e-6f, dot(lightVector, halfVector));
 
     float4 emission = material.albedo * material.emmissionIntensity;
     float isEmissive = dot(emission.xyz, (float3)(1.0f, 1.0f, 1.0f));
 
-    float4 weights = CalculateWeights(material);
-
-    float4 colorSample = 0.0f;
-
     float4 texture = GetTexturePixel(textureData, &object, info, sample.point, normal);
 
-    float4 diffuseComponent = material.albedo * texture * DiffuseBRDF(cosView, cosLight, cosHalf, cosLightHalf, material);
-    float4 specularComponent = weights.x * SpecularBSDF(normal, lightVector, viewVector, halfVector, material);
-    float4 transmissionComponent = weights.y * SpecularTransmissionBSDF(lightVector, viewVector, halfVector, material);
-    float4 clearcoatComponent = weights.w * ClearcoatBRDF(viewVector, lightVector, halfVector, material);
+    float4 diffuseAlbedo = (1.0f - material.metallic) * material.diffuse * texture;
+    float4 specular_albedo = mix(material.specular, 1.0f, material.metallic);
+    float4 fresnel = SchlickFresnel(cosLightHalf);
 
-    float4 sheen = Sheen(cosLightHalf, material);
-    
+    float4 diffuseComponent = diffuseAlbedo * (1.0f - fresnel ) * DiffuseBRDF(cosView, cosLight, material);
+    float4 specularComponent = specular_albedo * fresnel * SpecularBSDF(normal, lightVector, viewVector, halfVector, material);
+    float4 transmissionComponent = SpecularTransmissionBSDF(lightVector, viewVector, halfVector, material);
+    float4 clearcoatComponent = ClearcoatBRDF(viewVector, lightVector, halfVector, material);
+    float4 sheenComponent = Sheen( cosLightHalf, material);
+
+    float4 colorSample = 0.0f;
+    float4 weights = CalculateWeights(material);
 
     colorSample += emission * isEmissive;
-    colorSample +=  (diffuseComponent + sheen) * weights.z + clearcoatComponent + specularComponent + transmissionComponent;
+    colorSample += (diffuseComponent + sheenComponent) * weights.z;
+    colorSample += clearcoatComponent * weights.w;
+    colorSample += specularComponent * weights.x;
+    colorSample += transmissionComponent * weights.y;
     colorSample *=  *lightSample * (cosLight > 0.0f);
 
-    (*lightSample) *= material.albedo * texture * 2.0f * cosLight;
+    (*lightSample) *= texture * material.albedo * 2.0f * cosLight;
 
     return colorSample;
 }

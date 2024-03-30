@@ -11,17 +11,15 @@ kernel void Traverse(
     local struct Resources localResources;
     localResources = *resources;
 
-    uint x = get_global_id(0);
-    uint y = get_global_id(1);
+    uint gx = get_global_id(0);
+    uint gy = get_global_id(1);
 
     uint width = get_global_size(0);
     uint height = get_global_size(1);
 
-    uint index = y * width + x;
+    uint globalIndex = gy * width + gx;
 
-    struct Ray ray = rays[index];
-
-    global const struct BoundingBox * boxes = localResources.boxes;
+    struct Ray ray = rays[globalIndex];
 
     global const struct Object * objects = localResources.objects;
     int numObject = localResources.numObject;
@@ -53,7 +51,7 @@ kernel void Traverse(
 
     }
 
-    samples[index] = sample;
+    samples[globalIndex] = sample;
 
     if( sample.objectID == -1 )
         return;
@@ -62,7 +60,7 @@ kernel void Traverse(
 
     if ( object.type == SPHERE){
                 
-        normals[index] = normalize( sample.point - object.position);
+        normals[globalIndex] = normalize( sample.point - object.position);
 
     }else if( object.type == TRIANGLE ){
 
@@ -84,7 +82,7 @@ kernel void Traverse(
         float u = (dot11 * dot02 - dot01 * dot12) * invDenom;
         float v = (dot00 * dot12 - dot01 * dot02) * invDenom;
 
-        normals[index] = object.normalA * (1.0f - u - v) + object.normalB * u + object.normalC * v;
+        normals[globalIndex] = object.normalA * (1.0f - u - v) + object.normalB * u + object.normalC * v;
     }
     
 }
