@@ -7,6 +7,30 @@ WindowManager::WindowManager(RenderingContext * _context){
 
     context = _context;
 
+    Initialize();
+
+    context->loggingService.Write(MessageType::INFO, "Creating texture buffer...");
+    
+    glGenTextures(1, &context->textureID);
+    glBindTexture(GL_TEXTURE_2D, context->textureID);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, context->width, context->height, 0, GL_RGBA, GL_FLOAT, nullptr);
+
+    context->loggingService.Write(MessageType::INFO, "Current resolution : %d x %d", context->width, context->height);
+
+    context->loggingService.Write(MessageType::INFO, "Checking for V-Sync : %s", context->vSync?"enabled":"disabled");
+
+    context->loggingService.Write(MessageType::INFO, "Window configuration done");
+
+    pixels = new Color[context->width * context->height];
+
+    timer = &Timer::GetInstance();
+
+}
+
+void WindowManager::Initialize(){
+
     context->loggingService.Write(MessageType::INFO, "Configuring window...");
 
     if( glfwInit() == GLFW_FALSE ){
@@ -23,6 +47,9 @@ WindowManager::WindowManager(RenderingContext * _context){
 
     glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_FALSE);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+
+    if( context->boundedFrames )
+        glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
 
     float apsect = context->camera.aspectRatio;
     int windowWidth = WINDOW_WIDTH;
@@ -42,9 +69,6 @@ WindowManager::WindowManager(RenderingContext * _context){
     glfwMakeContextCurrent(window);
     glfwSwapInterval( context->vSync );
 
-    glLoadIdentity();
-    glOrtho(0, context->width, 0, context->height, -1.0f, 1.0f);
-
     if (glewInit() != GLEW_OK) {
         glfwDestroyWindow(window);
         glfwTerminate();
@@ -55,23 +79,8 @@ WindowManager::WindowManager(RenderingContext * _context){
         return;
     }
 
-    context->loggingService.Write(MessageType::INFO, "Creating texture buffer...");
-    
-    glGenTextures(1, &context->textureID);
-    glBindTexture(GL_TEXTURE_2D, context->textureID);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, context->width, context->height, 0, GL_RGBA, GL_FLOAT, nullptr);
-
-    context->loggingService.Write(MessageType::INFO, "Current resolution : %d x %d", context->width, context->height);
-
-    context->loggingService.Write(MessageType::INFO, "Checking for V-Sync : %s", context->vSync?"enabled":"disabled");
-
-    context->loggingService.Write(MessageType::INFO, "Window configuration done");
-
-    pixels = new Color[context->width * context->height];
-
-    timer = &Timer::GetInstance();
+    glLoadIdentity();
+    glOrtho(0, context->width, 0, context->height, -1.0f, 1.0f);
 
 }
 
@@ -141,13 +150,15 @@ void  WindowManager::HandleErrors(){
     }
 }
 
+void WindowManager::Render(){
+    timer->TicTac();
+    renderer->Render(pixels);
+    context->frameCounter++;
+}
+
 void WindowManager::UpdateWindow(){
 
-    timer->TicTac();
-
-    renderer->Render(pixels);
-
-    context->frameCounter++;
+    Render();
 
     if( !context->memorySharing )
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, context->width, context->height, GL_RGBA, GL_FLOAT, pixels);

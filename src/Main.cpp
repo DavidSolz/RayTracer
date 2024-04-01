@@ -10,6 +10,8 @@ void HandleCameraMovement(RenderingContext & context, const Vector3 & direction)
 
 void SetupKeyBindings(RenderingContext & context, WindowManager & manager, IFrameRender * accelerator, IFrameRender * processor);
 
+void ShowProgress(float progress);
+
 int main(int argc, char **argv){
 
     // Objects setup
@@ -32,19 +34,50 @@ int main(int argc, char **argv){
     ThreadedShader threaded(&context);
     CLShader accelerated(&context);
 
-    // Key binding and service setup
-
-    manager.SetRenderingService(&accelerated, "Acc mode");
-    SetupKeyBindings(context, manager, &accelerated, &threaded);
-
+    
     // Main loop
+
+    if( context.boundedFrames ){
+
+        if(context.useCPU){
+            manager.SetRenderingService(&threaded, "CPU mode");
+        }else{
+            manager.SetRenderingService(&accelerated, "ACC mode");
+        }
+        
+        for(uint32_t frame = 0; frame < context.numBoundedFrames; ++frame){
+            manager.Render();
+            monitor.GatherInformation();
+            //ShowProgress(frame/((float)context.numBoundedFrames-1));
+        }
+
+        return EXIT_SUCCESS;
+    }
+
+    manager.SetRenderingService(&accelerated, "ACC mode");
+    SetupKeyBindings(context, manager, &accelerated, &threaded);
 
     while ( manager.ShouldClose() ) {
         manager.Update();
         monitor.GatherInformation();
     }
-
+        
     return EXIT_SUCCESS;
+}
+
+void ShowProgress(float progress) {
+    int barWidth = 70;
+
+    const char * tokens = " =";
+
+    fprintf(stdout, "[");
+    int pos = barWidth * progress;
+    for (int i = 0; i < barWidth; ++i) {
+        bool isBefore = i < pos;
+        fprintf(stdout, "%c", tokens[isBefore] );
+    }
+    fprintf(stdout, "] %.1f %\r", progress * 100.0f);
+    fflush(stdout);
 }
 
 void HandleCameraMovement(RenderingContext & context, const Vector3 & direction) {

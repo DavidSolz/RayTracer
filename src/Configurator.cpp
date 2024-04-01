@@ -110,6 +110,7 @@ void Configurator::ParseArgs(const size_t & size, char **args){
         }else if (arg[1] == 'T' && arg[2] == '\0') {
             if (i + 1 < size && args[i + 1][0] != '-') {
                 context->numThreads = std::max(atoi(args[i+1]), 1);
+                context->useCPU = true;
                 i++;
             } else {
                 fprintf(stderr, "Error: -T flag requires requires number of threads\n");

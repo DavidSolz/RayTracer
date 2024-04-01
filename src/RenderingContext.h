@@ -22,6 +22,7 @@ struct RenderingContext {
     bool memorySharing = false;
     bool bvhAcceleration = false;
     bool boundedFrames = false;
+    bool useCPU = false;
 
     // Texture transfer object
     GLuint textureID;

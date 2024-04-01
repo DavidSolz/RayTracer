@@ -34,6 +34,9 @@ private:
     /// @brief Update window data
     void UpdateWindow();
 
+    /// @brief initializes GLFW window and OpenGL context 
+    void Initialize();
+
 public:
 
     WindowManager( RenderingContext * _context );
@@ -56,6 +59,9 @@ public:
     /// @param _key 
     /// @return true or false
     bool IsButtonPressed(const uint16_t & _key);
+
+    /// @brief Render data without displaying it
+    void Render();
 
     /// @brief Updates content of window using rendering service
     void Update();

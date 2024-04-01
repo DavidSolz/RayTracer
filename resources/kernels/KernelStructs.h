@@ -1,7 +1,12 @@
 #ifndef KERNELSTRUCTS_H
 #define KERNELSTRUCTS_H
 
-#include "src/Texture.h"
+struct Texture{
+    int width;
+    int height;
+    int offset;
+    unsigned int checksum;
+} __attribute((aligned(16)));
 
 struct Material {
     float4 albedo;

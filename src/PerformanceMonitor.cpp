@@ -109,7 +109,7 @@ PerformanceMonitor::~PerformanceMonitor(){
 
     CalculateStatistics();
 
-    fprintf(stdout, "========[ Statistics ]========\nSampling duration : %f s\nMean : \n\tFPS : %f\n\tframetime : %f \nVariance : \n\tFPS : %f\n\tframetime : %f \nDeviation :\n\tFPS : %f\n\tframetime : %f \nMedian :\n\tFPS : %f\n\tframetime : %f \n",
+    fprintf(stdout, "\n========[ Statistics ]========\nSampling duration : %f s\nMean : \n\tFPS : %f\n\tframetime : %f \nVariance : \n\tFPS : %f\n\tframetime : %f \nDeviation :\n\tFPS : %f\n\tframetime : %f \nMedian :\n\tFPS : %f\n\tframetime : %f \n",
     samplingDuration,
     statistics.mean.fpsCount, statistics.mean.frameTime,
     statistics.variance.fpsCount, statistics.variance.frameTime,
