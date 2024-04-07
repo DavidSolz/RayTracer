@@ -2,6 +2,9 @@
 #define COLOR_H
 
 #include <cmath>
+#include <immintrin.h>
+
+constexpr float ONE_OVER_UCHAR_MAX = 1.0f/255.0f;
 
 struct Color {
     float R;
@@ -9,13 +12,16 @@ struct Color {
     float B;
     float A;
 
-    Color operator+(const Color& color) const{ 
-        return {
-            R + color.R,
-            G + color.G,
-            B + color.B,
-            A + color.A
-            };
+    Color operator+(const Color& color) const{
+
+        __m128 first = _mm_load_ps((float*)this);
+        __m128 second = _mm_load_ps((float*)&color);
+        __m128 sum = _mm_add_ps(first, second);
+
+        Color result;
+        _mm_store_ps((float*)&result, sum);
+
+        return result;
     }
 
     Color operator+=(const Color& color){
@@ -35,49 +41,50 @@ struct Color {
     }
 
     Color operator-(const Color& color) const{
-        return {
-            R - color.R,
-            G - color.G,
-            B - color.B,
-            A - color.A
-        };
+
+        __m128 first = _mm_load_ps((float*)this);
+        __m128 second = _mm_load_ps((float*)&color);
+        __m128 sub = _mm_sub_ps(first, second);
+
+        Color result;
+        _mm_store_ps((float*)&result, sub);
+
+        return result;
     }
 
     Color operator*(float factor) const {
-        return {
-            R * factor,
-            G * factor,
-            B * factor,
-            A * factor
-            };
-    }
-    
 
-    Color operator*(const Color& other) const {
-        return {
-            R * other.R,
-            G * other.G,
-            B * other.B,
-            A * other.A
-            };
+        __m128 constant = _mm_set1_ps(factor);
+        __m128 current = _mm_loadu_ps((float*)this);
+        __m128 mul = _mm_mul_ps(current, constant);
+
+        Color result;
+        _mm_store_ps((float*)&result, mul);
+
+        return result;
+    }
+
+
+    Color operator*(const Color& color) const {
+
+        __m128 current = _mm_loadu_ps((float*)this);
+        __m128 other = _mm_loadu_ps((float*)&color);
+        __m128 mul = _mm_mul_ps(current, other);
+
+        Color result;
+        _mm_store_ps((float*)&result, mul);
+
+        return result;
     }
 
     Color operator*=(const Color& other) {
-        
+
         this->R *= other.R;
         this->G *= other.G;
         this->B *= other.B;
         this->A *= other.A;
 
         return *this;
-    }
-
-    /// @brief Mixes colors in equal proportion
-    /// @param a 
-    /// @param b 
-    /// @return mixture of color a and color b
-    static Color Mix(const Color & a, const Color & b){
-        return a * b;
     }
 
     /// @brief Lineary interpolates between two colors
@@ -99,18 +106,27 @@ struct Color {
         return _R<<24 | _G <<16 | _B << 8 | 255 ;
     }
 
+    static Color Clamp(const Color & color){
+        Color result = {};
+        result.R = std::fmax(0.0f, std::fmin(color.R, 1.0f));
+        result.G = std::fmax(0.0f, std::fmin(color.G, 1.0f));
+        result.B = std::fmax(0.0f, std::fmin(color.B, 1.0f));
+        result.A = 0.0f;
+        return result;
+    }
+
     /// @brief Unpacks coded RGB values to float array
-    /// @param _color 
+    /// @param _color
     /// @param _array inout array of colors
     static void Unpack(const unsigned int & _color, float _array[3]){
-        _array[0] = (_color>>24 & 255)/ 255.0f;
-        _array[1] = (_color>>16 & 255)/ 255.0f;
-        _array[2] = (_color>>8 & 255)/ 255.0f;
+        _array[0] = ( (_color>>24) & 255) * ONE_OVER_UCHAR_MAX;
+        _array[1] = ( (_color>>16) & 255) * ONE_OVER_UCHAR_MAX;
+        _array[2] = ( (_color>>8) & 255) * ONE_OVER_UCHAR_MAX;
     }
 
     /// @brief Determines similarity between two colors
-    /// @param _colorA 
-    /// @param _colorB 
+    /// @param _colorA
+    /// @param _colorB
     /// @return value in range <0, 1> representing similarity
     static float Similarity(const Color& _colorA, const Color& _colorB){
         float dR = fabs(_colorA.R - _colorB.R);

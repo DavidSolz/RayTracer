@@ -10,7 +10,7 @@ WindowManager::WindowManager(RenderingContext * _context){
     Initialize();
 
     context->loggingService.Write(MessageType::INFO, "Creating texture buffer...");
-    
+
     glGenTextures(1, &context->textureID);
     glBindTexture(GL_TEXTURE_2D, context->textureID);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -24,6 +24,7 @@ WindowManager::WindowManager(RenderingContext * _context){
     context->loggingService.Write(MessageType::INFO, "Window configuration done");
 
     pixels = new Color[context->width * context->height];
+    memset(pixels, 0, context->width * context->height * sizeof(Color));
 
     timer = &Timer::GetInstance();
 
@@ -94,7 +95,7 @@ void WindowManager::ProcessInput(){
     }
 
     if (glfwGetMouseButton(window,GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
-        
+
         static double lastMouseX, lastMouseY;
         double currentX, currentY;
 
@@ -120,7 +121,7 @@ void WindowManager::ProcessInput(){
 
         context->frameCounter=0;
     }
-    
+
 }
 
 void WindowManager::SetWindowTitle(const char _title[9]){
@@ -164,7 +165,7 @@ void WindowManager::UpdateWindow(){
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, context->width, context->height, GL_RGBA, GL_FLOAT, pixels);
 
     glEnable(GL_TEXTURE_2D);
-    
+
     glBegin(GL_QUADS);
          glTexCoord2f(0.0f, 0.0f); glVertex2f(0.0f, 0.0f);
          glTexCoord2f(1.0f, 0.0f); glVertex2f(context->width, 0.0f);
@@ -188,7 +189,7 @@ void WindowManager::UpdateWindow(){
 void WindowManager::Update(){
 
     ProcessInput();
-    
+
     HandleErrors();
 
     UpdateWindow();
@@ -214,38 +215,38 @@ void WindowManager::DumpContent(){
 
     std::ofstream outFile(IMG_OUT, std::ios::binary);
 
-    outFile << "BM"; 
-    uint32_t fileSize = 54 + sizeof(Color) * context->width * context->height; 
+    outFile << "BM";
+    uint32_t fileSize = 54 + sizeof(Color) * context->width * context->height;
     outFile.write((char*)(&fileSize), 4);
-    outFile.write("\0\0\0\0", 4); 
-    outFile.write("\x36\0\0\0", 4); 
+    outFile.write("\0\0\0\0", 4);
+    outFile.write("\x36\0\0\0", 4);
 
-    outFile.write("\x28\0\0\0", 4); 
-    outFile.write((char*)(&context->width), 4); 
-    outFile.write((char*)(&context->height), 4); 
+    outFile.write("\x28\0\0\0", 4);
+    outFile.write((char*)(&context->width), 4);
+    outFile.write((char*)(&context->height), 4);
     outFile.write("\x01\0", 2);
-    outFile.write("\x20\0", 2); 
+    outFile.write("\x20\0", 2);
     outFile.write("\0\0\0\0", 4);
     outFile.write((char*)(&fileSize), 4);
-    outFile.write("\x13\x0B\0\0", 4); 
     outFile.write("\x13\x0B\0\0", 4);
-    outFile.write("\0\0\0\0", 4); 
-    outFile.write("\0\0\0\0", 4); 
+    outFile.write("\x13\x0B\0\0", 4);
+    outFile.write("\0\0\0\0", 4);
+    outFile.write("\0\0\0\0", 4);
 
     for (int y = context->height - 1; y >= 0; --y) {
         for (int x = 0; x < context->width; ++x) {
 
             const Color& pixel = pixels[( context->height - 1 - y) * context->width + x];
-            
-            uint8_t bgra[4] = { 
-                uint8_t(pixel.B * 255), 
-                uint8_t(pixel.G * 255), 
-                uint8_t(pixel.R * 255), 
+
+            uint8_t bgra[4] = {
+                uint8_t(pixel.B * 255),
+                uint8_t(pixel.G * 255),
+                uint8_t(pixel.R * 255),
                 uint8_t(pixel.A * 255)
             };
-                
+
             outFile.write((char*)(bgra), 4);
-            
+
         }
     }
 
@@ -260,7 +261,7 @@ WindowManager::~WindowManager(){
 
     glBindTexture(GL_TEXTURE_2D, 0);
     glDeleteTextures(1, &context->textureID);
-    
+
     context->loggingService.Write(MessageType::INFO, "Destroying window");
 
     glfwDestroyWindow(window);

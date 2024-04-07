@@ -7,7 +7,7 @@ PerformanceMonitor::PerformanceMonitor(){
     this->lastSamplePoint = samplingStart;
     this->timer = &Timer::GetInstance();
 
-    logger.Write("fps count ; frametime");
+    logger.Write("fps count ; frametime ; time between frames");
 }
 
 void PerformanceMonitor::GatherInformation(){
@@ -17,13 +17,14 @@ void PerformanceMonitor::GatherInformation(){
     uint32_t frameCount = timer->GetFrameCount();
     frameCount = std::max(frameCount, (uint32_t)1);
     double frameTime = timer->GetDeltaTime();
+    double renderingTime = timer->GetDeltaFrame();
 
     sample.fpsCount = frameCount;
     sample.frameTime = frameTime;
 
     samples.emplace_back(sample);
 
-    sprintf(dataBuffer, "%.2f;%f", sample.fpsCount, sample.frameTime);
+    sprintf(dataBuffer, "%.2f;%f; %.5f", sample.fpsCount, sample.frameTime, renderingTime);
     logger.Write(dataBuffer);
 }
 
@@ -49,7 +50,7 @@ void PerformanceMonitor::CalculateVariance(){
     samplesCount = std::max((uint32_t)1, samplesCount);
 
     for(uint32_t id = 0; id < samples.size(); ++id){
-        
+
         float deltaFps =  ( statistics.mean.fpsCount - samples[id].fpsCount );
         float deltaFrametime =  ( statistics.mean.frameTime - samples[id].frameTime );
 
@@ -99,7 +100,7 @@ void PerformanceMonitor::CalculateStatistics(){
     CalculateVariance();
     CalculateDeviation();
     CalculateMedian();
-    
+
 }
 
 PerformanceMonitor::~PerformanceMonitor(){

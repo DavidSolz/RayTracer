@@ -9,13 +9,13 @@
 #include "Vector3.h"
 
 struct Object{
-    SpatialType type;
-    float radius;
-    Vector3 position;
-    Vector3 normals[3];
-    Vector3 vertices[3];
-    Vector3 uvs[3];
-    int materialID;
+    SpatialType type; // 1
+    float radius; // 4
+    Vector3 position; //16
+    Vector3 normals[3]; // 48
+    Vector3 vertices[3]; //48
+    Vector3 uvs[3]; //48
+    int materialID; //4
 } __attribute((aligned(256)));
 
 

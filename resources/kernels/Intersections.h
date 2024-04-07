@@ -27,35 +27,35 @@ float IntersectSphere(const struct Ray * ray, const struct Object * object) {
 }
 
 float IntersectTriangle(const struct Ray * ray, const struct Object * object) {
-
     float3 A = object->verticeA;
-    float3 B = object->verticeB;
-    float3 C = object->verticeC;
-
-    float3 e1 = (B - A);
-    float3 e2 = (C - A);
+    float3 e1 = object->verticeB - A;
+    float3 e2 = object->verticeC - A;
 
     float3 axis = cross(ray->direction, e2);
     float det = dot(e1, axis);
 
-    if( fabs(det) < 1e-6f) 
+    if (fabs(det) < 1e-6f)
         return -1.0f;
 
-    float inverseDeterminant = 1.0f / det;
+    float inverseDet = 1.0f / det;
     float3 rayToTriangle = ray->origin - A;
-    float u = inverseDeterminant * dot(rayToTriangle, axis);
+    float u = inverseDet * dot(rayToTriangle, axis);
 
-    if( (u < 0.0f) || (u >1.0f) )
+    if (u < 0.0f || u > 1.0f)
         return -1.0f;
 
     float3 q = cross(rayToTriangle, e1);
-    float v = inverseDeterminant * dot(ray->direction, q);
+    float v = inverseDet * dot(ray->direction, q);
 
-    if( (v < 0.0f) || (u+v >1.0f) )
+    if (v < 0.0f || (u + v) > 1.0f)
         return -1.0f;
 
-    return inverseDeterminant * dot(e2, q);
+    float t = inverseDet * dot(e2, q);
 
+    if (t <= 1e-6f)
+        return -1.0f;
+
+    return t;
 }
 
 bool AABBIntersection(const struct Ray * ray, const float3 minimalPosition , const float3 maximalPosition){

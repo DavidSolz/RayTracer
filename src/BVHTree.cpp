@@ -7,12 +7,8 @@ BVHTree::BVHTree(RenderingContext * _context){
 
 BoundingBox BVHTree::CreateLeaf(const uint32_t & objectID){
 
-    BoundingBox box = {0};
-    box.minimalPosition = Vector3(INFINITY, INFINITY, INFINITY);
-    box.maximalPosition = Vector3(-INFINITY, -INFINITY, -INFINITY);
+    BoundingBox box = BoundingBox();
     box.objectID = objectID;
-    box.leftID = -1;
-    box.rightID = -1;
 
     Object & object = context->objects[objectID];
 
@@ -158,6 +154,7 @@ int32_t BVHTree::Insert(std::vector<int32_t> & ids, const int32_t & parentID, co
 
     int32_t splitAxis = depth%3;
     int32_t bestSplit = ids.size() >> 1;
+    // TODO : Heuristic split
 
     std::vector<Object> & objects = context->objects;
 
@@ -170,13 +167,8 @@ int32_t BVHTree::Insert(std::vector<int32_t> & ids, const int32_t & parentID, co
     std::vector<int32_t> left(ids.begin(), ids.begin() + bestSplit);
     std::vector<int32_t> right(ids.begin() + bestSplit, ids.end());
 
-    BoundingBox temp;
-    temp.minimalPosition = Vector3(INFINITY, INFINITY, INFINITY);
-    temp.maximalPosition = Vector3(-INFINITY, -INFINITY, -INFINITY);
+    BoundingBox temp = BoundingBox();
     temp.parentID = parentID;
-    temp.leftID = -1;
-    temp.rightID = -1;
-    temp.objectID = -1;
 
     context->boxes.emplace_back(temp);
 

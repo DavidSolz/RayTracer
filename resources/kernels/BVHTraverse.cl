@@ -1,7 +1,7 @@
 #include "resources/kernels/KernelStructs.h"
 #include "resources/kernels/Intersections.h"
 
-#define STACK_SIZE 32
+#define STACK_SIZE 64
 
 kernel void Traverse(
     global struct Resources * resources,
@@ -16,8 +16,6 @@ kernel void Traverse(
 
     global const struct BoundingBox * boxes = localResources.boxes;
     global const struct Object * objects = localResources.objects;
-
-    int numObject = localResources.numObject;
 
     int gx = get_global_id(0);
     int gy = get_global_id(1);
@@ -41,13 +39,10 @@ kernel void Traverse(
     float minLength = INFINITY;
     float length = -1.0f;
 
-
     int stack[ STACK_SIZE ] = {};
     int top = 0;
 
     stack[top++] = 0;
-
-
 
     while ( top > 0 ) {
 
@@ -82,7 +77,7 @@ kernel void Traverse(
 
                 if( AABBIntersection(&ray, left.minimalPosition, left.maximalPosition) )
                     stack[top++] = leftChildIndex;
-                
+
             }
 
             if( rightChildIndex > 0){
@@ -99,14 +94,14 @@ kernel void Traverse(
 
     samples[globalIndex] = sample;
 
-    
+
     if( sample.objectID == -1 )
         return;
 
     struct Object object = objects[ sample.objectID ];
 
     if ( object.type == SPHERE){
-                
+
         normals[globalIndex] = normalize( sample.point - object.position);
 
     }else if( object.type == TRIANGLE ){
@@ -124,12 +119,12 @@ kernel void Traverse(
         float dot02 = dot(v0, v2);
         float dot11 = dot(v1, v1);
         float dot12 = dot(v1, v2);
-    
+
         float invDenom = 1.0f / (dot00 * dot11 - dot01 * dot01);
         float u = (dot11 * dot02 - dot01 * dot12) * invDenom;
         float v = (dot00 * dot12 - dot01 * dot02) * invDenom;
         float w = 1.0f - u - v;
-        
+
         normals[globalIndex] = normalize(object.normalA * w + object.normalB * u + object.normalC * v);
     }
 }

@@ -2,7 +2,7 @@
 
 float Random::Rand(uint32_t & seed){
     seed = seed *747796405u + 2891336453u;
-    uint32_t word = ((seed >> ((seed >> 28u) + 4u)) ^ seed) * 277803737u;
+    uint32_t word = ((seed >> 17) ^ seed) * 277803737u;
     return ((word>>22u) ^ word)/(float)__UINT32_MAX__;
 }
 

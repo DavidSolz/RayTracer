@@ -82,7 +82,7 @@ CLShader::CLShader(RenderingContext * _context) : ComputeShader(_context){
         localRange = cl::NDRange(1, 1, 1);
     }else{
         localRange = cl::NDRange(8, 4, 1);
-    }   
+    }
 
     int numObjects = context->objects.size();
     int numMaterials = context->materials.size();
