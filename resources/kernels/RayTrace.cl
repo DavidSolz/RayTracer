@@ -127,7 +127,6 @@ float4 SpecularBSDF(const float3 normal, const float3 lightVector, const float3 
 
     float cosLight = dot(normal, lightVector);
     float cosView = dot(normal, viewVector);
-    float cosLightHalf = dot(lightVector, halfVector);
 
     float D = GgxAnisotropic(halfVector, ax, ay);
     float Gl = SeparableSmithGGXG1BSDF(lightVector, halfVector, ax, ay);
@@ -191,9 +190,7 @@ float4 ClearcoatBRDF(const float3 viewVector, const float3 lightVector, const fl
     float cosHalf = fabs(halfVector.y);
     float cosView = fabs(viewVector.y);
     float cosLight = fabs(lightVector.y);
-
     float cosLightHalf = dot(lightVector, halfVector);
-    float cosViewHalf = dot(viewVector, halfVector);
 
     float scale = mix(0.1f, 0.001f, material.clearcoatRoughness);
 
@@ -235,8 +232,6 @@ float4 ComputeColorSample(
     global const struct Object * objects = resources.objects;
     global const struct Texture * infos = resources.textureInfo;
 
-    ray->origin = sample.point;
-
     struct Object object = objects[ sample.objectID ];
     struct Material material =  materials[ object.materialID ];
     struct Texture info = infos[ material.textureID ];
@@ -250,11 +245,12 @@ float4 ComputeColorSample(
     float3 refractionDirecton = Refract(viewVector, normal, INPUT_IOR, material.indexOfRefraction);
 
     float3 outgoing = mix(diffusionDirection, reflectionDirection, material.metallic);
+
+    ray->origin = sample.point;
     ray->direction = normalize( mix(outgoing, refractionDirecton, material.transparency) );
 
     float cosLight = fmax(1e-6f, dot(normal, lightVector));
     float cosView = fmax(1e-6f, dot(normal, viewVector));
-    float cosHalf = fmax(1e-6f, dot(normal, halfVector));
     float cosLightHalf = fmax(1e-6f, dot(lightVector, halfVector));
 
     float4 emission = material.albedo * material.emmissionIntensity;
@@ -272,10 +268,9 @@ float4 ComputeColorSample(
     float4 clearcoatComponent = ClearcoatBRDF(viewVector, lightVector, halfVector, material);
     float4 sheenComponent = Sheen( cosLightHalf, material);
 
-    float4 colorSample = 0.0f;
     float4 weights = CalculateWeights(material);
 
-    colorSample += emission * isEmissive;
+    float4 colorSample = emission * isEmissive;
     colorSample += (diffuseComponent + sheenComponent) * weights.z;
     colorSample += clearcoatComponent * weights.w;
     colorSample += specularComponent * weights.x;
@@ -334,6 +329,6 @@ void kernel RayTrace(
 
     rays[index] = ray;
     light[index] = clamp(lightSample, 0.0f, 1.0f);
-    accumulator[index] += clamp(accumulator[index] + colorSample, 0.0f, 1.0f);
+    accumulator[index] = clamp(accumulator[index] + colorSample, 0.0f, 1.0f);
 
 }

@@ -75,6 +75,21 @@ struct Vector3 {
         return result;
     }
 
+    static Vector3 Clamp(const Vector3 & a){
+
+        __m128 current = _mm_load_ps((float*)&a);
+        __m128 zeros = _mm_setzero_ps();
+        __m128 ones = _mm_set1_ps(1.0f);
+
+        __m128 clamped = _mm_min_ps(current, ones);
+        clamped = _mm_max_ps(clamped, zeros);
+
+        Vector3 result;
+        _mm_store_ps((float*)&result, clamped);
+
+        return result;
+    }
+
     Vector3 operator-(const Vector3 & b) const {
         __m128 first = _mm_load_ps((float*)this);
         __m128 second = _mm_load_ps((float*)&b);

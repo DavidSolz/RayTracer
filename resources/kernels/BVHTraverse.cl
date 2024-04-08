@@ -94,7 +94,6 @@ kernel void Traverse(
 
     samples[globalIndex] = sample;
 
-
     if( sample.objectID == -1 )
         return;
 

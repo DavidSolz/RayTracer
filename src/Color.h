@@ -107,11 +107,17 @@ struct Color {
     }
 
     static Color Clamp(const Color & color){
-        Color result = {};
-        result.R = std::fmax(0.0f, std::fmin(color.R, 1.0f));
-        result.G = std::fmax(0.0f, std::fmin(color.G, 1.0f));
-        result.B = std::fmax(0.0f, std::fmin(color.B, 1.0f));
-        result.A = 0.0f;
+
+        __m128 current = _mm_load_ps((float*)&color);
+        __m128 zeros = _mm_setzero_ps();
+        __m128 ones = _mm_set1_ps(1.0f);
+
+        __m128 clamped = _mm_min_ps(current, ones);
+        clamped = _mm_max_ps(clamped, zeros);
+
+        Color result;
+        _mm_store_ps((float*)&result, clamped);
+
         return result;
     }
 
@@ -137,5 +143,7 @@ struct Color {
     }
 
 } __attribute__((aligned(16)));
+
+const static Color WHITE = {1.0f, 1.0f, 1.0f, 1.0f};
 
 #endif

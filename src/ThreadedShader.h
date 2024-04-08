@@ -23,6 +23,7 @@
 #define STACK_SIZE 32
 #define ALPHA_MIN 0.001f
 #define INPUT_IOR 1.0f
+#define ONE_OVER_PI 1.0f/3.1415926535f
 
 class ThreadedShader : public ComputeShader{
 private:
@@ -30,7 +31,7 @@ private:
     unsigned int numThreads;
     int rowsPerThread;
 
-    Sample ( * traverse )(RenderingContext * context, const Ray & ray);
+    Sample ( * traverse )(RenderingContext * context, const Ray & ray, Vector3 & normal);
 
     std::thread * threads;
 
@@ -44,9 +45,9 @@ private:
 
     Vector3 CalculateWeights(const Material & material);
 
-    static Sample LinearTraverse(RenderingContext * context, const Ray & ray);
+    static Sample LinearTraverse(RenderingContext * context, const Ray & ray, Vector3 & normal);
 
-    static Sample BVHTraverse(RenderingContext * context, const Ray & ray);
+    static Sample BVHTraverse(RenderingContext * context, const Ray & ray, Vector3 & normal);
 
     static float IntersectTriangle(const Ray & ray, const Object & object, float & u, float & v);
 
@@ -54,7 +55,7 @@ private:
 
     Vector3 RandomDirection(unsigned int& seed);
 
-    Color ComputeColor(Ray & ray, const Sample & sample, Color & lightSample, unsigned int& seed);
+    Color ComputeColor(Ray & ray, const Sample & sample, Color & lightSample, unsigned int& seed, const Vector3 & normal);
 
     void ComputeRows(const int& _startY, const int& _endY, Color * pixels);
 
