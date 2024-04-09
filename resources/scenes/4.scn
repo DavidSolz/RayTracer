@@ -1,0 +1,9 @@
+mtllib skybox4.mtl
+mtllib car.mtl
+
+scene
+{
+
+mesh car.obj
+
+}

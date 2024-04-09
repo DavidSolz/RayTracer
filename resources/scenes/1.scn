@@ -1,5 +1,5 @@
+mtllib skybox1.mtl
 mtllib mat.mtl
-mtllib face.mtl
 
 !Best experience with resoultion 1000 x 1000
 
@@ -23,10 +23,9 @@ cube
 
 plane
 {
-    position 500 300 500
+    position 500 100 500
     normal 0 1 0
     scale 5000 5000 5000
-    material Default
 }
 
 sphere

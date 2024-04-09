@@ -43,12 +43,19 @@ void BVHTree::BuildBVH(){
 
     std::vector<int32_t> ids;
 
-
     for(int32_t id = 0; id < context->objects.size(); ++id){
         ids.emplace_back(id);
     }
 
+    Timepoint begin = Timer::GetCurrentTime();
+
     Insert(ids);
+
+    Timepoint end = Timer::GetCurrentTime();
+
+    double duration = Timer::GetDurationInSeconds(end - begin);
+
+    printf("BVH tree with %d nodes built in %0.6lf ms\n", context->boxes.size(), duration);
     //CheckBalance(0);
 }
 

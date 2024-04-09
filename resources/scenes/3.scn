@@ -1,0 +1,9 @@
+mtllib skybox3.mtl
+mtllib bust.mtl
+
+scene
+{
+
+mesh bust.obj
+
+}

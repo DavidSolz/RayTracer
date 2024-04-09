@@ -3,6 +3,7 @@
 
 #include "BoundingBox.h"
 #include "RenderingContext.h"
+#include "Timer.h"
 
 #include <algorithm>
 #include <stdio.h>
