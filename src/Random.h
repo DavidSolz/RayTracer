@@ -7,11 +7,11 @@
 #include <cmath>
 #include <stdint.h>
 
-class Random{
-public:
-static float Rand(uint32_t & seed);
+namespace Random{
 
-static float UniformRandom(uint32_t & seed);
+float Rand(uint32_t & seed);
+
+float UniformRandom(uint32_t & seed);
 
 };
 

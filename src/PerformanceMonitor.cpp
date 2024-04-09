@@ -7,7 +7,7 @@ PerformanceMonitor::PerformanceMonitor(){
     this->lastSamplePoint = samplingStart;
     this->timer = &Timer::GetInstance();
 
-    logger.Write("fps count ; frametime ; time between frames");
+    logger.Write("fps count ; frametime");
 }
 
 void PerformanceMonitor::GatherInformation(){
@@ -24,7 +24,7 @@ void PerformanceMonitor::GatherInformation(){
 
     samples.emplace_back(sample);
 
-    sprintf(dataBuffer, "%.2f;%f; %.5f", sample.fpsCount, sample.frameTime, renderingTime);
+    sprintf(dataBuffer, "%.2f;%f", sample.fpsCount, sample.frameTime);
     logger.Write(dataBuffer);
 }
 

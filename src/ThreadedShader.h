@@ -21,9 +21,7 @@
 
 #define EPSILON 1.0000001f
 #define STACK_SIZE 32
-#define ALPHA_MIN 0.001f
 #define INPUT_IOR 1.0f
-#define ONE_OVER_PI 1.0f/3.1415926535f
 
 class ThreadedShader : public ComputeShader{
 private:

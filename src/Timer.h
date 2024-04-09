@@ -17,11 +17,10 @@ private:
     double deltaTime;
 
     uint32_t lastFrameCount;
-    uint32_t frameCount;
 
     Timer();
 
-    
+
 public:
 
     void TicTac();

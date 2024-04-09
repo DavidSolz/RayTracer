@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import gaussian_kde
-from scipy.ndimage import gaussian_filter1d
 
 file_path = 'Performance_log.csv'
 data = []
@@ -11,7 +10,7 @@ with open(file_path, 'r') as file:
     next(file)
 
     for line in file:
-        fps, frametime, _ = map(float, line.strip().split(';'))
+        fps, frametime = map(float, line.strip().split(';'))
         data.append((fps, frametime))
 
 fps, frametime = zip(*data)
@@ -50,9 +49,9 @@ plt.legend()
 plt.subplot(2, 2, 3)
 plt.hist(selected_fps, bins=20, color='b', alpha=0.7, density=True)
 
-# kde_fps = gaussian_kde(selected_fps)
-# x_vals = np.linspace(min(selected_fps), max(selected_fps), 100)
-# plt.plot(x_vals, kde_fps(x_vals), color='k', linestyle='-', linewidth=1)
+kde_fps = gaussian_kde(selected_fps)
+x_vals = np.linspace(min(selected_fps), max(selected_fps), 100)
+plt.plot(x_vals, kde_fps(x_vals), color='k', linestyle='-', linewidth=1)
 
 plt.axvline(mean_fps, color='r', linestyle='--', linewidth=1, label='Mean FPS')
 plt.xlabel('FPS')
@@ -63,9 +62,9 @@ plt.legend()
 plt.subplot(2, 2, 4)
 plt.hist(selected_frametime, bins=20, color='r', alpha=0.7, density=True)
 
-# kde_frametime = gaussian_kde(selected_frametime)
-# x_vals = np.linspace(min(selected_frametime), max(selected_frametime), 100)
-# plt.plot(x_vals, kde_frametime(x_vals), color='k', linestyle='-', linewidth=1)
+kde_frametime = gaussian_kde(selected_frametime)
+x_vals = np.linspace(min(selected_frametime), max(selected_frametime), 100)
+plt.plot(x_vals, kde_frametime(x_vals), color='k', linestyle='-', linewidth=1)
 
 plt.axvline(mean_frametime, color='b', linestyle='--', linewidth=1, label='Mean Frametime')
 plt.xlabel('Frametime (ms)')

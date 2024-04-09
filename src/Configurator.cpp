@@ -22,13 +22,13 @@ Configurator::Configurator(RenderingContext * _context){
 
 void Configurator::Initialize(){
     Material material;
-    
+
     material.albedo = {0.5f, 0.5f, 0.5f, 1.0f};
     material.tint = {};
     material.specular = {};
     material.emmissionIntensity = 0.0f;
     material.specularIntensity = 0.0f;
-    material.indexOfRefraction = 1.45f; 
+    material.indexOfRefraction = 1.45f;
     material.roughness = 0.5f;
     material.tintRoughness = 0.5f;
     material.textureID = 0;
@@ -63,6 +63,7 @@ void Configurator::ShowHelp(){
     fprintf(stdout,"  -S              Enable memory sharing\n");
     fprintf(stdout,"  -H              Show help menu\n");
     fprintf(stdout,"  -B              Build BVH tree\n");
+    fprintf(stdout,"  -O              Enable camera orbiting around center\n");
     fprintf(stdout,"  -T <threads>    Set number of threads\n");
     fprintf(stdout,"  -F <frames>     Set number of frames to render\n");
 
@@ -80,9 +81,12 @@ void Configurator::ParseArgs(const size_t & size, char **args){
         if(arg[0] != '-'){
             fprintf(stderr, "Unknown argument: %s\n", arg);
             exit(-1);
-        }else if (arg[1] == 'V' && arg[2] == '\0' && context->vSync == false) {
+        } else if (arg[1] == 'V' && arg[2] == '\0' && context->vSync == false) {
             fprintf(stdout, "VSync enabled.\n");
             context->vSync = true;
+        } else if (arg[1] == 'O' && arg[2] == '\0' && context->followCenter == false) {
+            fprintf(stdout, "Camera self movement enabled.\n");
+            context->followCenter = true;
         } else if (arg[1] == 'L' && arg[2] == '\0' && filepath == NULL) {
             if (i + 1 < size && args[i + 1][0] != '-') {
                 filepath = args[i + 1];
@@ -99,7 +103,7 @@ void Configurator::ParseArgs(const size_t & size, char **args){
                 fprintf(stderr, "Error: -w flag requires window width\n");
                 exit(-1);
             }
-        }else if (arg[1] == 'h' && arg[2] == '\0') {
+        } else if (arg[1] == 'h' && arg[2] == '\0') {
             if (i + 1 < size && args[i + 1][0] != '-') {
                 context->height = std::max(atoi(args[i+1]), 100);
                 i++;
@@ -107,7 +111,7 @@ void Configurator::ParseArgs(const size_t & size, char **args){
                 fprintf(stderr, "Error: -h flag requires requires window height\n");
                 exit(-1);
             }
-        }else if (arg[1] == 'T' && arg[2] == '\0') {
+        } else if (arg[1] == 'T' && arg[2] == '\0') {
             if (i + 1 < size && args[i + 1][0] != '-') {
                 context->numThreads = std::max(atoi(args[i+1]), 1);
                 context->useCPU = true;
@@ -116,7 +120,7 @@ void Configurator::ParseArgs(const size_t & size, char **args){
                 fprintf(stderr, "Error: -T flag requires requires number of threads\n");
                 exit(-1);
             }
-        }else if (arg[1] == 'F' && arg[2] == '\0') {
+        } else if (arg[1] == 'F' && arg[2] == '\0' && context->boundedFrames == false) {
             if (i + 1 < size && args[i + 1][0] != '-') {
                 context->numBoundedFrames = std::max(atoi(args[i+1]), 1);
                 context->boundedFrames = true;
@@ -125,7 +129,7 @@ void Configurator::ParseArgs(const size_t & size, char **args){
                 fprintf(stderr, "Error: -F flag requires requires number of frames\n");
                 exit(-1);
             }
-        }else if (arg[1] == 'S' && arg[2] == '\0' && context->memorySharing == false) {
+        } else if (arg[1] == 'S' && arg[2] == '\0' && context->memorySharing == false) {
             fprintf(stdout, "Memory sharing enabled.\n");
             context->memorySharing = true;
         } else if (arg[1] == 'B' && arg[2] == '\0' && context->bvhAcceleration == false) {
@@ -146,7 +150,7 @@ void Configurator::ParseArgs(const size_t & size, char **args){
 
     if( filepath != NULL )
         serializer->LoadFromFile(filepath);
-        
+
     if( context->bvhAcceleration == true )
         tree->BuildBVH();
 

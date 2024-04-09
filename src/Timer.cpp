@@ -5,7 +5,6 @@
 Timer::Timer(){
     this->lastTime = GetCurrentTime();
     this->deltaTime = 1.0f/60.0f;
-    this->frameCount = 60;
 }
 
 std::chrono::high_resolution_clock::time_point Timer::GetCurrentTime() {
@@ -25,8 +24,7 @@ void Timer::TicTac(){
     Timepoint currentTime = GetCurrentTime();
     deltaFrame = GetDurationInSeconds(currentTime - lastTime);
     lastTime = currentTime;
-    
-    frameCount++;
+
     accumulatedTime *= (accumulatedTime < 1.0);
     accumulatedTime += deltaFrame;
 

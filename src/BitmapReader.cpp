@@ -29,7 +29,7 @@ char BitmapReader::ParseInfo(const char * source, unsigned int & offset){
         fprintf(stderr, "Invalid file format. Only BITMAPV5HEADER are currently handled.\n");
         return -1;
     }
-    
+
     ParseData((char*)&infoHeader.width, source, offset, 4);
     ParseData((char*)&infoHeader.height, source, offset, 4);
     ParseData((char*)&infoHeader.planes, source, offset, 2);
@@ -38,7 +38,7 @@ char BitmapReader::ParseInfo(const char * source, unsigned int & offset){
     ParseData((char*)&infoHeader.image_size, source, offset, 4);
     ParseData((char*)&infoHeader.x_pixels_per_m, source, offset, 4);
     ParseData((char*)&infoHeader.y_pixels_per_m, source, offset, 4);
-    ParseData((char*)&infoHeader.colors_used, source, offset, 4); 
+    ParseData((char*)&infoHeader.colors_used, source, offset, 4);
     ParseData((char*)&infoHeader.important_colors, source, offset, 4);
     ParseData((char*)&infoHeader.red_mask, source, offset, 4);
     ParseData((char*)&infoHeader.green_mask, source, offset, 4);
@@ -73,7 +73,7 @@ Image BitmapReader::ReadFile(const char * filename){
 
     if(!input){
         fprintf(stderr, "File can't be opened.\n");
-        
+
         return Image();
     }
 

@@ -94,7 +94,7 @@ void WindowManager::ProcessInput(){
 
     }
 
-    if (glfwGetMouseButton(window,GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
+    if (glfwGetMouseButton(window,GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS && !context->followCenter) {
 
         static double lastMouseX, lastMouseY;
         double currentX, currentY;

@@ -22,22 +22,23 @@ struct RenderingContext {
     bool memorySharing = false;
     bool bvhAcceleration = false;
     bool boundedFrames = false;
+    bool followCenter = false;
     bool useCPU = false;
 
     // Texture transfer object
     GLuint textureID;
-    
+
     // Objects data
     std::vector<Object> objects;
     std::vector<Material> materials;
-    
+
     // Bounding Boxes
     std::vector<BoundingBox> boxes;
 
     // Texture data
     std::vector<Texture> textureInfo;
     std::vector<unsigned int> textureData;
-    
+
     // Camera info
     Camera camera;
     uint32_t frameCounter = 0;

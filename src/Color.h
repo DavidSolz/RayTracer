@@ -106,11 +106,11 @@ struct Color {
         return _R<<24 | _G <<16 | _B << 8 | 255 ;
     }
 
-    static Color Clamp(const Color & color){
+    static Color Clamp(const Color & color, const float & lowerBound = 0.0f, const float & upperBound = 1.0f){
 
         __m128 current = _mm_load_ps((float*)&color);
-        __m128 zeros = _mm_setzero_ps();
-        __m128 ones = _mm_set1_ps(1.0f);
+        __m128 zeros = _mm_set1_ps(lowerBound);
+        __m128 ones = _mm_set1_ps(upperBound);
 
         __m128 clamped = _mm_min_ps(current, ones);
         clamped = _mm_max_ps(clamped, zeros);

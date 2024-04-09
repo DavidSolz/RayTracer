@@ -50,6 +50,6 @@ sphere
     material Copper
 }
 
-!mesh dragon.obj
+mesh dragon.obj
 
 }

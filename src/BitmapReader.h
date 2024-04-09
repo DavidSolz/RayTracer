@@ -58,19 +58,19 @@ struct Info{
 class BitmapReader {
 
 private:
-    
+
     static void ParseData(char * destintation, const char * source, uint32_t & offset, const int32_t length);
-    
+
     static void ParseHeader(const char * source, uint32_t & offset);
-    
+
     static char ParseInfo(const char * source, uint32_t & offset);
-    
+
     static void CalculateChecksum(Image & image);
 
 public:
 
     static Image ReadFile(const char * filename);
-    
+
 };
 
 

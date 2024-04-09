@@ -24,7 +24,6 @@ int main(int argc, char **argv){
     // Window and monitor setup
 
     WindowManager manager(&context);
-    PerformanceMonitor monitor;
 
     // Service setup
 
@@ -40,6 +39,7 @@ int main(int argc, char **argv){
     }
 
     manager.SetRenderingService(service, name);
+    PerformanceMonitor monitor;
 
     // Main loop
 
@@ -51,6 +51,40 @@ int main(int argc, char **argv){
         }
 
         return EXIT_SUCCESS;
+    }
+
+    if( context.followCenter ){
+
+        float yaw = 0.0f;
+        float pitch = 0.0f;
+        float radius = 5000.0f;
+
+        const Vector3 center = Vector3(0.0f, 0.0f, 0.0f);
+
+        while ( manager.ShouldClose() ) {
+            manager.Update();
+            monitor.GatherInformation();
+
+            float yawInRad = yaw * deg2rad;
+            float pitchInRad = pitch * deg2rad;
+
+            float xNew = radius * sin(yawInRad);
+            float yNew = 500.0f * cos(pitchInRad) + 500.0f;
+            float zNew = radius * cos(yawInRad);
+
+            context.frameCounter = 0;
+            context.camera.position = Vector3(xNew, yNew, zNew);
+            context.camera.LookAt(center);
+
+            yaw = (yaw >= 360.0f) * (yaw - 360.0f) + (yaw < 360.0f) * yaw;
+            yaw += 0.1f;
+            pitch = (pitch >= 360.0f) * (pitch - 360.0f) + (pitch < 360.0f) * pitch;
+            pitch += 0.1f;
+
+        }
+
+        return EXIT_SUCCESS;
+
     }
 
     SetupKeyBindings(context, manager);
