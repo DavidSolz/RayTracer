@@ -178,6 +178,7 @@ void CLShader::Render(Color * _pixels){
 
     queue.enqueueNDRangeKernel(correctionKernel, cl::NullRange, globalRange, localRange);
 
+
     queue.finish();
 
     if( !context->memorySharing ){

@@ -11,9 +11,9 @@ Logger::Logger(const char * _filename){
     uint32_t len = 0;
     while( _filename[len++] );
 
-    if (len > 0) 
+    if (len > 0)
        BindOutput(_filename);
-    
+
     if ( output == nullptr) {
         fprintf(stderr, "Error opening log file: %s", _filename);
         isSystemStream = true;
@@ -49,13 +49,13 @@ void Logger::Write(MessageType _type, const char * _format, ...){
     std::time_t now = std::time(nullptr);
     std::tm * localTime = std::localtime(&now);
 
-    std::fprintf(output, 
+    std::fprintf(output,
                 "[%04d-%02d-%02d %02d:%02d:%02d] [%s] : ",
-                localTime->tm_year + 1900, 
-                localTime->tm_mon + 1, 
+                localTime->tm_year + 1900,
+                localTime->tm_mon + 1,
                 localTime->tm_mday,
-                localTime->tm_hour, 
-                localTime->tm_min, 
+                localTime->tm_hour,
+                localTime->tm_min,
                 localTime->tm_sec,
                 types[ _type ]
                 );
@@ -70,7 +70,7 @@ void Logger::Write(MessageType _type, const char * _format, ...){
     fprintf(output, "\n");
 
     fflush(output);
-    
+
 }
 
 void Logger::Write(const char * _data){
@@ -78,7 +78,7 @@ void Logger::Write(const char * _data){
 
     std::fprintf(output, "%s\n", _data);
     fflush(output);
-    
+
 }
 
 Logger::~Logger(){

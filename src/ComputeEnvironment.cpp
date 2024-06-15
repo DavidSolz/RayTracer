@@ -134,7 +134,7 @@ cl::Context ComputeEnvironment::CreateDeviceContext(const cl::Device & device, c
     int selectedPlatform = 0;
 
     fprintf(stdout, "========[ CL Setup ]========\nPlatforms : \n");
-    
+
     for (size_t i = 0; i < all_platforms.size(); ++i) {
         fprintf(stdout, "\t[%i] : %s\n", i, all_platforms[i].getInfo<CL_PLATFORM_NAME>().c_str());
     }
@@ -241,7 +241,7 @@ cl::Kernel ComputeEnvironment::CreateKernel(const cl::Context & deviceContext, c
         context->loggingService.Write(MessageType::ISSUE, "Program build log : %s", buildLog.c_str());
         exit(-1);
     }
-        
+
     context->loggingService.Write(MessageType::INFO, "Discovered programs : %s", program.getInfo<CL_PROGRAM_KERNEL_NAMES>().c_str());
 
     if(!program()){

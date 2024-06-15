@@ -21,16 +21,13 @@ void kernel ImageCorrection(
     int2 lcoord = (int2)(get_local_id(0), get_local_id(1));
 
     int width = get_global_size(0);
-    int height = get_global_size(1);
-
     int globalIndex = coord.y * width + coord.x;
-    int localIndex = lcoord.y * get_local_size(0) + lcoord.x; 
 
     float scale = 1.0f / (1.0f + numFrames);
 
     float4 color = colors[globalIndex];
     color = mix(color, accumulator[globalIndex], scale);
     colors[globalIndex] = color;
-    
+
     write_imagef(image, coord, color);
 }

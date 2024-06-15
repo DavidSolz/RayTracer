@@ -108,7 +108,7 @@ void Configurator::ParseArgs(const size_t & size, char **args){
                 context->height = std::max(atoi(args[i+1]), 100);
                 i++;
             } else {
-                fprintf(stderr, "Error: -h flag requires requires window height\n");
+                fprintf(stderr, "Error: -h flag requires window height\n");
                 exit(-1);
             }
         } else if (arg[1] == 'T' && arg[2] == '\0') {
@@ -117,7 +117,7 @@ void Configurator::ParseArgs(const size_t & size, char **args){
                 context->useCPU = true;
                 i++;
             } else {
-                fprintf(stderr, "Error: -T flag requires requires number of threads\n");
+                fprintf(stderr, "Error: -T flag requires number of threads\n");
                 exit(-1);
             }
         } else if (arg[1] == 'F' && arg[2] == '\0' && context->boundedFrames == false) {
@@ -126,7 +126,7 @@ void Configurator::ParseArgs(const size_t & size, char **args){
                 context->boundedFrames = true;
                 i++;
             } else {
-                fprintf(stderr, "Error: -F flag requires requires number of frames\n");
+                fprintf(stderr, "Error: -F flag requires number of frames\n");
                 exit(-1);
             }
         } else if (arg[1] == 'S' && arg[2] == '\0' && context->memorySharing == false) {
