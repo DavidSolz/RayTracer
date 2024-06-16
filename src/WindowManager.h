@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <functional>
 #include <unordered_map>
+#include <cstring>
 
 #include "IFrameRender.h"
 #include "Timer.h"
@@ -22,7 +23,7 @@ private:
     GLFWwindow * window;
 
     char windowTitle[50]={0};
-    
+
     std::unordered_map<uint16_t, Callback> actions;
 
     /// @brief Processes input events
@@ -34,7 +35,7 @@ private:
     /// @brief Update window data
     void UpdateWindow();
 
-    /// @brief initializes GLFW window and OpenGL context 
+    /// @brief initializes GLFW window and OpenGL context
     void Initialize();
 
 public:
@@ -42,21 +43,21 @@ public:
     WindowManager( RenderingContext * _context );
 
     /// @brief Sets first 9 characters of window title
-    /// @param _title 
+    /// @param _title
     void SetWindowTitle(const char _title[9]);
 
     /// @brief Sets Rendering service and first 9 characters of window title
-    /// @param _service 
-    /// @param _name 
+    /// @param _service
+    /// @param _name
     void SetRenderingService(IFrameRender * _service, const char _name[9]);
 
     /// @brief Binds and callback to given key within window context
-    /// @param _key 
-    /// @param _callback 
+    /// @param _key
+    /// @param _callback
     void BindAction(const uint16_t & _key, Callback _callback);
 
     /// @brief Checks if button is being pressed
-    /// @param _key 
+    /// @param _key
     /// @return true or false
     bool IsButtonPressed(const uint16_t & _key);
 
@@ -75,7 +76,7 @@ public:
 
     /// @brief Closes window after completing all internal actions
     void Close();
-    
+
     ~WindowManager();
 };
 
