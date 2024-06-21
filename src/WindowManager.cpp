@@ -211,19 +211,24 @@ void WindowManager::Close(){
 
 void WindowManager::DumpContent(){
 
-    glReadPixels(0, 0, context->width, context->height, GL_RGBA, GL_FLOAT, pixels);
+    int width, height;
+    glfwGetWindowSize(window, &width, &height);
+
+    std::vector<Color> framebufferData(width * height);
+
+    glReadPixels(0, 0, width, height, GL_RGBA, GL_FLOAT, framebufferData.data());
 
     std::ofstream outFile(IMG_OUT, std::ios::binary);
 
     outFile << "BM";
-    uint32_t fileSize = 54 + sizeof(Color) * context->width * context->height;
+    uint32_t fileSize = 54 + sizeof(Color) * width * height;
     outFile.write((char*)(&fileSize), 4);
     outFile.write("\0\0\0\0", 4);
     outFile.write("\x36\0\0\0", 4);
 
     outFile.write("\x28\0\0\0", 4);
-    outFile.write((char*)(&context->width), 4);
-    outFile.write((char*)(&context->height), 4);
+    outFile.write((char*)(&width), 4);
+    outFile.write((char*)(&height), 4);
     outFile.write("\x01\0", 2);
     outFile.write("\x20\0", 2);
     outFile.write("\0\0\0\0", 4);
@@ -233,10 +238,10 @@ void WindowManager::DumpContent(){
     outFile.write("\0\0\0\0", 4);
     outFile.write("\0\0\0\0", 4);
 
-    for (int y = context->height - 1; y >= 0; --y) {
-        for (int x = 0; x < context->width; ++x) {
+    for (int y = height - 1; y >= 0; --y) {
+        for (int x = 0; x < width; ++x) {
 
-            const Color& pixel = pixels[( context->height - 1 - y) * context->width + x];
+            const Color& pixel = framebufferData[( height - 1 - y) * width + x];
 
             uint8_t bgra[4] = {
                 uint8_t(pixel.B * 255),
