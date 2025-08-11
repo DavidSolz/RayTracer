@@ -1,108 +1,215 @@
 # RayTracer
 
 ## Description
+Simple CPU/GPU ray tracer with OpenCL/OpenGL interop, scene loading from `.scn` files, and several runtime options (BVH, multithreading, camera animation, etc.).
 
-### Instalation
+---
+
+# Gallery
+
+Below are sample renders produced by the RayTracer.  
+(*Images are located in the `images` directory of this repository.*)
+
+![First Scene](images/first_scene.bmp)  
+![Second Scene](images/second_scene.bmp)  
+![Third Scene](images/third_scene.bmp)  
+![Fourth Scene](images/fourth_scene.bmp)  
+
+> **Note:** GitHub’s web UI may not preview `.bmp` images in all browsers. If the image doesn’t load, click it to download/view.
+
+
+# Installation
 
 1. Clone repository
+```sh
+git clone https://github.com/DavidSolz/RayTracer.git
+cd RayTracer
+```
 
+2. Install required dependencies (see **Requirements** below).
+
+3. Build:
+- On macOS / Linux (recommended): run the provided build script
+```sh
+./Build.sh
+```
+- On Windows (MinGW): run from project root
+```sh
+cmake -G "MinGW Makefiles" -B build
+cmake --build build
+```
+
+4. Run application (see **Run** below).
+
+---
+
+# Requirements
+
+- GLFW ≥ 3.3.9
+- GLEW ≥ 2.1.0
+- OpenGL ≥ 1.2
+- OpenCL ≥ 2.0
+- CMake ≥ 3.29.4
+- MinGW ≥ 11.0.0 (only on Windows)
+- OS: Windows, macOS or Linux
+
+> Make sure your GPU drivers support OpenCL 2.0 if you plan to use GPU acceleration features.
+
+---
+
+# Compilation
+
+- macOS / Linux:
+  - `./Build.sh` will detect dependencies and produce a `build` directory with the compiled executable.
+- Windows (manual, with MinGW):
+  - From project root:
     ```sh
-        git clone https://github.com/DavidSolz/RayTracer.git
-        cd RayTracer
+    cmake -G "MinGW Makefiles" -B build
+    cmake --build build
     ```
+  - If CMake cannot find libraries, point it to the proper include/library paths or install dependencies via your package manager / installer.
 
-2. Install required dependencies
+---
 
-3. Compile
+# Run
 
-4. Run application
+From the project root, execute the built binary:
 
-### Requirements
+- Windows:
+```sh
+./build/src/RayTracer_run.exe
+```
+- macOS / Linux:
+```sh
+./build/src/RayTracer_run
+```
 
-    - GLFW 3.3.9 >=
-    - GLEW 2.1.0 >=
-    - OpenGL 1.2 >=
-    - OpenCL 2.0 >=
-    - CMake  3.29.4 >=
-    - MinGW 11.0.0 >= ( only on Windows )
-    - Operating system from Windows, MacOS or Linux family.
+---
 
-### Compilation
+# Run parameters (CLI flags)
 
-    On systems like MacOS and Linux just run internal script named `Build.sh`. It will find required depencencies and compile application into build catalogue.
-    On systems like Windows there is need to use manual compilation due to lack of compability. To compile application provide specified command into terminal:
+Run the executable with single-letter flags and arguments as below:
 
-    ```sh
-        cmake -G "MinGW Makefiles" -B build
-        cmake --build build
-    ```
+- `-H` : show list of all possible parameters (help).
+- `-B` : enable BVH acceleration.
+- `-V` : enable vertical synchronization (vsync).
+- `-w <width>` : set output image width (pixels).
+- `-h <height>` : set output image height (pixels).
+- `-L <filepath>` : load scene from specified .scn file.
+- `-T <num_threads>` : run on specified number of threads.
+- `-S` : enable memory sharing between OpenCL and OpenGL (works only with default GPU).
+- `-O` : enable automatic camera movement (animated camera).
+- `-F <n_frames>` : render a number of frames without visualization (useful for batch renders / offline render).
 
-### Run
+Example:
+```sh
+./build/src/RayTracer_run -B -w 1000 -h 1000 -L scenes/my_scene.scn -T 4
+```
 
-    To run application you need to be in root catalogue and type into terminal :
+---
 
-    ```sh
-        ./build/src/RayTracer_run.exe ( on Windows )
-        or
-        ./build/src/RayTracer_run ( on MacOS and Linux )
-    ```
+# Scene file format (`.scn`)
 
-### Run parameters
+Scene files are plain text with a simple JSON-like block structure. Lines starting with `//` or a leading `!` are comments.
 
-    There is a dozen of possible parameters that modify application runtime logic.
+Basic structure:
+```text
+mtllib skybox2.mtl     // optional skybox material
+mtllib mat.mtl         // other materials
 
-    - H - shows a list of all possible parameters,
-    - B - enables BVH acceleration,
-    - V - enables vertical synchronization,
-    - w  <width> - determines width of generated image,
-    - h <height> - determines height of generated image,
-    - L <filepath> - loads scene from specified description,
-    - T <number of threads>- runs application on some number of threads
-    - S - enables memory sharing between OpenCL and OpenGL ( works only with default GPU ),
-    - O - enables automatic camera movement,
-    - F <number of frames> - allows to specify number of frames that will be generated without visualization,
+! Best experience with resolution 1000 x 1000  // comment
 
-### Structure of scene description
-
-    If there is need to specify custom scene, just describe it with a file that have .scn extension. Files of that type consatins some internal structure similar to JSON. It looks as below :
-
-    ```json
-
-    mtllib skybox2.mtl // <-- skybox material
-    mtllib mat.mtl // <-- other materials used by objects
-
-    !Best experience with resoultion 1000 x 1000 // <-- comment
-
-    scene // <-- start of scene description
+scene
+{
+    disk
     {
+        position 500 4000 500
+        normal 0 -1 0
+        radius 1000
+        material Light
+    }
 
-        disk // <-- object type
-        {
-            position 500 4000 500 // <-- object attributes
-            normal 0 -1 0 //
-            radius 1000 //
-            material Light // <-- material used by object
-        }
+    plane
+    {
+        position 500 100 500
+        normal 0 1 0
+        scale 5000 5000 5000
+    }
 
-        plane
-        {
-            position 500 100 500
-            normal 0 1 0
-            scale 5000 5000 5000
-        }
+    mesh mesh.obj
+}
+```
 
-    mesh mesh.obj // <-- mesh that will be placed on (0,0,0) coordinates
+### Supported primitives and attributes
+- `disk` — attributes: `position`, `normal`, `radius`, `scale`, `material`
+- `sphere` — attributes: `position`, `radius`, `scale`, `material`
+- `plane` — attributes: `position`, `normal`, `scale`, `material`
+- `cube` — attributes: `position`, `scale`, `material`
+- `mesh <filename>` — use external mesh file placed at provided position (default origin unless specified)
 
-    } // <-- end of scene description
+> All materials are compatible with the material template library format used by this project (`.mtl` references).
 
-    ```
+---
 
-    There is list of default primitves and attributes that might be specified:
+# Example `.scn` (minimal)
+```text
+mtllib skybox2.mtl
+mtllib mat.mtl
 
-    - disk <position> <normal> <radius> <scale> <material>
-    - sphere <positino> <radius> <scale> <material>
-    - plane <position> <normal> <scale> <material>
-    - cube <position> <scale> <material>
-    - mesh <filename>
+! Example scene: ground plane + sphere + light disk
 
-    All materials are comaptible with material template libray
+scene
+{
+    sphere
+    {
+        position 0 100 0
+        radius 100
+        material Chrome
+    }
+
+    plane
+    {
+        position 0 0 0
+        normal 0 1 0
+        scale 10000 10000 10000
+        material Matte
+    }
+
+    disk
+    {
+        position 0 1000 0
+        normal 0 -1 0
+        radius 500
+        material Light
+    }
+}
+```
+
+---
+
+# Tips & Notes
+
+- `-S` (OpenCL/OpenGL memory sharing) often requires the GPU used by both OpenCL and OpenGL to be the same device; otherwise behavior is undefined.
+- If you see compilation issues, ensure headers and libs for GLFW / GLEW / OpenCL are installed and visible to CMake (`CMAKE_PREFIX_PATH`, `pkg-config`, or explicit `-D` flags can help).
+- On multi-GPU systems you may need to set the default GPU via OS/driver settings for proper OpenCL/OpenGL interop.
+
+---
+
+# Contributing
+
+- Bug reports and pull requests are welcome.
+- Please include OS, GPU model, driver versions, and reproduction steps for rendering bugs or crashes.
+
+---
+
+# License
+
+(Include your license here — e.g., MIT, Apache 2.0 — or add a `LICENSE` file in the repo.)
+
+---
+
+# Changelog of README edits (what I fixed for you)
+- Corrected typos (`posiitno` → `position`, `consatins` → `contains`, `resoultion` → `resolution`, `compatibile` → `compatible`, etc.).
+- Standardized CLI flags format and added usage examples.
+- Added explicit example scene and simplified the `.scn` explanation.
+- Cleaned up Build/Run instructions and included both Windows and Unix variants.
