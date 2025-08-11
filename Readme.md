@@ -202,13 +202,7 @@ scene
 
 ---
 
-# License
-
-(Include your license here — e.g., MIT, Apache 2.0 — or add a `LICENSE` file in the repo.)
-
----
-
-# Changelog of README edits (what I fixed for you)
+# Changelog of README edits
 - Corrected typos (`posiitno` → `position`, `consatins` → `contains`, `resoultion` → `resolution`, `compatibile` → `compatible`, etc.).
 - Standardized CLI flags format and added usage examples.
 - Added explicit example scene and simplified the `.scn` explanation.
